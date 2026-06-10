@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Punisher — One Last Kill (Fan FPS)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background:#000; color:#ddd;
+    font-family: 'Courier New', monospace; user-select:none; }
+  #game { display:block; width:100%; height:100%; }
+  #hud { position:fixed; inset:0; pointer-events:none; z-index:5; }
+  #crosshair { position:absolute; left:50%; top:50%; width:18px; height:18px;
+    transform:translate(-50%,-50%); }
+  #crosshair::before, #crosshair::after { content:''; position:absolute;
+    background:rgba(220,220,220,0.85); box-shadow:0 0 4px #000; }
+  #crosshair::before { left:50%; top:0; bottom:0; width:2px; transform:translateX(-50%); }
+  #crosshair::after  { top:50%; left:0; right:0; height:2px; transform:translateY(-50%); }
+  #vitals { position:absolute; bottom:20px; left:24px; display:flex; align-items:center; gap:10px; }
+  #healthbar { width:240px; height:18px; border:2px solid #555; background:rgba(0,0,0,0.55); }
+  #healthfill { width:100%; height:100%; background:linear-gradient(90deg,#a30000,#ff3030);
+    transition:width 0.2s; }
+  #healthtext { font-size:18px; font-weight:bold; text-shadow:0 0 4px #000; }
+  #weaponbox { position:absolute; bottom:20px; right:24px; text-align:right; text-shadow:0 0 6px #000; }
+  #weaponname { font-size:18px; letter-spacing:1px; color:#ddd; }
+  #ammo { font-size:28px; font-weight:bold; color:#ffcd44; }
+  #objective { position:absolute; top:24px; left:50%; transform:translateX(-50%);
+    font-size:14px; letter-spacing:2px; text-shadow:0 0 6px #000; color:#bbb; }
+  #message { position:absolute; top:64px; left:50%; transform:translateX(-50%);
+    font-size:16px; color:#ffd; text-shadow:0 0 6px #000; opacity:0; transition:opacity 0.3s; }
+  #overlay { position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:40px;
+    background:radial-gradient(circle at center,#1a0808 0%,#000 80%);
+    z-index:10; cursor:pointer; text-align:center; }
+  #title { font-size:64px; letter-spacing:8px; color:#e8d8c0;
+    text-shadow:0 0 18px #800,0 0 4px #000; }
+  #title span { font-size:22px; letter-spacing:6px; color:#a99; display:block; margin-top:14px; }
+  #start { font-size:14px; line-height:1.7; color:#bbb; max-width:520px; }
+  #overlay.hidden { display:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="objective">LITTLE SICILY · 6:47 PM</div>
+  <div id="message"></div>
+  <div id="vitals">
+    <div id="healthbar"><div id="healthfill"></div></div>
+    <div id="healthtext">100</div>
+  </div>
+  <div id="weaponbox">
+    <div id="weaponname">UNARMED</div>
+    <div id="ammo">— / —</div>
+  </div>
+</div>
+<div id="overlay">
+  <div id="title">THE PUNISHER<span>One Last Kill — Fan FPS</span></div>
+  <div id="start">CLICK TO ENGAGE<br><br>WASD move · SHIFT sprint · SPACE jump · C crouch<br>LMB attack · R reload · E pickup · ESC release mouse</div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE PUNISHER — One Last Kill (Fan FPS)
+// Single-file Three.js engine. All assets (textures, models, audio) are
+// generated procedurally in-script. The only external resource is Three.js.
+// Sections, top to bottom:
+//   1. MATH/NOISE        — value noise, fBm, helpers
+//   2. CANVAS TEXTURES   — procedural materials (plaster, brick, wood, etc.)
+//   3. SKYBOX            — night sky + city glow cubemap
+//   4. HUMANOID BUILDER  — parameterized box/capsule character constructor
+//   5. AUDIO             — synthesized SFX bank via WebAudio
+//   6. INPUT             — keyboard + mouse + pointer lock
+//   7. HUD               — DOM overlay updater
+//   8. COLLISION         — capsule vs AABB collider list
+//   9. PLAYER CONTROLLER — gravity, walk/sprint/jump/crouch
+//  10. WORLD             — test room (additional levels added by later tasks)
+//  11. ENGINE            — renderer, scene, main loop
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── ENGINE BOOTSTRAP ────────────────────────────────────────────────────────
+const canvas = document.getElementById('game');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0a0a14, 0.018);
+
+const camera = new THREE.PerspectiveCamera(78, innerWidth / innerHeight, 0.05, 600);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// Placeholder loop — replaced after all systems are wired up at the bottom.
+renderer.setAnimationLoop(() => renderer.render(scene, camera));
+</script>
+</body>
+</html>
+
