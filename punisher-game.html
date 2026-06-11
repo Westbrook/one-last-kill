@@ -78,7 +78,7 @@ import * as THREE from 'three';
 //   7. HUD               — DOM overlay updater
 //   8. COLLISION         — capsule vs AABB collider list
 //   9. PLAYER CONTROLLER — gravity, walk/sprint/jump/crouch
-//  10. WORLD             — test room (additional levels added by later tasks)
+//  10. WORLD             — apartment → neighbor → balcony → stairwell → roof → scaffolding → street
 //  11. ENGINE            — renderer, scene, main loop
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -792,9 +792,9 @@ function resolveSphereAABB(center, radius, box) {
 
 // ─── 9. PLAYER CONTROLLER ────────────────────────────────────────────────────
 const Player = {
-  pos: new THREE.Vector3(0, 1.72, 4),
+  pos: new THREE.Vector3(-9.0, 4.0 + 1.72, -4.0),
   vel: new THREE.Vector3(),
-  yaw: 0, pitch: 0,
+  yaw: Math.PI * 0.5, pitch: 0,
   eyeHeight: 1.72, crouchEye: 1.10,
   bodyHeight: 1.84, crouchBody: 1.22,
   radius: 0.32,
@@ -897,137 +897,1037 @@ function playerUpdate(dt) {
   }
 }
 
-// ─── 10. WORLD: TEST ROOM ────────────────────────────────────────────────────
+// ─── 10. WORLD: LITTLE SICILY (8 ZONES) ──────────────────────────────────────
 const World = new THREE.Group(); World.name = 'world';
 scene.add(World);
 
+// Shared lighting: dim night sky + warm interior accents added per-zone.
 function addLights() {
-  const ambient = new THREE.AmbientLight(0x29304a, 0.55);
+  const ambient = new THREE.AmbientLight(0x1a1c2a, 0.45);
   scene.add(ambient);
 
-  const moon = new THREE.DirectionalLight(0xa8c4ff, 0.55);
-  moon.position.set(-12, 22, -6);
+  const moon = new THREE.DirectionalLight(0x8aa4d8, 0.42);
+  moon.position.set(-30, 50, -20);
   moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048);
-  moon.shadow.camera.left = -22; moon.shadow.camera.right = 22;
-  moon.shadow.camera.top = 22;  moon.shadow.camera.bottom = -22;
-  moon.shadow.camera.near = 0.5; moon.shadow.camera.far = 80;
+  moon.shadow.camera.left = -40; moon.shadow.camera.right = 40;
+  moon.shadow.camera.top = 40;  moon.shadow.camera.bottom = -40;
+  moon.shadow.camera.near = 0.5; moon.shadow.camera.far = 140;
   moon.shadow.bias = -0.0005;
   scene.add(moon);
 
-  const bulb = new THREE.PointLight(0xffcc88, 2.4, 16, 1.6);
-  bulb.position.set(0, 3.05, 0);
-  bulb.castShadow = true;
-  bulb.shadow.mapSize.set(1024, 1024);
-  bulb.shadow.bias = -0.0005;
-  scene.add(bulb);
-
-  const bulbMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 12, 12),
-    new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffaa55, emissiveIntensity: 3.0 }),
-  );
-  bulbMesh.position.copy(bulb.position);
-  scene.add(bulbMesh);
-  const cordMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1.0 });
-  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.35, 6), cordMat);
-  cord.position.set(0, 3.22, 0); scene.add(cord);
+  const cityGlow = new THREE.HemisphereLight(0x3a2418, 0x05060c, 0.25);
+  scene.add(cityGlow);
 }
 
-function buildTestRoom() {
-  const W = 12, D = 12, H = 3.4;
+// World-state shared across zone builders.
+const WorldState = {
+  fires: [],
+  flickerLights: [],
+  smokeSystems: [],
+  car: null,
+  bakeryLights: [],
+};
 
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.2, D), MATS.wood);
-  floor.position.set(0, -0.1, 0); floor.receiveShadow = true; World.add(floor);
-  Colliders.addBoxBySize(0, -0.1, 0, W, 0.2, D);
+// Zone trigger volumes. Each fires zoneChanged(name) the first time the
+// player enters, and may add follow-up colliders (one-way gates).
+const Triggers = {
+  list: [],
+  add(name, min, max, onEnter) {
+    this.list.push({
+      name,
+      box: new THREE.Box3(min.clone(), max.clone()),
+      fired: false,
+      onEnter: onEnter || null,
+    });
+  },
+};
+let currentZone = null;
+const ZONE_OBJECTIVES = {
+  apartment:    'GET OUT — THE FIRE IS SPREADING',
+  neighbor:     'THROUGH THE NEIGHBOR\'S UNIT',
+  balcony:      'CROSS THE BALCONY TO THE STAIRWELL',
+  stairwell:    'CLIMB TO THE ROOF',
+  roof:         'FIND THE SCAFFOLDING',
+  scaffolding:  'DESCEND TO THE STREET',
+  street:       'LITTLE SICILY — CAR OR BAKERY?',
+  bakery:       'INSIDE THE BAKERY',
+};
+function zoneChanged(zone) {
+  currentZone = zone;
+  const obj = ZONE_OBJECTIVES[zone] || zone.toUpperCase();
+  HUD.setObjective(obj);
+  HUD.message('— ' + zone.toUpperCase() + ' —', 2.0);
+}
+function triggersUpdate() {
+  const p = Player.pos;
+  for (const t of Triggers.list) {
+    if (t.fired) continue;
+    if (t.box.containsPoint(p)) {
+      t.fired = true;
+      zoneChanged(t.name);
+      if (t.onEnter) t.onEnter();
+    }
+  }
+}
 
-  const ceil = new THREE.Mesh(new THREE.BoxGeometry(W, 0.2, D), MATS.plaster);
-  ceil.position.set(0, H + 0.1, 0); ceil.receiveShadow = true; World.add(ceil);
-  Colliders.addBoxBySize(0, H + 0.1, 0, W, 0.2, D);
+// ── Fire material: animated radial gradient drawn into a CanvasTexture ──────
+function makeFireMaterial() {
+  const c = makeCanvas(64);
+  const ctx = c.getContext('2d');
+  const noiseFn = makeValueNoise(7777 + ((Math.random() * 9000) | 0), 24);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, depthWrite: false,
+    side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+  });
+  return { mat, tex, ctx, c, noiseFn, phase: Math.random() * 1000 };
+}
+function paintFireCanvas(fire, t) {
+  const { ctx, c, noiseFn } = fire;
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+  for (let y = 0; y < h; y++) {
+    const v = y / h;
+    for (let x = 0; x < w; x++) {
+      const u = x / w;
+      const dx = (u - 0.5) * 2;
+      const radial = Math.max(0, 1 - Math.hypot(dx * 1.6, (v - 0.85) * 1.3));
+      const n = fBm(noiseFn, u * 4 + t * 0.6, (1 - v) * 6 + t * 1.8, 4);
+      let f = clamp(radial * (0.55 + n * 0.9) * (1.2 - v * 0.4), 0, 1);
+      f = Math.pow(f, 1.4);
+      const r = Math.min(255, 255 * f);
+      const g = Math.min(255, 230 * Math.pow(f, 1.8));
+      const b = Math.min(255, 80 * Math.pow(f, 3.2));
+      const a = Math.min(255, 255 * Math.pow(f, 0.9));
+      const i = (y * w + x) * 4;
+      data[i] = r; data[i+1] = g; data[i+2] = b; data[i+3] = a;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  fire.tex.needsUpdate = true;
+}
 
-  const wallMat = MATS.wallpaper;
-  const wallN = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.2), wallMat);
-  wallN.position.set(0, H / 2, -D / 2); wallN.castShadow = true; wallN.receiveShadow = true; World.add(wallN);
-  Colliders.addBoxBySize(0, H / 2, -D / 2, W, H, 0.2);
+// Spawn a fire patch: animated billboards + point light + smoke particles + hot collider.
+function spawnFire(x, y, z, opts = {}) {
+  const o = Object.assign({ width: 1.4, height: 1.8, blockHeight: 2.0, blockWidth: 1.6, color: 0xffa040, intensity: 3.8, addCollider: true }, opts);
+  const group = new THREE.Group();
+  group.position.set(x, y, z);
+  const fireA = makeFireMaterial();
+  const fireB = makeFireMaterial();
+  fireB.phase += 1.7;
+  const planeGeo = new THREE.PlaneGeometry(o.width, o.height);
+  const mA = new THREE.Mesh(planeGeo, fireA.mat);
+  const mB = new THREE.Mesh(planeGeo, fireB.mat);
+  mA.position.y = o.height / 2;
+  mB.position.y = o.height / 2;
+  mB.rotation.y = Math.PI / 2;
+  group.add(mA); group.add(mB);
 
-  const wallS = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.2), wallMat);
-  wallS.position.set(0, H / 2, D / 2); wallS.castShadow = true; wallS.receiveShadow = true; World.add(wallS);
-  Colliders.addBoxBySize(0, H / 2, D / 2, W, H, 0.2);
+  const light = new THREE.PointLight(o.color, o.intensity, 9, 1.8);
+  light.position.y = o.height * 0.6;
+  light.castShadow = false;
+  group.add(light);
 
-  const wallE = new THREE.Mesh(new THREE.BoxGeometry(0.2, H, D), MATS.brick);
-  wallE.position.set(W / 2, H / 2, 0); wallE.castShadow = true; wallE.receiveShadow = true; World.add(wallE);
-  Colliders.addBoxBySize(W / 2, H / 2, 0, 0.2, H, D);
+  const smoke = makeSmokeSystem(64);
+  smoke.points.position.y = o.height * 0.95;
+  group.add(smoke.points);
+  WorldState.smokeSystems.push(smoke);
 
-  const wallW = new THREE.Mesh(new THREE.BoxGeometry(0.2, H, D), wallMat);
-  wallW.position.set(-W / 2, H / 2, 0); wallW.castShadow = true; wallW.receiveShadow = true; World.add(wallW);
-  Colliders.addBoxBySize(-W / 2, H / 2, 0, 0.2, H, D);
+  World.add(group);
+  const entry = { group, fires: [fireA, fireB], light, baseIntensity: o.intensity };
+  WorldState.fires.push(entry);
+  if (o.addCollider) {
+    Colliders.addBoxBySize(x, y + o.blockHeight / 2, z, o.blockWidth, o.blockHeight, o.blockWidth);
+  }
+  return entry;
+}
 
-  // A pair of concrete crates to prove collision + climbing
-  const crate1 = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.0, 1.4), MATS.concrete);
-  crate1.position.set(-3.2, 0.5, -2.5); crate1.castShadow = true; crate1.receiveShadow = true; World.add(crate1);
-  Colliders.addFromMesh(crate1);
+let fireFrame = 0;
+function animateFires(t, dt) {
+  fireFrame++;
+  for (let i = 0; i < WorldState.fires.length; i++) {
+    const f = WorldState.fires[i];
+    if ((fireFrame + i) % 2 === 0) paintFireCanvas(f.fires[0], t + f.fires[0].phase);
+    else                            paintFireCanvas(f.fires[1], t + f.fires[1].phase);
+    f.light.intensity = f.baseIntensity * (0.78 + Math.sin(t * 14 + f.fires[0].phase) * 0.12 + Math.sin(t * 23 + f.fires[1].phase) * 0.08);
+  }
+}
 
-  const crate2 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 1.0), MATS.concrete);
-  crate2.position.set(-2.2, 0.35, -3.5); crate2.castShadow = true; crate2.receiveShadow = true; World.add(crate2);
-  Colliders.addFromMesh(crate2);
+// ── Smoke particles (point sprites) ─────────────────────────────────────────
+function makeSmokeTexture() {
+  const c = makeCanvas(64); const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 30);
+  g.addColorStop(0, 'rgba(40,30,28,0.85)');
+  g.addColorStop(0.6, 'rgba(30,24,22,0.35)');
+  g.addColorStop(1, 'rgba(20,18,18,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+const SMOKE_TEXTURE = makeSmokeTexture();
+function makeSmokeSystem(count = 64) {
+  const positions = new Float32Array(count * 3);
+  const lifeAttr  = new Float32Array(count);
+  const speedAttr = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    positions[3*i]   = (Math.random() - 0.5) * 0.6;
+    positions[3*i+1] = Math.random() * 1.4;
+    positions[3*i+2] = (Math.random() - 0.5) * 0.6;
+    lifeAttr[i]  = Math.random();
+    speedAttr[i] = 0.4 + Math.random() * 0.5;
+  }
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    map: SMOKE_TEXTURE, size: 0.9, transparent: true, opacity: 0.55,
+    depthWrite: false, sizeAttenuation: true, color: 0x2a2422,
+    blending: THREE.NormalBlending,
+  });
+  const points = new THREE.Points(geom, mat);
+  return { points, life: lifeAttr, speed: speedAttr, count };
+}
+function animateSmoke(dt) {
+  for (const s of WorldState.smokeSystems) {
+    const pos = s.points.geometry.attributes.position;
+    const arr = pos.array;
+    for (let i = 0; i < s.count; i++) {
+      s.life[i] += dt * 0.35;
+      arr[3*i+1] += s.speed[i] * dt;
+      arr[3*i]   += Math.sin(s.life[i] * 2.0) * dt * 0.15;
+      arr[3*i+2] += Math.cos(s.life[i] * 1.7) * dt * 0.15;
+      if (s.life[i] > 1.0 || arr[3*i+1] > 2.4) {
+        s.life[i] = 0;
+        arr[3*i]   = (Math.random() - 0.5) * 0.5;
+        arr[3*i+1] = 0;
+        arr[3*i+2] = (Math.random() - 0.5) * 0.5;
+      }
+    }
+    pos.needsUpdate = true;
+  }
+}
 
-  // A metal table on the right
-  const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.9), MATS.metal);
-  tableTop.position.set(3.0, 0.92, 1.8); tableTop.castShadow = true; tableTop.receiveShadow = true; World.add(tableTop);
-  Colliders.addFromMesh(tableTop);
-  const legMat = MATS.metal;
-  const legGeo = new THREE.BoxGeometry(0.08, 0.9, 0.08);
-  for (const [lx, lz] of [[-0.7, -0.4], [0.7, -0.4], [-0.7, 0.4], [0.7, 0.4]]) {
-    const leg = new THREE.Mesh(legGeo, legMat);
-    leg.position.set(3.0 + lx, 0.45, 1.8 + lz); leg.castShadow = true; leg.receiveShadow = true; World.add(leg);
+// ── Flickering lamp registry ────────────────────────────────────────────────
+function addFlickerLight(light, baseIntensity, seed) {
+  WorldState.flickerLights.push({ light, base: baseIntensity, seed: seed * 0.137 });
+}
+function animateFlickerLights(t) {
+  for (const f of WorldState.flickerLights) {
+    const n = Math.sin(t * 13 + f.seed) * 0.5 + Math.sin(t * 27 + f.seed * 3.1) * 0.3 + Math.sin(t * 5 + f.seed * 7.3) * 0.2;
+    f.light.intensity = f.base * (0.45 + 0.55 * (n * 0.5 + 0.5));
+  }
+}
+
+// ── Geometry helpers: solid boxes that also register a collider ─────────────
+function addBox(cx, cy, cz, sx, sy, sz, mat, opts = {}) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+  m.position.set(cx, cy, cz);
+  m.castShadow = opts.cast !== false;
+  m.receiveShadow = opts.recv !== false;
+  World.add(m);
+  if (opts.collide !== false) Colliders.addBoxBySize(cx, cy, cz, sx, sy, sz);
+  return m;
+}
+// Wall along x-axis with an optional doorway carved out of it.
+function addWallX(cx, cy, cz, length, height, thickness, mat, doorway) {
+  if (!doorway) {
+    addBox(cx, cy + height / 2, cz, length, height, thickness, mat);
+    return;
+  }
+  const { xStart, xEnd, headerH = 0.3, sillH = 0 } = doorway;
+  const xLeft  = cx - length / 2;
+  const xRight = cx + length / 2;
+  if (xStart > xLeft) {
+    const segLen = xStart - xLeft;
+    addBox(xLeft + segLen / 2, cy + height / 2, cz, segLen, height, thickness, mat);
+  }
+  if (xEnd < xRight) {
+    const segLen = xRight - xEnd;
+    addBox(xEnd + segLen / 2, cy + height / 2, cz, segLen, height, thickness, mat);
+  }
+  const opLen = xEnd - xStart;
+  if (headerH > 0) {
+    addBox((xStart + xEnd) / 2, cy + height - headerH / 2, cz, opLen, headerH, thickness, mat);
+  }
+  if (sillH > 0) {
+    addBox((xStart + xEnd) / 2, cy + sillH / 2, cz, opLen, sillH, thickness, mat);
+  }
+}
+function addWallZ(cx, cy, cz, length, height, thickness, mat, doorway) {
+  if (!doorway) {
+    addBox(cx, cy + height / 2, cz, thickness, height, length, mat);
+    return;
+  }
+  const { zStart, zEnd, headerH = 0.3, sillH = 0 } = doorway;
+  const zLow  = cz - length / 2;
+  const zHigh = cz + length / 2;
+  if (zStart > zLow) {
+    const segLen = zStart - zLow;
+    addBox(cx, cy + height / 2, zLow + segLen / 2, thickness, height, segLen, mat);
+  }
+  if (zEnd < zHigh) {
+    const segLen = zHigh - zEnd;
+    addBox(cx, cy + height / 2, zEnd + segLen / 2, thickness, height, segLen, mat);
+  }
+  const opLen = zEnd - zStart;
+  if (headerH > 0) {
+    addBox(cx, cy + height - headerH / 2, (zStart + zEnd) / 2, thickness, headerH, opLen, mat);
+  }
+  if (sillH > 0) {
+    addBox(cx, cy + sillH / 2, (zStart + zEnd) / 2, thickness, sillH, opLen, mat);
+  }
+}
+
+// Decorative-only mesh (no collider).
+function addDecor(cx, cy, cz, sx, sy, sz, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+  m.position.set(cx, cy, cz);
+  m.castShadow = true; m.receiveShadow = true;
+  World.add(m);
+  return m;
+}
+
+// ── Canvas-drawn shop sign (original names, fan-fiction Little Sicily) ──────
+function makeSignTexture(text, opts = {}) {
+  const o = Object.assign({ bg: '#3a1a14', fg: '#ffdd88', accent: '#caa040', font: 'bold 84px serif', sub: '', subFont: 'italic 36px serif' }, opts);
+  const c = makeRectCanvas(1024, 256); const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, o.bg); g.addColorStop(1, '#1a0805');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 1024, 256);
+  ctx.strokeStyle = o.accent; ctx.lineWidth = 6; ctx.strokeRect(8, 8, 1024 - 16, 256 - 16);
+  ctx.fillStyle = o.fg; ctx.font = o.font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 512, o.sub ? 110 : 128);
+  if (o.sub) {
+    ctx.fillStyle = o.accent; ctx.font = o.subFont;
+    ctx.fillText(o.sub, 512, 188);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.needsUpdate = true;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
+function addSign(cx, cy, cz, w, h, faceNormal, text, opts) {
+  const tex = makeSignTexture(text, opts);
+  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.65, metalness: 0.05, emissive: 0x000000 });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  sign.position.set(cx, cy, cz);
+  if (faceNormal === '+z') sign.rotation.y = 0;
+  else if (faceNormal === '-z') sign.rotation.y = Math.PI;
+  else if (faceNormal === '+x') sign.rotation.y = -Math.PI / 2;
+  else                          sign.rotation.y = Math.PI / 2;
+  sign.castShadow = false; sign.receiveShadow = true;
+  World.add(sign);
+  return sign;
+}
+
+// Dispatcher: builds the full traversable world.
+function buildWorld() {
+  buildPlayerApartment();
+  buildNeighborApartment();
+  buildBalcony();
+  buildStairwell();
+  buildRoof();
+  buildScaffolding();
+  buildStreet();
+  buildBakeryAndCar();
+  buildWorldBoundary();
+}
+
+// Outer kill-floor: a low concrete pad below the playable area so the player
+// can never fall out of the world even if a future change exposes a gap.
+function buildWorldBoundary() {
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(120, 0.4, 120), MATS.asphalt);
+  pad.position.set(0, -2.0, 5);
+  pad.receiveShadow = true;
+  World.add(pad);
+  Colliders.addBoxBySize(0, -2.0, 5, 120, 0.4, 120);
+}
+
+// ─── ZONE 1: PLAYER'S APARTMENT ────────────────────────────────────────────
+// Footprint x∈[-15,-3], z∈[-10,0], floor y=4, ceiling y=7.4.
+// East wall (x=-3) has a broken-wall opening to the neighbor's unit.
+// South wall (z=0) has the entry door blocked from inside by a wall of fire.
+function buildPlayerApartment() {
+  const FX1 = -15, FX2 = -3, FZ1 = -10, FZ2 = 0;
+  const FY = 4.0, CY = 7.4, WALL_T = 0.2;
+  const H = CY - FY;
+  const cx = (FX1 + FX2) / 2, cz = (FZ1 + FZ2) / 2, w = FX2 - FX1, d = FZ2 - FZ1;
+
+  addBox(cx, FY - 0.1, cz, w, 0.2, d, MATS.wood, { cast: false });
+  addBox(cx, CY + 0.1, cz, w, 0.2, d, MATS.plaster, { cast: false });
+
+  // West wall (solid).
+  addWallZ(FX1, FY, cz, d, H, WALL_T, MATS.wallpaper);
+  // North wall (solid).
+  addWallX(cx, FY, FZ1, w, H, WALL_T, MATS.wallpaper);
+  // South wall: solid (the entry door area sits to the east end, blocked by fire on the inside).
+  addWallX(cx, FY, FZ2, w, H, WALL_T, MATS.wallpaper);
+  // East wall (shared with neighbor) with a broken-wall opening.
+  addWallZ(FX2, FY, cz, d, H, WALL_T, MATS.plaster, { zStart: -7.5, zEnd: -4.5, headerH: 0.6, sillH: 0.5 });
+
+  // Furniture: bed (frame + mattress)
+  addBox(-13.5, FY + 0.25, -8.0, 2.1, 0.5, 1.2, MATS.wood);
+  addBox(-13.5, FY + 0.65, -8.0, 2.0, 0.3, 1.1, MATS.wallpaper, { collide: false });
+  addBox(-12.5, FY + 0.78, -8.4, 0.5, 0.12, 0.35, MATS.wallpaper, { collide: false });
+
+  // Kitchenette: counter + sink slab + cabinets
+  addBox(-14.4, FY + 0.45, -2.5, 1.0, 0.9, 2.4, MATS.wood);
+  addBox(-14.4, FY + 0.92, -2.5, 1.0, 0.05, 2.4, MATS.metal, { collide: false });
+  addBox(-14.4, FY + 0.92, -2.5, 0.7, 0.05, 1.0, MATS.metal, { collide: false });
+  addBox(-14.4, FY + 1.95, -2.5, 1.0, 1.1, 2.4, MATS.wood);
+
+  // Wooden table (collidable) with a glass on it.
+  addBox(-10.0, FY + 0.45, -5.0, 1.4, 0.06, 0.9, MATS.wood);
+  for (const [lx, lz] of [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]]) {
+    addBox(-10.0 + lx, FY + 0.22, -5.0 + lz, 0.06, 0.44, 0.06, MATS.wood, { collide: false });
+  }
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.14, 12), MATS.glass);
+  glass.position.set(-9.6, FY + 0.55, -5.0); World.add(glass);
+
+  // Locked gear chest (heavy metal box with a glowing keyhole hint).
+  const chest = addBox(-12.0, FY + 0.4, -3.8, 1.2, 0.8, 0.7, MATS.metal);
+  const lock = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.04), new THREE.MeshStandardMaterial({ color: 0x402010, emissive: 0x402010, emissiveIntensity: 0.4, roughness: 0.5, metalness: 0.8 }));
+  lock.position.set(-12.0, FY + 0.42, -3.8 + 0.36); World.add(lock);
+
+  // Flickering ceiling lamp.
+  const lampBulb = new THREE.PointLight(0xffb86b, 2.6, 11, 1.7);
+  lampBulb.position.set(-9.0, CY - 0.4, -5.0);
+  lampBulb.castShadow = true; lampBulb.shadow.mapSize.set(512, 512); lampBulb.shadow.bias = -0.0005;
+  World.add(lampBulb);
+  addFlickerLight(lampBulb, 2.6, 1);
+  const lampMesh = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffaa55, emissiveIntensity: 3.0 }));
+  lampMesh.position.copy(lampBulb.position); World.add(lampMesh);
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.35, 6), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1.0 }));
+  cord.position.set(-9.0, CY - 0.2, -5.0); World.add(cord);
+
+  // Fire wall blocking the south-wall entry door (interior side).
+  spawnFire(-5.0, FY, -0.9, { width: 2.2, height: 2.4, blockWidth: 4.0, blockHeight: 2.6, intensity: 4.4 });
+  spawnFire(-7.5, FY, -0.9, { width: 2.0, height: 2.2, blockWidth: 3.8, blockHeight: 2.4, intensity: 3.6 });
+  // Charred floor scar in front of the fire.
+  addDecor(-6.0, FY + 0.02, -1.4, 5.0, 0.04, 1.0, MATS.tar);
+
+  // Zone trigger (covers the playable interior).
+  Triggers.add('apartment',
+    new THREE.Vector3(FX1 + 0.5, FY,       FZ1 + 0.5),
+    new THREE.Vector3(FX2 - 0.5, FY + 2.2, FZ2 - 0.5));
+}
+
+// ─── ZONE 2: NEIGHBOR'S APARTMENT ──────────────────────────────────────────
+// Footprint x∈[-3,9], z∈[-10,0], floor y=4, ceiling y=7.4.
+// East wall (x=9) has a balcony door opening. Decor is plaster + green wallpaper
+// alternative, with different furniture set to feel distinct.
+function buildNeighborApartment() {
+  const FX1 = -3, FX2 = 9, FZ1 = -10, FZ2 = 0;
+  const FY = 4.0, CY = 7.4, WALL_T = 0.2;
+  const H = CY - FY;
+  const cx = (FX1 + FX2) / 2, cz = (FZ1 + FZ2) / 2, w = FX2 - FX1, d = FZ2 - FZ1;
+
+  // Floor (plaster instead of wood — distinct look) and ceiling.
+  addBox(cx, FY - 0.1, cz, w, 0.2, d, MATS.plaster, { cast: false });
+  addBox(cx, CY + 0.1, cz, w, 0.2, d, MATS.plaster, { cast: false });
+
+  // North wall (solid).
+  addWallX(cx, FY, FZ1, w, H, WALL_T, MATS.brick);
+  // South wall (solid; building front).
+  addWallX(cx, FY, FZ2, w, H, WALL_T, MATS.brick);
+  // East wall: opening to the balcony at z∈[-7,-3].
+  addWallZ(FX2, FY, cz, d, H, WALL_T, MATS.brick, { zStart: -7, zEnd: -3, headerH: 0.5, sillH: 0 });
+
+  // Heavy dining table in the middle.
+  addBox(3.0, FY + 0.45, -5.0, 2.0, 0.08, 1.0, MATS.wood);
+  for (const [lx, lz] of [[-0.9, -0.4], [0.9, -0.4], [-0.9, 0.4], [0.9, 0.4]]) {
+    addBox(3.0 + lx, FY + 0.22, -5.0 + lz, 0.08, 0.44, 0.08, MATS.wood, { collide: false });
+  }
+  // Chairs (two ends).
+  addBox(1.7, FY + 0.4, -5.0, 0.4, 0.05, 0.4, MATS.wood);
+  addBox(1.7, FY + 0.85, -5.2, 0.4, 0.9, 0.05, MATS.wood, { collide: false });
+  addBox(4.3, FY + 0.4, -5.0, 0.4, 0.05, 0.4, MATS.wood);
+  addBox(4.3, FY + 0.85, -4.8, 0.4, 0.9, 0.05, MATS.wood, { collide: false });
+
+  // Sofa against the north wall.
+  addBox(7.0, FY + 0.3, -9.0, 2.2, 0.6, 0.8, MATS.wallpaper);
+  addBox(7.0, FY + 0.85, -9.3, 2.2, 0.6, 0.2, MATS.wallpaper, { collide: false });
+  addBox(5.9, FY + 0.7, -9.0, 0.2, 0.4, 0.8, MATS.wallpaper, { collide: false });
+  addBox(8.1, FY + 0.7, -9.0, 0.2, 0.4, 0.8, MATS.wallpaper, { collide: false });
+
+  // TV cabinet + dim CRT glow.
+  addBox(-1.5, FY + 0.4, -9.5, 1.2, 0.8, 0.5, MATS.wood);
+  const crt = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.55, 0.05),
+    new THREE.MeshStandardMaterial({ color: 0x051018, emissive: 0x2a3a5a, emissiveIntensity: 0.6, roughness: 0.4, metalness: 0.2 }));
+  crt.position.set(-1.5, FY + 1.0, -9.2); World.add(crt);
+  const crtLight = new THREE.PointLight(0x4a6aa0, 0.7, 4, 2.0);
+  crtLight.position.set(-1.5, FY + 1.0, -9.0);
+  World.add(crtLight); addFlickerLight(crtLight, 0.7, 7);
+
+  // Framed picture (decorative).
+  const frame = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.4),
+    new THREE.MeshStandardMaterial({ map: makeSignTexture('FAMIGLIA', { bg: '#3a2a14', fg: '#f0d090', font: 'bold 110px serif' }), roughness: 0.7 }));
+  frame.position.set(7.0, FY + 1.7, FZ1 + 0.11); frame.rotation.y = 0; World.add(frame);
+
+  // Ceiling pendant.
+  const pend = new THREE.PointLight(0xffd9a0, 1.6, 9, 1.6);
+  pend.position.set(3.0, CY - 0.35, -5.0); pend.castShadow = true;
+  pend.shadow.mapSize.set(512, 512); pend.shadow.bias = -0.0005;
+  World.add(pend);
+  const pendMesh = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12),
+    new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffcc88, emissiveIntensity: 2.2 }));
+  pendMesh.position.copy(pend.position); World.add(pendMesh);
+
+  // Zone trigger fires the first time the player passes through the broken wall.
+  Triggers.add('neighbor',
+    new THREE.Vector3(FX1 + 0.6, FY,       FZ1 + 0.5),
+    new THREE.Vector3(FX2 - 0.5, FY + 2.2, FZ2 - 0.5),
+    () => {
+      // One-way gate: drop debris in the broken-wall opening so the player can't return.
+      spawnFire(-3.0, FY, -6.0, { width: 1.4, height: 1.6, blockWidth: 1.8, blockHeight: 1.9, intensity: 3.0 });
+      addDecor(-3.0, FY + 0.15, -6.0, 0.6, 0.3, 2.6, MATS.brick);
+      Colliders.addBoxBySize(-3.0, FY + 0.15, -6.0, 0.6, 0.3, 2.6);
+    });
+}
+
+// ─── ZONE 3: BALCONY ───────────────────────────────────────────────────────
+// A cantilevered platform on the east side of the neighbor's apartment,
+// x∈[9,13], z∈[-10,0], floor y=4. Open to the sky; railing on three sides.
+// The east end leads to the stairwell-tower window.
+function buildBalcony() {
+  const BX1 = 9, BX2 = 13, BZ1 = -10, BZ2 = 0;
+  const BY = 4.0;
+  const cx = (BX1 + BX2) / 2, cz = (BZ1 + BZ2) / 2, w = BX2 - BX1, d = BZ2 - BZ1;
+
+  // Concrete deck.
+  addBox(cx, BY - 0.1, cz, w, 0.2, d, MATS.concrete, { cast: false });
+  // Underside support beam (collidable so the player can't drop through).
+  addBox(cx, BY - 0.3, cz, w + 0.2, 0.2, d + 0.2, MATS.concrete, { cast: false, collide: true });
+
+  // Railing posts and top rail along the south, east, and inside-north edges.
+  const railH = 1.05, postW = 0.08, topT = 0.06;
+  // South rail (z = BZ2 - 0.05).
+  for (let x = BX1; x <= BX2; x += 0.6) {
+    addBox(x, BY + railH / 2, BZ2 - 0.05, postW, railH, postW, MATS.metal);
+  }
+  addBox(cx, BY + railH, BZ2 - 0.05, w, topT, 0.08, MATS.metal);
+  // North rail (z = BZ1 + 0.05).
+  for (let x = BX1; x <= BX2; x += 0.6) {
+    addBox(x, BY + railH / 2, BZ1 + 0.05, postW, railH, postW, MATS.metal);
+  }
+  addBox(cx, BY + railH, BZ1 + 0.05, w, topT, 0.08, MATS.metal);
+  // East rail (x = BX2 - 0.05) with a gap at the stairwell window z∈[-7,-3].
+  for (let z = BZ1; z <= BZ2; z += 0.6) {
+    if (z > -7 && z < -3) continue;
+    addBox(BX2 - 0.05, BY + railH / 2, z, postW, railH, postW, MATS.metal);
+  }
+  // Two top-rail segments around the window gap.
+  addBox(BX2 - 0.05, BY + railH, (BZ1 + -7) / 2, 0.08, topT, (-7 - BZ1), MATS.metal);
+  addBox(BX2 - 0.05, BY + railH, (-3 + BZ2) / 2, 0.08, topT, (BZ2 + 3), MATS.metal);
+
+  // A potted plant + a window-cleaner's bucket as decor.
+  addBox(BX1 + 0.4, BY + 0.2, BZ2 - 0.6, 0.4, 0.4, 0.4, MATS.concrete);
+  addBox(BX1 + 0.4, BY + 0.55, BZ2 - 0.6, 0.32, 0.3, 0.32, MATS.wallpaper, { collide: false });
+  addBox(BX2 - 0.6, BY + 0.18, BZ1 + 0.6, 0.32, 0.36, 0.32, MATS.metal);
+
+  // Distant skyline lamp (warm glow so the balcony reads as exterior).
+  const lamp = new THREE.PointLight(0xffb060, 0.9, 18, 1.4);
+  lamp.position.set(BX2 + 0.5, BY + 2.0, BZ2 + 0.5);
+  World.add(lamp);
+
+  // Zone trigger.
+  Triggers.add('balcony',
+    new THREE.Vector3(BX1 + 0.3, BY,       BZ1 + 0.3),
+    new THREE.Vector3(BX2 - 0.3, BY + 2.2, BZ2 - 0.3));
+}
+
+// ─── ZONE 4: STAIRWELL ─────────────────────────────────────────────────────
+// Tower x∈[13,19], z∈[-10,0], interior y=0..14 (the player only ever sees
+// y≥1.5 — the lower flight is rubble-blocked). Three switchback flights climb
+// from the balcony-window landing (y=4) up to the roof access at y=14.
+function buildStairwell() {
+  const SX1 = 13, SX2 = 19, SZ1 = -10, SZ2 = 0;
+  const cx = (SX1 + SX2) / 2, cz = (SZ1 + SZ2) / 2, w = SX2 - SX1, d = SZ2 - SZ1;
+
+  // Outer walls (open to north and the open balcony window on the west).
+  // East wall.
+  addWallZ(SX2, 0, cz, d, 16, 0.2, MATS.brick);
+  // North wall.
+  addWallX(cx, 0, SZ1, w, 16, 0.2, MATS.brick);
+  // South wall.
+  addWallX(cx, 0, SZ2, w, 16, 0.2, MATS.brick);
+  // West wall with a balcony-access opening at z∈[-7,-3] at y∈[4,6].
+  // Lower segment (y=0..4).
+  addWallZ(SX1, 0, cz, d, 4, 0.2, MATS.brick);
+  // Upper segment: y=6..14 solid.
+  addWallZ(SX1, 6, cz, d, 8, 0.2, MATS.brick);
+  // Top band y=14..16 with a roof-access doorway at z∈[-7,-3].
+  addWallZ(SX1, 14, cz, d, 2, 0.2, MATS.brick, { zStart: -7, zEnd: -3, headerH: 0, sillH: 0 });
+  // Wall pieces around the window opening (z<-7 and z>-3 between y=4..6).
+  if (-7 > SZ1) addBox(SX1, 5.0, (SZ1 + -7) / 2, 0.2, 2.0, -7 - SZ1, MATS.brick);
+  if (-3 < SZ2) addBox(SX1, 5.0, (-3 + SZ2) / 2, 0.2, 2.0, SZ2 + 3, MATS.brick);
+
+  // Concrete landing at y=4 (entry from balcony).
+  addBox(cx, 3.9, cz, w, 0.2, d, MATS.concrete, { cast: false });
+
+  // Switchback stair generator. Each flight is 11 steps × 0.3m rise × 0.32m tread.
+  // Flight 1: y 4→6.4 along +z (south wall), x∈[13.4,15.8]
+  // Flight 2: y 6.4→9.0 along -z (north wall), x∈[16.2,18.6]
+  // Flight 3: y 9.0→11.6 along +z, x∈[13.4,15.8]
+  // Flight 4 (final): y 11.6→14.0 along -z, x∈[16.2,18.6]
+  function flight(y0, y1, xLane, zStart, zEnd) {
+    const steps = 11;
+    const rise = (y1 - y0) / steps;
+    const dir = Math.sign(zEnd - zStart);
+    const treadLen = Math.abs(zEnd - zStart) / steps;
+    for (let i = 0; i < steps; i++) {
+      const zc = zStart + dir * (treadLen * (i + 0.5));
+      const stepTop = y0 + rise * (i + 1);
+      // Each step block sits from the flight base up to its tread top so the
+      // staircase reads correctly from the side and the player always stands
+      // on the highest tread at their z slot.
+      const blockH = stepTop - y0;
+      addBox(xLane, y0 + blockH / 2, zc, 2.4, blockH, treadLen, MATS.wood);
+    }
+  }
+  // Landings.
+  function landing(xc, y, zc) { addBox(xc, y - 0.05, zc, 2.4, 0.1, 2.4, MATS.concrete); }
+  flight(4.0, 6.4, 14.6, -8.6, -1.4);
+  landing(14.6, 6.4, -0.2 - 1.0); // approach landing south
+  landing(17.4, 6.4, -0.2 - 1.0);
+  flight(6.4, 9.0, 17.4, -1.4, -8.6);
+  landing(17.4, 9.0, -9.0 + 0.2 + 1.0);
+  landing(14.6, 9.0, -9.0 + 0.2 + 1.0);
+  flight(9.0, 11.6, 14.6, -8.6, -1.4);
+  landing(14.6, 11.6, -0.2 - 1.0);
+  landing(17.4, 11.6, -0.2 - 1.0);
+  flight(11.6, 14.0, 17.4, -1.4, -8.6);
+  landing(17.4, 14.0, -9.0 + 0.2 + 1.0);
+  landing(14.6, 14.0, -9.0 + 0.2 + 1.0);
+
+  // Decorative locked doors at each landing.
+  function lockedDoor(x, y, z, face) {
+    const doorTex = makeSignTexture('3' + face, { bg: '#3a2418', fg: '#caa078', font: 'bold 140px serif' });
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.0, 1.0),
+      new THREE.MeshStandardMaterial({ map: doorTex, roughness: 0.8 }));
+    door.position.set(x, y + 1.0, z);
+    door.castShadow = true; door.receiveShadow = true;
+    World.add(door);
+    Colliders.addBoxBySize(x, y + 1.0, z, 0.18, 2.0, 1.0);
+  }
+  lockedDoor(SX2 - 0.13, 6.4, -8.4, 'B');
+  lockedDoor(SX1 + 0.13, 9.0, -1.4, 'C');
+  lockedDoor(SX2 - 0.13, 11.6, -8.4, 'D');
+
+  // Burning debris blocking the DOWN flight (visible going from y=4 toward y=0).
+  // Player can see the descent is impossible.
+  const debrisY = 1.6;
+  addBox(15.0, debrisY, -5.0, 3.6, 2.4, 4.0, MATS.brick);
+  addBox(17.0, debrisY + 0.6, -5.0, 1.6, 1.8, 4.0, MATS.concrete);
+  spawnFire(15.0, debrisY + 1.2, -5.0, { width: 2.2, height: 2.2, blockWidth: 2.0, blockHeight: 2.2, intensity: 3.6 });
+  spawnFire(17.0, debrisY + 1.4, -5.0, { width: 1.8, height: 2.0, blockWidth: 1.8, blockHeight: 2.0, intensity: 3.0 });
+
+  // Cap the stairwell at the bottom so the player can never fall below.
+  addBox(cx, 0.9, cz, w - 0.4, 0.4, d - 0.4, MATS.concrete, { cast: false });
+
+  // Zone trigger.
+  Triggers.add('stairwell',
+    new THREE.Vector3(SX1 + 0.3, 4.0, SZ1 + 0.3),
+    new THREE.Vector3(SX2 - 0.3, 15.0, SZ2 - 0.3));
+}
+
+// ─── ZONE 5: ROOF ──────────────────────────────────────────────────────────
+// Spans the full building x∈[-15,19], z∈[-10,0], floor y=14.
+// Parapet, water tower, HVAC vents, stairwell access bulkhead.
+// South parapet has a maintenance opening that drops onto the scaffolding.
+function buildRoof() {
+  // Main roof deck covers everything west of the stairwell tower.
+  const RX1 = -15, RX2 = 13, RZ1 = -10, RZ2 = 0;
+  const RY = 14.0;
+  const cx = (RX1 + RX2) / 2, cz = (RZ1 + RZ2) / 2, w = RX2 - RX1, d = RZ2 - RZ1;
+
+  // Roof deck.
+  addBox(cx, RY - 0.1, cz, w, 0.2, d, MATS.tar, { cast: false });
+
+  // Parapet walls (low, 1.2m), with a gap on the south face at x∈[-3,3]
+  // for the scaffolding drop.
+  const PH = 1.2;
+  addWallX(cx, RY, RZ1, w, PH, 0.25, MATS.brick);                // north
+  addWallZ(RX1, RY, cz, d, PH, 0.25, MATS.brick);                // west
+  // South parapet with scaffold gap.
+  addWallX(cx, RY, RZ2, w, PH, 0.25, MATS.brick, { xStart: -3, xEnd: 3, headerH: 0, sillH: 0 });
+  // East "parapet" is the stairwell tower wall itself — no extra wall needed.
+
+  // The stairwell tower's outer brick walls already rise to y=16, forming a
+  // natural bulkhead. The west wall has a doorway at y=14..16, z∈[-7,-3]
+  // through which the player exits the stair tower onto the roof.
+  // Add a low concrete sill across the bulkhead doorway threshold so the
+  // tar-roof edge reads cleanly visually.
+  addBox(13.0, RY - 0.05, -5.0, 0.1, 0.1, 4.0, MATS.concrete, { collide: false });
+
+  // Water tower: wooden barrel on a metal scaffold.
+  const towerY = RY + 0.1;
+  const legs = [[-9, -3], [-7, -3], [-9, -1], [-7, -1]];
+  for (const [lx, lz] of legs) {
+    addBox(lx, towerY + 1.5, lz, 0.12, 3.0, 0.12, MATS.metal);
+  }
+  // Barrel.
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 2.2, 24), MATS.wood);
+  barrel.position.set(-8, towerY + 3.2, -2);
+  barrel.castShadow = true; barrel.receiveShadow = true;
+  World.add(barrel);
+  Colliders.addBoxBySize(-8, towerY + 3.2, -2, 2.8, 2.2, 2.8);
+  // Conical roof.
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(1.55, 0.7, 24), MATS.metal);
+  cap.position.set(-8, towerY + 4.7, -2); cap.castShadow = true;
+  World.add(cap);
+
+  // HVAC units (three boxy gray units).
+  for (let i = 0; i < 3; i++) {
+    const ux = -2 + i * 3.0;
+    addBox(ux, RY + 0.5, -8.0, 1.6, 1.0, 1.4, MATS.metal);
+    addBox(ux, RY + 1.15, -8.0, 0.6, 0.3, 0.6, MATS.metal, { collide: false });
+    // Pipe stub.
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.5, 12), MATS.metal);
+    pipe.position.set(ux, RY + 1.55, -8.0); pipe.castShadow = true;
+    World.add(pipe);
   }
 
-  // Roof-tar accent slab as a visual reference
-  const slab = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.12, 2.4), MATS.tar);
-  slab.position.set(3.2, 0.06, -3.0); slab.receiveShadow = true; World.add(slab);
-  Colliders.addFromMesh(slab);
+  // A vent fan/grille decal on each unit.
+  for (let i = 0; i < 3; i++) {
+    const ux = -2 + i * 3.0;
+    const grille = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.9, metalness: 0.3 }));
+    grille.position.set(ux, RY + 0.55, -8.0 + 0.71); World.add(grille);
+  }
 
-  // Asphalt pad just outside the doorway opening on the south wall
-  const pad = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.05, 1.6), MATS.asphalt);
-  pad.position.set(0, 0.025, D / 2 - 0.9); pad.receiveShadow = true; World.add(pad);
+  // Scaffold-drop marker: a metal hatch lip on the south parapet gap.
+  addBox(0, RY - 0.05, RZ2 + 0.05, 6.0, 0.1, 0.2, MATS.metal, { collide: false });
+  // "DANGER" panel beside the gap.
+  addSign(-5, RY + 0.6, RZ2 + 0.13, 1.6, 0.4, '+z', 'DANGER', { bg: '#3a0a05', fg: '#ffe066', font: 'bold 110px sans-serif' });
 
-  // A glass pane standing free on the table
-  const pane = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.02), MATS.glass);
-  pane.position.set(3.0, 1.25, 1.8); pane.castShadow = false; pane.receiveShadow = false; World.add(pane);
+  // Cool exterior moonlight kicker on the roof for visibility.
+  const rooflight = new THREE.PointLight(0xa0b8e0, 0.6, 25, 1.4);
+  rooflight.position.set(cx, RY + 6, cz);
+  World.add(rooflight);
 
-  // A humanoid mannequin proving the model builder works
-  const mannequin = makeHumanoid(HUMANOID_PRESETS.thug);
-  mannequin.position.set(2.0, 0, -3.0);
-  mannequin.rotation.y = Math.PI * 0.85;
-  World.add(mannequin);
-
-  const civilian = makeHumanoid(HUMANOID_PRESETS.shopkeeper);
-  civilian.position.set(-3.0, 0, 2.0);
-  civilian.rotation.y = -Math.PI * 0.25;
-  World.add(civilian);
-
-  const child = makeHumanoid(HUMANOID_PRESETS.child);
-  child.position.set(-4.2, 0, 2.6);
-  child.rotation.y = -Math.PI * 0.1;
-  World.add(child);
+  // Zone trigger.
+  Triggers.add('roof',
+    new THREE.Vector3(RX1 + 0.5, RY,       RZ1 + 0.5),
+    new THREE.Vector3(RX2 - 0.5, RY + 4.0, RZ2 - 0.5));
 }
+
+// ─── ZONE 6: SCAFFOLDING ───────────────────────────────────────────────────
+// A descending series of wooden platforms hung off metal poles on the south
+// face of the building (z > 0). The player drops level by level. Each drop
+// is taller than the player's jump height, so backtracking up is impossible.
+function buildScaffolding() {
+  // Each level: { y, x1, x2, z1, z2 }. Player drops to the next as they walk.
+  const levels = [
+    { y: 10.0, x1: -4.0, x2:  4.0, z1: 0.3, z2: 3.3 },
+    { y:  7.0, x1: -7.0, x2:  1.0, z1: 1.0, z2: 4.0 },
+    { y:  4.0, x1: -1.0, x2:  7.0, z1: 1.5, z2: 4.5 },
+    { y:  1.5, x1: -4.0, x2:  4.0, z1: 2.0, z2: 5.0 },
+  ];
+  for (let i = 0; i < levels.length; i++) {
+    const L = levels[i];
+    const cx = (L.x1 + L.x2) / 2, cz = (L.z1 + L.z2) / 2;
+    const sx = L.x2 - L.x1, sz = L.z2 - L.z1;
+    // Wood plank platform.
+    addBox(cx, L.y - 0.05, cz, sx, 0.1, sz, MATS.wood);
+    // Plank lines (decor) — a few raised wood strips for texture variation.
+    for (let j = 0; j < 3; j++) {
+      const px = L.x1 + (j + 0.5) * sx / 3;
+      addBox(px, L.y + 0.005, cz, sx / 3 - 0.04, 0.01, sz, MATS.wood, { collide: false, cast: false });
+    }
+    // Metal support poles at the four corners reaching up to the level above.
+    const supportTop = i === 0 ? 14.0 : levels[i - 1].y;
+    for (const [sxp, szp] of [[L.x1, L.z1], [L.x2, L.z1], [L.x1, L.z2], [L.x2, L.z2]]) {
+      addBox(sxp, (L.y + supportTop) / 2, szp, 0.1, supportTop - L.y, 0.1, MATS.metal);
+    }
+    // Cross braces (decor — thin diagonal-looking horizontals).
+    for (let yb = L.y + 0.3; yb < supportTop - 0.3; yb += 0.6) {
+      addBox(cx, yb, L.z1, sx, 0.05, 0.05, MATS.metal, { collide: false, cast: false });
+      addBox(cx, yb, L.z2, sx, 0.05, 0.05, MATS.metal, { collide: false, cast: false });
+    }
+    // Low side railings on the long sides (decor only — the player must be
+    // able to walk off the platform edges to drop to the next level).
+    const railH = 0.9;
+    addBox(cx, L.y + railH, L.z1, sx, 0.05, 0.06, MATS.metal, { collide: false });
+    addBox(cx, L.y + railH, L.z2, sx, 0.05, 0.06, MATS.metal, { collide: false });
+    for (let x = L.x1 + 0.4; x < L.x2 - 0.3; x += 0.8) {
+      addBox(x, L.y + railH / 2, L.z1, 0.05, railH, 0.05, MATS.metal, { collide: false });
+      addBox(x, L.y + railH / 2, L.z2, 0.05, railH, 0.05, MATS.metal, { collide: false });
+    }
+
+    // Tarpaulin: a hanging cloth panel as a "scaffold drape" (decor).
+    if (i % 2 === 0) {
+      const tarp = new THREE.Mesh(new THREE.PlaneGeometry(sx, 1.8),
+        new THREE.MeshStandardMaterial({ color: 0x2a3a2a, roughness: 0.95, side: THREE.DoubleSide }));
+      tarp.position.set(cx, L.y - 1.0, L.z2 + 0.04);
+      World.add(tarp);
+    }
+  }
+
+  // Zone trigger covers the scaffolding volume.
+  Triggers.add('scaffolding',
+    new THREE.Vector3(-7.5, 0.5,  0.3),
+    new THREE.Vector3( 7.5, 11.5, 5.2));
+
+  // A small visible "scaffold light" on the top level for visibility.
+  const sl = new THREE.PointLight(0xffd080, 1.0, 10, 1.6);
+  sl.position.set(0, 10.5, 2.0); World.add(sl);
+}
+
+// ─── ZONE 7: STREET (LITTLE SICILY) ────────────────────────────────────────
+// Asphalt block south of the building. The building exterior wall faces the
+// street at z=4, with the scaffolding hanging in front of it. Sidewalk runs
+// along z∈[4,6], roadway z∈[6,18], far sidewalk z∈[18,20], far buildings z>20.
+function buildStreet() {
+  // Roadway pavement.
+  const road = new THREE.Mesh(new THREE.BoxGeometry(50, 0.05, 12), MATS.asphalt);
+  road.position.set(0, 0.025, 12); road.receiveShadow = true;
+  World.add(road);
+
+  // Painted lane stripes (decor).
+  for (let x = -22; x <= 22; x += 4) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.005, 0.18),
+      new THREE.MeshStandardMaterial({ color: 0xe0c060, roughness: 0.7 }));
+    stripe.position.set(x, 0.05, 12); World.add(stripe);
+  }
+
+  // Sidewalks (concrete).
+  addBox(0, 0.07,  5.0, 50, 0.14, 2.0, MATS.concrete, { cast: false });
+  addBox(0, 0.07, 19.0, 50, 0.14, 2.0, MATS.concrete, { cast: false });
+
+  // World edge: invisible high walls so the player cannot leave the block.
+  Colliders.addBoxBySize(-25, 6,  12,  0.2, 12, 24);
+  Colliders.addBoxBySize( 25, 6,  12,  0.2, 12, 24);
+  Colliders.addBoxBySize(  0, 6,  30, 50, 12, 0.2);
+
+  // Far facades on the north side (across the road, z=20..24) — brick storefronts.
+  for (let i = 0; i < 5; i++) {
+    const fx = -20 + i * 10;
+    addBox(fx, 4.0, 22.0, 9.0, 8.0, 2.0, MATS.brick);
+    // Upper-story windows (canvas-painted decor).
+    for (let w = 0; w < 3; w++) {
+      const winTex = makeSignTexture('', { bg: '#3a3a55', fg: '#aac0e0', font: 'bold 80px serif' });
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.4),
+        new THREE.MeshStandardMaterial({ map: winTex, emissive: 0x303a55, emissiveIntensity: 0.5, roughness: 0.6 }));
+      win.position.set(fx - 3.0 + w * 3.0, 5.5, 20.95);
+      World.add(win);
+    }
+  }
+
+  // The apartment-level south wall already exists at z=0 (y=4..7.4). Add a
+  // ground-floor exterior brick face below it (y=0..4) along the same plane
+  // so the building reads as a real structure and the player can't slip under.
+  addBox(2.0, 2.0, 0.0, 34, 4.0, 0.2, MATS.brick);
+  // Continue the brick face along the upper floors (y=7.4..14) to fill in the
+  // space between the apartment ceiling and the roof level.
+  addBox(2.0, 10.7, 0.0, 34, 6.6, 0.2, MATS.brick);
+  // East and west external corners of the building, ground-floor side wall.
+  addBox(-15, 2.0, 2.0, 0.2, 4.0, 4.0, MATS.brick);
+  addBox( 19, 2.0, 2.0, 0.2, 4.0, 4.0, MATS.brick);
+  // North-side ground level wall to close the building off.
+  addBox(2.0, 2.0, -10.0, 34, 4.0, 0.2, MATS.brick);
+
+  // Streetlights along the road centerline.
+  for (let i = 0; i < 5; i++) {
+    const lx = -20 + i * 10;
+    // Pole.
+    addBox(lx, 2.5, 6.0, 0.12, 5.0, 0.12, MATS.metal);
+    // Arm.
+    addBox(lx + 0.5, 5.0, 6.0, 1.0, 0.08, 0.08, MATS.metal, { collide: false });
+    // Lamp head.
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.35),
+      new THREE.MeshStandardMaterial({ color: 0x222226, emissive: 0xffd080, emissiveIntensity: 1.4, roughness: 0.6, metalness: 0.5 }));
+    head.position.set(lx + 0.95, 4.95, 6.0); World.add(head);
+    const light = new THREE.PointLight(0xffc680, 1.5, 14, 1.6);
+    light.position.set(lx + 0.95, 4.85, 6.0); World.add(light);
+  }
+
+  // Parked cars on the near sidewalk (decor, collidable).
+  spawnParkedCar(-12, 0,  7.5, 0.05, 0x40180c);
+  spawnParkedCar( -2, 0,  7.5, -0.04, 0x142028);
+  spawnParkedCar( 14, 0, 16.5, Math.PI + 0.03, 0x1a1a1c);
+
+  // Trash cans + a fire-escape style metal stack (decor).
+  for (let i = 0; i < 3; i++) {
+    const x = -22 + i * 22;
+    addBox(x, 0.5, 5.6, 0.5, 0.9, 0.5, MATS.metal);
+    addBox(x, 1.0, 5.6, 0.55, 0.05, 0.55, MATS.metal, { collide: false });
+  }
+
+  // Zone trigger.
+  Triggers.add('street',
+    new THREE.Vector3(-24, 0.0,  5.0),
+    new THREE.Vector3( 24, 4.0, 19.5));
+}
+
+// Procedural parked car: body + cabin + four wheels.
+function spawnParkedCar(x, y, z, rotY, bodyColor, opts = {}) {
+  const o = Object.assign({ idling: false, length: 4.4, width: 1.8, height: 1.2 }, opts);
+  const car = new THREE.Group();
+  car.position.set(x, y, z);
+  car.rotation.y = rotY;
+  const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.45, metalness: 0.6 });
+  const cabinMat = new THREE.MeshPhysicalMaterial({ color: 0x101418, roughness: 0.2, metalness: 0.1, transmission: 0.25, transparent: true, opacity: 0.85 });
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.95, metalness: 0.0 });
+  const chromeMat = new THREE.MeshStandardMaterial({ color: 0xb8b8c0, roughness: 0.25, metalness: 0.85 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(o.length, 0.5, o.width), bodyMat);
+  body.position.y = 0.55; body.castShadow = true; body.receiveShadow = true; car.add(body);
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(o.length * 0.95, 0.1, o.width * 0.95), bodyMat);
+  hood.position.y = 0.82; hood.castShadow = true; car.add(hood);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(o.length * 0.55, 0.6, o.width * 0.9), cabinMat);
+  cabin.position.set(-0.1, 1.15, 0); cabin.castShadow = true; car.add(cabin);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(o.length * 0.55, 0.05, o.width * 0.9), bodyMat);
+  roof.position.set(-0.1, 1.48, 0); roof.castShadow = true; car.add(roof);
+  const bumperF = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, o.width), chromeMat);
+  bumperF.position.set(o.length / 2, 0.45, 0); car.add(bumperF);
+  const bumperR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, o.width), chromeMat);
+  bumperR.position.set(-o.length / 2, 0.45, 0); car.add(bumperR);
+  // Wheels.
+  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 18);
+  for (const [wx, wz] of [[o.length * 0.35, o.width * 0.45], [o.length * 0.35, -o.width * 0.45], [-o.length * 0.35, o.width * 0.45], [-o.length * 0.35, -o.width * 0.45]]) {
+    const w = new THREE.Mesh(wheelGeo, tireMat);
+    w.rotation.z = Math.PI / 2;
+    w.position.set(wx, 0.35, wz); w.castShadow = true; car.add(w);
+  }
+  // Headlights (forward-facing emissive disks).
+  for (const wz of [-0.55, 0.55]) {
+    const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 14),
+      new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffe8a0, emissiveIntensity: o.idling ? 2.5 : 0.4 }));
+    hl.rotation.z = Math.PI / 2; hl.position.set(o.length / 2 + 0.02, 0.55, wz); car.add(hl);
+  }
+
+  World.add(car);
+  Colliders.addBoxBySize(x, 0.6, z, o.length + 0.2, 1.2, o.width + 0.2);
+  Colliders.addBoxBySize(x, 1.15, z, o.length * 0.55, 0.7, o.width);
+  return car;
+}
+
+// ─── ZONE 8: BAKERY + GNUCCI'S CAR ─────────────────────────────────────────
+// Bakery storefront sits inside the west facade (replacing one of the
+// generic brick storefronts). Warm glow inside; the door faces the street.
+// Gnucci's idling black sedan is parked across the road from the bakery.
+function buildBakeryAndCar() {
+  // Bakery footprint: x∈[-25, -16], z∈[20, 28], floor y=0, ceiling y=4.
+  const BX1 = -25, BX2 = -16, BZ1 = 20, BZ2 = 28;
+  const cx = (BX1 + BX2) / 2, cz = (BZ1 + BZ2) / 2;
+  const w = BX2 - BX1, d = BZ2 - BZ1;
+
+  // Floor + ceiling.
+  addBox(cx, 0.04, cz, w, 0.08, d, MATS.wood, { cast: false });
+  addBox(cx, 4.0, cz, w, 0.2, d, MATS.plaster, { cast: false });
+
+  // Walls: storefront south wall (z=20) has a door + display windows.
+  // South wall split: solid corners with a wide glass+door opening at x∈[-23,-18].
+  addBox((BX1 + -23) / 2, 2.0, BZ1, -23 - BX1, 4.0, 0.2, MATS.brick);
+  addBox((BX2 + -18) / 2, 2.0, BZ1, BX2 - -18, 4.0, 0.2, MATS.brick);
+  // Header above the opening.
+  addBox((-23 + -18) / 2, 3.65, BZ1, 5, 0.7, 0.2, MATS.brick);
+  // Sill below the windows (low knee-wall).
+  addBox((-23 + -19.5) / 2, 0.4, BZ1, 3.5, 0.8, 0.2, MATS.brick);
+  // Display glass panes.
+  const paneMat = MATS.glass;
+  const pane1 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.2, 0.04), paneMat);
+  pane1.position.set((-23 + -19.5) / 2, 1.9, BZ1 + 0.01); World.add(pane1);
+  // Door opening at x∈[-19.5, -18] kept open for the player to enter.
+
+  // North, east, west walls.
+  addBox(cx, 2.0, BZ2, w, 4.0, 0.2, MATS.brick);
+  addBox(BX1, 2.0, cz, 0.2, 4.0, d, MATS.brick);
+  addBox(BX2, 2.0, cz, 0.2, 4.0, d, MATS.brick);
+
+  // Sign above the storefront — "AURELIO'S BAKERY".
+  addSign(-20.5, 4.5, BZ1 + 0.13, 5.5, 1.0, '+z', "AURELIO'S BAKERY", { bg: '#3a1a08', fg: '#ffd680', font: 'bold 90px serif', sub: 'EST. 1948', subFont: 'italic 30px serif' });
+  // Awning (red striped sloping panel).
+  const awning = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.08, 1.2),
+    new THREE.MeshStandardMaterial({ color: 0x801818, roughness: 0.9, side: THREE.DoubleSide }));
+  awning.position.set(-20.5, 4.2, BZ1 + 0.7); awning.rotation.x = -0.18; awning.castShadow = true;
+  World.add(awning);
+
+  // Interior furniture: display counter, shelves, oven hint.
+  addBox(-21, 1.0, 24, 4.0, 1.0, 0.8, MATS.wood);
+  addBox(-21, 1.55, 24, 4.0, 0.05, 0.85, MATS.metal, { collide: false });
+  // Wood bread loaves on counter.
+  for (let i = 0; i < 5; i++) {
+    addDecor(-22.5 + i * 0.7, 1.62, 24, 0.4, 0.18, 0.25, MATS.wood);
+  }
+  // Tall shelves at the back.
+  addBox(-22.5, 1.5, 27.0, 1.0, 3.0, 0.6, MATS.wood);
+  addBox(-18.5, 1.5, 27.0, 1.0, 3.0, 0.6, MATS.wood);
+  // Oven box.
+  addBox(-23.5, 1.0, 26.0, 1.5, 2.0, 1.0, MATS.metal);
+  const ovenGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x300a04, emissive: 0xff5020, emissiveIntensity: 2.0, roughness: 0.4 }));
+  ovenGlow.position.set(-22.74, 1.0, 26.0); ovenGlow.rotation.y = Math.PI / 2; World.add(ovenGlow);
+
+  // Warm interior lights.
+  const warm1 = new THREE.PointLight(0xffaa55, 1.8, 14, 1.5);
+  warm1.position.set(-20, 3.5, 23); warm1.castShadow = true; warm1.shadow.bias = -0.0005;
+  World.add(warm1); WorldState.bakeryLights.push(warm1);
+  const warm2 = new THREE.PointLight(0xffcc88, 1.4, 10, 1.6);
+  warm2.position.set(-22, 3.0, 26); World.add(warm2); WorldState.bakeryLights.push(warm2);
+  const ovenL = new THREE.PointLight(0xff5020, 1.1, 5, 2.0);
+  ovenL.position.set(-22.5, 1.0, 26); World.add(ovenL); WorldState.bakeryLights.push(ovenL);
+
+  // Civilian shopkeeper inside (decorative humanoid).
+  const keeper = makeHumanoid(HUMANOID_PRESETS.shopkeeper);
+  keeper.position.set(-21, 0, 24.7);
+  keeper.rotation.y = 0;
+  World.add(keeper);
+
+  // Bakery zone trigger.
+  Triggers.add('bakery',
+    new THREE.Vector3(BX1 + 0.3, 0,   BZ1 + 0.3),
+    new THREE.Vector3(BX2 - 0.3, 3.0, BZ2 - 0.3));
+
+  // ── Gnucci's car: idling east side of the street ──
+  const car = spawnParkedCar(14, 0, 7.5, Math.PI * 0.95, 0x0a0a0c, { idling: true });
+  WorldState.car = car;
+  // Exhaust smoke from the tailpipe.
+  const exhaust = makeSmokeSystem(28);
+  exhaust.points.position.set(14 + Math.cos(Math.PI * 0.95) * -2.3, 0.35, 7.5 + Math.sin(Math.PI * 0.95) * -2.3);
+  exhaust.points.material.opacity = 0.4; exhaust.points.material.size = 0.5;
+  World.add(exhaust.points);
+  WorldState.smokeSystems.push(exhaust);
+  // Underglow from idling.
+  const idleGlow = new THREE.PointLight(0xff8030, 0.5, 4, 2.0);
+  idleGlow.position.set(14, 0.2, 7.5); World.add(idleGlow);
+
+  // Tag-name sign behind the car so it reads as "Gnucci".
+  addSign(14, 2.0, 5.6 - 0.05, 1.8, 0.4, '+z', "GNUCCI'S", { bg: '#1a0606', fg: '#c84030', font: 'bold 110px serif' });
+}
+
 
 // ─── 11. ENGINE / MAIN ───────────────────────────────────────────────────────
 scene.background = buildSkybox();
 addLights();
-buildTestRoom();
+buildWorld();
 playerInit();
-HUD.setObjective('TEST ROOM · CLICK TO PLAY');
+HUD.setObjective(ZONE_OBJECTIVES.apartment);
 HUD.setWeapon('UNARMED', '— / —');
+Audio.startFireCrackle();
 
 const clock = new THREE.Clock();
 let acc = 0;
 const STEP = 1 / 120;
+let elapsed = 0;
 
 function frame() {
   let dt = clock.getDelta();
   if (dt > 0.1) dt = 0.1;
   acc += dt;
   while (acc >= STEP) { playerUpdate(STEP); acc -= STEP; }
+  elapsed += dt;
+  animateFires(elapsed, dt);
+  animateFlickerLights(elapsed);
+  animateSmoke(dt);
+  triggersUpdate();
   HUD.update(dt);
   renderer.render(scene, camera);
 }
