@@ -69,7 +69,7 @@ const climbAll = await evalExpr(`(() => {
       const footY = G.Player.pos.y - G.Player._eyeH;
       if (footY > maxFootY) maxFootY = footY;
       if (footY < maxFootY - 0.05) regressions++;
-      if (i % 30 === 0) path.push({ t:+(i*dt).toFixed(2), y:+footY.toFixed(2), z:+G.Player.pos.z.toFixed(2), og:G.Player.onGround });
+      if (i % 15 === 0) path.push({ t:+(i*dt).toFixed(2), y:+footY.toFixed(2), z:+G.Player.pos.z.toFixed(2), og:G.Player.onGround });
     }
     const finalFootY = +(G.Player.pos.y - G.Player._eyeH).toFixed(3);
     results.push({
@@ -83,7 +83,7 @@ const climbAll = await evalExpr(`(() => {
 })()`);
 console.log('CLIMB (per flight):');
 for (const r of climbAll) console.log(' ', r.flight, JSON.stringify({ start:r.startFootY, target:r.targetTopY, max:r.maxFootY, final:r.finalFootY, reachedTop:r.reachedTop, regressions:r.regressions, usedSpace:r.usedSpace }));
-for (const r of climbAll) if (!r.reachedTop) console.log('  DETAIL', r.flight, JSON.stringify(r.path));
+for (const r of climbAll) console.log('  DETAIL', r.flight, JSON.stringify(r.path));
 
 // Diagnostic: dump nearby colliders at the F2 stuck position to find blocker.
 const dump = await evalExpr(`(() => {
