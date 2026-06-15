@@ -1774,10 +1774,14 @@ function addLights() {
   const moon = new THREE.DirectionalLight(0xbcc8ee, 0.85);
   moon.position.set(-30, 50, -20);
   moon.castShadow = true;
-  moon.shadow.mapSize.set(1024, 1024);
+  // PERF (task 25): moon shadow map halved (1024→512) and frustum tightened on
+  // the y-axis (was top/bot ±30 covering empty sky). Reverts crisp far-cast
+  // shadow detail in exchange for a roughly 4× cheaper depth pass each frame
+  // — the dominant cost in the open balcony/street/bakery views.
+  moon.shadow.mapSize.set(512, 512);
   moon.shadow.camera.left = -30; moon.shadow.camera.right = 30;
-  moon.shadow.camera.top = 30;  moon.shadow.camera.bottom = -30;
-  moon.shadow.camera.near = 0.5; moon.shadow.camera.far = 120;
+  moon.shadow.camera.top = 24;  moon.shadow.camera.bottom = -20;
+  moon.shadow.camera.near = 0.5; moon.shadow.camera.far = 100;
   moon.shadow.bias = -0.0005;
   scene.add(moon);
 
