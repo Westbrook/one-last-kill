@@ -2121,20 +2121,42 @@ function addSign(cx, cy, cz, w, h, faceNormal, text, opts) {
 
 // Dispatcher: builds the full traversable world.
 // PERF: zone-visibility culling. After each zone is built we snapshot which
-// World children belong to it; ZoneCull.setActive(zone) then hides meshes for
+// World children belong to it; ZoneCull.setHidden(zone) then hides meshes for
 // zones the player has permanently left via one-way gates. Colliders are
 // untouched (they're cheap and a few are referenced by raycasts).
+// PERF: lightsByZone tracks every PointLight introduced by a zone (including
+// those nested inside fire / car groups). setActiveZone(zone) toggles each
+// zone's PointLights based on ZONE_ADJACENT_LIGHTS so only the rooms the
+// player can realistically see are lit per frame — three.js's per-fragment
+// light loop iterates only visible lights, so this is the dominant FPS lever.
+// Mesh visibility is NOT touched here (sightlines through windows stay).
 const ZoneCull = {
   byZone: {},
+  lightsByZone: {},
   capture(zone, before) {
     const arr = [];
-    for (let i = before; i < World.children.length; i++) arr.push(World.children[i]);
+    const lights = [];
+    for (let i = before; i < World.children.length; i++) {
+      const c = World.children[i];
+      arr.push(c);
+      c.traverse(o => { if (o.isLight) lights.push(o); });
+    }
     this.byZone[zone] = arr;
+    this.lightsByZone[zone] = lights;
   },
   setHidden(zone, hidden) {
     const arr = this.byZone[zone];
     if (!arr) return;
     for (const m of arr) m.visible = !hidden;
+  },
+  setActiveZone(zone) {
+    const list = ZONE_ADJACENT_LIGHTS[zone] || [zone];
+    const set = new Set(list);
+    for (const z in this.lightsByZone) {
+      const want = set.has(z);
+      const arr = this.lightsByZone[z];
+      for (const l of arr) l.visible = want;
+    }
   },
 };
 // Forward zone progression — when player enters key, hide all entries listed.
@@ -2144,6 +2166,20 @@ const ZONE_HIDE_ON_ENTER = {
   scaffolding: ['roof'],
   street:      ['apartment', 'neighbor', 'balcony', 'stairwell', 'roof', 'scaffolding'],
   bakery:      ['apartment', 'neighbor', 'balcony', 'stairwell', 'roof', 'scaffolding'],
+};
+// For each zone, the set of zones whose PointLights stay LIT while the player
+// is here. Includes the current zone and zones genuinely visible from it via
+// sightlines (broken walls, doorways, scaffold drops). Conservative — when in
+// doubt the next/previous zone stays lit so the transition does not pop.
+const ZONE_ADJACENT_LIGHTS = {
+  apartment:   ['apartment', 'neighbor'],
+  neighbor:    ['neighbor', 'apartment', 'balcony'],
+  balcony:     ['balcony', 'neighbor', 'stairwell'],
+  stairwell:   ['stairwell', 'balcony', 'roof'],
+  roof:        ['roof', 'stairwell', 'scaffolding'],
+  scaffolding: ['scaffolding', 'roof', 'street'],
+  street:      ['street', 'scaffolding', 'bakery'],
+  bakery:      ['bakery', 'street'],
 };
 function buildZone(zone, fn) {
   const before = World.children.length;
