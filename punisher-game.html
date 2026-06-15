@@ -863,6 +863,78 @@ const _CG = {
   unitBox:    new THREE.BoxGeometry(1, 1, 1),
 };
 
+// Shared building-detail geometries — sills, lintels, trim bands, conduit,
+// junction boxes, parapet caps. Unit-size primitives are transformed and
+// pushed into per-material buckets via pushDecor(); buildZone() then calls
+// flushDecor() once per zone to MERGE each bucket into a SINGLE BufferGeometry,
+// collapsing what would be ~40 individual meshes into 1-3 draw calls/zone.
+// No colliders are emitted so the walkable layout cannot regress.
+const _BG = {
+  unitBox: new THREE.BoxGeometry(1, 1, 1),
+  pipe:    new THREE.CylinderGeometry(1, 1, 1, 12),
+};
+const _decorBuckets = new Map();
+const _decorMat4    = new THREE.Matrix4();
+const _decorScale   = new THREE.Matrix4();
+const _decorRot     = new THREE.Matrix4();
+const _decorTrans   = new THREE.Matrix4();
+function pushDecor(geo, mat, cx, cy, cz, sx, sy, sz, rotY = 0) {
+  const g = geo.clone();
+  _decorScale.makeScale(sx, sy, sz);
+  _decorRot.makeRotationY(rotY);
+  _decorTrans.makeTranslation(cx, cy, cz);
+  _decorMat4.copy(_decorTrans).multiply(_decorRot).multiply(_decorScale);
+  g.applyMatrix4(_decorMat4);
+  let bucket = _decorBuckets.get(mat);
+  if (!bucket) { bucket = []; _decorBuckets.set(mat, bucket); }
+  bucket.push(g);
+}
+function _mergeAttrGeometries(geos) {
+  let totalVerts = 0, totalIdx = 0;
+  for (const g of geos) {
+    totalVerts += g.attributes.position.count;
+    totalIdx   += g.index ? g.index.count : g.attributes.position.count;
+  }
+  const positions = new Float32Array(totalVerts * 3);
+  const normals   = new Float32Array(totalVerts * 3);
+  const uvs       = new Float32Array(totalVerts * 2);
+  const indices   = totalVerts > 65535 ? new Uint32Array(totalIdx) : new Uint16Array(totalIdx);
+  let pO = 0, nO = 0, uO = 0, iO = 0, vBase = 0;
+  for (const g of geos) {
+    const p = g.attributes.position.array;
+    const n = g.attributes.normal.array;
+    const u = g.attributes.uv.array;
+    positions.set(p, pO); pO += p.length;
+    normals.set(n, nO);   nO += n.length;
+    uvs.set(u, uO);       uO += u.length;
+    const idx = g.index ? g.index.array : null;
+    if (idx) {
+      for (let k = 0; k < idx.length; k++) indices[iO++] = idx[k] + vBase;
+    } else {
+      for (let k = 0; k < g.attributes.position.count; k++) indices[iO++] = k + vBase;
+    }
+    vBase += g.attributes.position.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  out.setAttribute('normal',   new THREE.BufferAttribute(normals, 3));
+  out.setAttribute('uv',       new THREE.BufferAttribute(uvs, 2));
+  out.setIndex(new THREE.BufferAttribute(indices, 1));
+  out.computeBoundingSphere();
+  return out;
+}
+function flushDecor() {
+  for (const [mat, geos] of _decorBuckets) {
+    if (geos.length === 0) continue;
+    const merged = _mergeAttrGeometries(geos);
+    const mesh = new THREE.Mesh(merged, mat);
+    mesh.castShadow = false; mesh.receiveShadow = true;
+    World.add(mesh);
+    for (const g of geos) g.dispose();
+  }
+  _decorBuckets.clear();
+}
+
 function makeHumanoid(opts = {}) {
   const o = Object.assign({
     skin: '#caa590', shirt: '#3a3a44', shirtAccent: '#1a1a1f',
@@ -2076,6 +2148,7 @@ const ZONE_HIDE_ON_ENTER = {
 function buildZone(zone, fn) {
   const before = World.children.length;
   fn();
+  flushDecor();
   ZoneCull.capture(zone, before);
 }
 function buildWorld() {
@@ -2121,6 +2194,13 @@ function buildPlayerApartment() {
   addWallX(cx, FY, FZ2, w, H, WALL_T, MATS.wallpaper);
   // East wall (shared with neighbor) with a broken-wall opening.
   addWallZ(FX2, FY, cz, d, H, WALL_T, MATS.plaster, { zStart: -7.5, zEnd: -4.5, headerH: 0.6, sillH: 0.5 });
+
+  // Dark wood baseboard trim along the three solid walls — single thin strip
+  // each (decor, shared unit box) reads as a 50s-era apartment skirting board
+  // without adding meaningful drawcall pressure to the FPS-tightest zone.
+  pushDecor(_BG.unitBox, MATS.wood, cx, FY + 0.07, FZ1 + 0.12, w - 0.2, 0.14, 0.04);
+  pushDecor(_BG.unitBox, MATS.wood, cx, FY + 0.07, FZ2 - 0.12, w - 0.2, 0.14, 0.04);
+  pushDecor(_BG.unitBox, MATS.wood, FX1 + 0.12, FY + 0.07, cz, 0.04, 0.14, d - 0.2);
 
   // Furniture: bed (frame + mattress)
   addBox(-13.5, FY + 0.25, -8.0, 2.1, 0.5, 1.2, MATS.wood);
@@ -2193,6 +2273,16 @@ function buildNeighborApartment() {
   addWallX(cx, FY, FZ2, w, H, WALL_T, MATS.brick);
   // East wall: opening to the balcony at z∈[-7,-3].
   addWallZ(FX2, FY, cz, d, H, WALL_T, MATS.brick, { zStart: -7, zEnd: -3, headerH: 0.5, sillH: 0 });
+
+  // Painted-wood baseboard along the three solid walls + balcony-door jamb
+  // trim (decor, shared unit box). Same cheap pattern as the player's unit
+  // but with the wood material reading darker against the brick walls here.
+  pushDecor(_BG.unitBox, MATS.wood, cx, FY + 0.07, FZ1 + 0.12, w - 0.2, 0.14, 0.04);
+  pushDecor(_BG.unitBox, MATS.wood, cx, FY + 0.07, FZ2 - 0.12, w - 0.2, 0.14, 0.04);
+  pushDecor(_BG.unitBox, MATS.wood, FX1 + 0.12, FY + 0.07, cz, 0.04, 0.14, d - 0.2);
+  // Door jamb (concrete trim) flanking the balcony opening on the east wall.
+  pushDecor(_BG.unitBox, MATS.concrete, FX2 - 0.13, FY + 1.0, -7, 0.05, 2.0, 0.10);
+  pushDecor(_BG.unitBox, MATS.concrete, FX2 - 0.13, FY + 1.0, -3, 0.05, 2.0, 0.10);
 
   // Heavy dining table in the middle.
   addBox(3.0, FY + 0.45, -5.0, 2.0, 0.08, 1.0, MATS.wood);
@@ -2519,6 +2609,22 @@ function buildRoof() {
   // tar-roof edge reads cleanly where the stairwell exits onto the roof.
   addBox(RX1, RY - 0.05, -7.0, 0.1, 0.1, 4.0, MATS.concrete, { collide: false });
 
+  // Parapet caps — thin concrete coping sitting on top of each brick parapet
+  // gives the wall a finished edge instead of bare brick. Pure decor (no
+  // collider), shared unit box; matches the gaps in each parapet so we don't
+  // cap the door / scaffold openings.
+  const capY = RY + PH + 0.04, capT = 0.10, capH = 0.08;
+  // North parapet — full span.
+  pushDecor(_BG.unitBox, MATS.concrete, cx, capY, RZ1, w + capT, capH, capT);
+  // West parapet (split around door opening z∈[-9,-5]).
+  pushDecor(_BG.unitBox, MATS.concrete, RX1, capY, (RZ1 + -9) / 2, capT, capH, -9 - RZ1);
+  pushDecor(_BG.unitBox, MATS.concrete, RX1, capY, (-5 + RZ2) / 2, capT, capH, RZ2 - -5);
+  // East parapet — full span.
+  pushDecor(_BG.unitBox, MATS.concrete, RX2, capY, cz, capT, capH, d);
+  // South parapet (split around scaffold gap x∈[-3,3]).
+  pushDecor(_BG.unitBox, MATS.concrete, (RX1 + -3) / 2, capY, RZ2, -3 - RX1, capH, capT);
+  pushDecor(_BG.unitBox, MATS.concrete, (3 + RX2) / 2, capY, RZ2, RX2 - 3, capH, capT);
+
   // Water tower: wooden barrel on a metal scaffold.
   const towerY = RY + 0.1;
   const legs = [[-9, -3], [-7, -3], [-9, -1], [-7, -1]];
@@ -2693,12 +2799,34 @@ function buildStreet() {
     addBox(fx, 4.0, 22.0, 9.0, 8.0, 2.0, MATS.brick);
     // Upper-story windows (canvas-painted decor).
     for (let w = 0; w < 3; w++) {
+      const wx = fx - 3.0 + w * 3.0;
       const winTex = makeSignTexture('', { bg: '#3a3a55', fg: '#aac0e0', font: 'bold 80px serif' });
       const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.4),
         new THREE.MeshStandardMaterial({ map: winTex, emissive: 0x404a70, emissiveIntensity: 0.85, roughness: 0.6 }));
-      win.position.set(fx - 3.0 + w * 3.0, 5.5, 20.95);
+      win.position.set(wx, 5.5, 20.95);
       World.add(win);
+      // Concrete sill below + lintel above + metal frame (decor only — shared
+      // unitBox geometry scaled per-instance keeps the marginal cost flat).
+      pushDecor(_BG.unitBox, MATS.concrete, wx, 4.74, 20.90, 1.45, 0.10, 0.22);
+      pushDecor(_BG.unitBox, MATS.concrete, wx, 6.30, 20.90, 1.35, 0.14, 0.18);
+      // Window frame — four thin metal rectangles around the pane.
+      pushDecor(_BG.unitBox, MATS.metal, wx, 6.21, 20.93, 1.16, 0.04, 0.05);
+      pushDecor(_BG.unitBox, MATS.metal, wx, 4.79, 20.93, 1.16, 0.04, 0.05);
+      pushDecor(_BG.unitBox, MATS.metal, wx - 0.55, 5.50, 20.93, 0.04, 1.40, 0.05);
+      pushDecor(_BG.unitBox, MATS.metal, wx + 0.55, 5.50, 20.93, 0.04, 1.40, 0.05);
     }
+    // Horizontal trim band at floor-line (between ground floor and upper),
+    // and a parapet cap along the facade top.
+    pushDecor(_BG.unitBox, MATS.concrete, fx, 4.30, 20.85, 9.10, 0.18, 0.30);
+    pushDecor(_BG.unitBox, MATS.concrete, fx, 7.92, 20.85, 9.10, 0.22, 0.34);
+    // Vertical drainpipe down the right edge of every facade with a wall
+    // bracket halfway up — cylinder shares the cached _BG.pipe geometry.
+    const dpx = fx + 4.0;
+    pushDecor(_BG.pipe, MATS.metal, dpx, 4.0, 20.84, 0.08, 7.0, 0.08);
+    pushDecor(_BG.unitBox, MATS.metal, dpx, 5.4, 20.80, 0.22, 0.10, 0.18);
+    pushDecor(_BG.unitBox, MATS.metal, dpx, 2.6, 20.80, 0.22, 0.10, 0.18);
+    // A small grey utility box bolted near the corner — silhouette break.
+    pushDecor(_BG.unitBox, MATS.metal, fx - 4.1, 2.6, 20.85, 0.28, 0.42, 0.20);
   }
 
   // The apartment-level south wall already exists at z=0 (y=4..7.4). Add a
@@ -2715,6 +2843,33 @@ function buildStreet() {
   addBox( 19, 2.0, 2.0, 0.2, 4.0, 4.0, MATS.brick);
   // North-side ground level wall to close the building off.
   addBox(2.0, 2.0, -10.0, 34, 4.0, 0.2, MATS.brick);
+
+  // Facade-floor trim bands on the apartment-building south face — two
+  // shallow concrete belts visually separate apartment floor and roof level.
+  // y=4 is skipped because the wrap-walkway deck sits there; trim at y=7.4
+  // and y=13.95 reads from both balcony walkway and street POV. Pure decor
+  // (no collider), shared unit box, narrow depth so it doesn't intrude into
+  // the walkway clearance.
+  for (const ty of [7.4, 13.95]) {
+    pushDecor(_BG.unitBox, MATS.concrete, 2.0, ty, 0.15, 34.2, 0.18, 0.06);
+  }
+  // Two vertical drainpipes on the south facade — the player passes this face
+  // on the wrap-walkway, so cheap conduit detail here pays off in close-range
+  // readability. Positioned at x values that are NOT on the wrap (x=-12 sits
+  // between the apartment opening and stairwell door; x=18.4 is east of the
+  // wrap which terminates at x=13) so they don't intrude into the walkable
+  // clearance. Mid-wall brackets are flush against the brick.
+  for (const px of [-12.0, 18.4]) {
+    pushDecor(_BG.pipe, MATS.metal, px, 7.0, 0.20, 0.10, 13.8, 0.10);
+    for (const by of [2.5, 6.2, 10.0, 12.8]) {
+      pushDecor(_BG.unitBox, MATS.metal, px, by, 0.17, 0.26, 0.10, 0.18);
+    }
+  }
+  // Junction box bolted to the building below the east pipe (east of the
+  // wrap walkway so it doesn't collide with traversal).
+  pushDecor(_BG.unitBox, MATS.metal, 18.4 + 0.4, 1.4, 0.17, 0.42, 0.55, 0.22);
+  // Vintage hand-painted ghost sign on the apartment building's upper face.
+  addSign(-7.0, 11.6, 0.13, 7.0, 1.2, '+z', 'TRATTORIA', { bg: '#2a0e08', fg: '#d8a060', font: 'bold 110px serif', sub: 'VINO & PANE', subFont: 'italic 36px serif' });
 
   // Streetlights along the road centerline.
   for (let i = 0; i < 5; i++) {
@@ -2924,6 +3079,27 @@ function buildBakeryAndCar() {
     new THREE.MeshStandardMaterial({ color: 0x801818, roughness: 0.9, side: THREE.DoubleSide }));
   awning.position.set(-20.5, 4.2, BZ1 + 0.7); awning.rotation.x = -0.18; awning.castShadow = true;
   World.add(awning);
+  // Awning brackets — small metal triangles at each end of the awning.
+  for (const bx of [-23.0, -18.0]) {
+    pushDecor(_BG.unitBox, MATS.metal, bx, 4.10, BZ1 + 0.18, 0.06, 0.40, 0.06);
+  }
+  // Storefront brick frame: concrete sill (display window base), lintel under
+  // the awning, and a thin metal display-window frame around the pane. All
+  // decor — no colliders, shared unitBox geometry.
+  pushDecor(_BG.unitBox, MATS.concrete, (-23 + -20.5) / 2, 0.90, BZ1 + 0.14, 2.6, 0.18, 0.24);
+  pushDecor(_BG.unitBox, MATS.concrete, (-23 + -17) / 2, 4.05, BZ1 + 0.14, 6.2, 0.18, 0.28);
+  // Display-window metal frame (top/bottom/left/right thin bars around pane1).
+  const pcx = (-23 + -20.5) / 2;
+  pushDecor(_BG.unitBox, MATS.metal, pcx, 1.02, BZ1 + 0.04, 2.55, 0.05, 0.06);
+  pushDecor(_BG.unitBox, MATS.metal, pcx, 2.94, BZ1 + 0.04, 2.55, 0.05, 0.06);
+  pushDecor(_BG.unitBox, MATS.metal, pcx - 1.27, 1.98, BZ1 + 0.04, 0.05, 1.95, 0.06);
+  pushDecor(_BG.unitBox, MATS.metal, pcx + 1.27, 1.98, BZ1 + 0.04, 0.05, 1.95, 0.06);
+  // Door-jamb trim on either side of the entry opening (decorative).
+  pushDecor(_BG.unitBox, MATS.concrete, -20.55, 1.9, BZ1 + 0.12, 0.10, 3.5, 0.22);
+  pushDecor(_BG.unitBox, MATS.concrete, -16.95, 1.9, BZ1 + 0.12, 0.10, 3.5, 0.22);
+  // Drainpipe on the east jamb running floor → roof, with two brackets.
+  pushDecor(_BG.pipe, MATS.metal, -16.30, 2.0, BZ1 + 0.18, 0.07, 4.0, 0.07);
+  for (const by of [1.2, 3.2]) pushDecor(_BG.unitBox, MATS.metal, -16.30, by, BZ1 + 0.15, 0.20, 0.08, 0.16);
 
   // Interior furniture: display counter, shelves, oven hint. The counter is
   // narrowed and shifted west (x∈[-23,-21]) so the corridor east of it
