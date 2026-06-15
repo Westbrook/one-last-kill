@@ -1774,14 +1774,10 @@ function addLights() {
   const moon = new THREE.DirectionalLight(0xbcc8ee, 0.85);
   moon.position.set(-30, 50, -20);
   moon.castShadow = true;
-  // PERF (task 25): moon shadow map halved (1024→512) and frustum tightened on
-  // the y-axis (was top/bot ±30 covering empty sky). Reverts crisp far-cast
-  // shadow detail in exchange for a roughly 4× cheaper depth pass each frame
-  // — the dominant cost in the open balcony/street/bakery views.
-  moon.shadow.mapSize.set(512, 512);
+  moon.shadow.mapSize.set(1024, 1024);
   moon.shadow.camera.left = -30; moon.shadow.camera.right = 30;
-  moon.shadow.camera.top = 24;  moon.shadow.camera.bottom = -20;
-  moon.shadow.camera.near = 0.5; moon.shadow.camera.far = 100;
+  moon.shadow.camera.top = 30;  moon.shadow.camera.bottom = -30;
+  moon.shadow.camera.near = 0.5; moon.shadow.camera.far = 120;
   moon.shadow.bias = -0.0005;
   scene.add(moon);
 
@@ -2179,17 +2175,18 @@ const ZONE_HIDE_ON_ENTER = {
   bakery:      ['apartment', 'neighbor', 'balcony', 'stairwell', 'roof', 'scaffolding'],
 };
 // For each zone, the set of zones whose PointLights stay LIT while the player
-// is here. Includes the current zone and zones genuinely visible from it via
-// sightlines (broken walls, doorways, scaffold drops). Conservative — when in
-// doubt the next/previous zone stays lit so the transition does not pop.
+// is here. Tight — only the current zone plus one neighbour visible through
+// a doorway/broken wall. The fragment shader iterates EVERY visible light per
+// pixel, so dropping from ~20 to ~10 lights typically buys 1.5–2× fill rate
+// on the heavy open-air views (balcony, street, bakery).
 const ZONE_ADJACENT_LIGHTS = {
-  apartment:   ['apartment', 'neighbor'],
-  neighbor:    ['neighbor', 'apartment', 'balcony'],
-  balcony:     ['balcony', 'neighbor', 'stairwell'],
-  stairwell:   ['stairwell', 'balcony', 'roof'],
-  roof:        ['roof', 'stairwell', 'scaffolding'],
-  scaffolding: ['scaffolding', 'roof', 'street'],
-  street:      ['street', 'scaffolding', 'bakery'],
+  apartment:   ['apartment'],
+  neighbor:    ['neighbor', 'apartment'],
+  balcony:     ['balcony', 'neighbor'],
+  stairwell:   ['stairwell', 'balcony'],
+  roof:        ['roof', 'stairwell'],
+  scaffolding: ['scaffolding', 'roof'],
+  street:      ['street', 'scaffolding'],
   bakery:      ['bakery', 'street'],
 };
 function buildZone(zone, fn) {
