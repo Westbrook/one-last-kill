@@ -2541,6 +2541,10 @@ function buildStairwell() {
   // list (the weapon raycast layer — shots cannot pass through stairs).
   // Stringers fill the side gaps between lane and adjacent wall/lane so the
   // player capsule cannot squeeze through.
+  // PERF: treads, stringers, and landings push into the shared wood/concrete
+  // decor buckets and emit colliders separately, so 4 flights × (11 treads +
+  // up-to-2 stringers) + 4 landings collapse into one merged mesh per
+  // material instead of ~60 individual draw calls in this zone.
   function flight(y0, y1, xLane, zStart, zEnd, leftFace, rightFace) {
     const steps = 11;
     const rise = (y1 - y0) / steps;
@@ -2550,7 +2554,8 @@ function buildStairwell() {
       const zc = zStart + dir * (treadLen * (i + 0.5));
       const stepTop = y0 + rise * (i + 1);
       const blockH = stepTop - y0;
-      addBox(xLane, y0 + blockH / 2, zc, 2.4, blockH, treadLen, MATS.wood);
+      pushDecor(_BG.unitBox, MATS.wood, xLane, y0 + blockH / 2, zc, 2.4, blockH, treadLen);
+      Colliders.addBoxBySize(xLane, y0 + blockH / 2, zc, 2.4, blockH, treadLen);
     }
     // Side stringers (full flight height/length, span gap to adjacent feature).
     const yc = (y0 + y1) / 2, hH = (y1 - y0);
@@ -2558,11 +2563,13 @@ function buildStairwell() {
     const laneW = xLane - 1.2, laneE = xLane + 1.2;
     if (laneW - leftFace > 0.01) {
       const w = laneW - leftFace;
-      addBox(leftFace + w / 2, yc, zMid, w, hH, zLen, MATS.wood, { cast: false });
+      pushDecor(_BG.unitBox, MATS.wood, leftFace + w / 2, yc, zMid, w, hH, zLen);
+      Colliders.addBoxBySize(leftFace + w / 2, yc, zMid, w, hH, zLen);
     }
     if (rightFace - laneE > 0.01) {
       const w = rightFace - laneE;
-      addBox(laneE + w / 2, yc, zMid, w, hH, zLen, MATS.wood, { cast: false });
+      pushDecor(_BG.unitBox, MATS.wood, laneE + w / 2, yc, zMid, w, hH, zLen);
+      Colliders.addBoxBySize(laneE + w / 2, yc, zMid, w, hH, zLen);
     }
   }
   // Landings — single full-tower-width slab. South-landing helper (used at the
@@ -2573,13 +2580,19 @@ function buildStairwell() {
   // capsule into the landing's underside and blocked the climb on F2/F4.
   // (The freed strip beneath the old overhang is filled by the flight's own
   // treads + stringers, so no new fall-through is introduced.)
-  function landingSouth(y) { addBox(cx, y - 0.05, -1.2, w, 0.1, 2.4, MATS.concrete); }
+  function landingSouth(y) {
+    pushDecor(_BG.unitBox, MATS.concrete, cx, y - 0.05, -1.2, w, 0.1, 2.4);
+    Colliders.addBoxBySize(cx, y - 0.05, -1.2, w, 0.1, 2.4);
+  }
   // North landing extends from the north wall face (z=-9.9) south to the top
   // of the lane-B flight's last tread (z=-7.95). Reaching the north wall is
   // required: without it, the player's capsule (constrained to z>=-9.58 by
   // the north wall) extends past a landing whose north edge sits at z=-9 and
   // falls straight through to the entry landing.
-  function landingNorth(y) { addBox(cx, y - 0.05, -8.925, w, 0.1, 1.95, MATS.concrete); }
+  function landingNorth(y) {
+    pushDecor(_BG.unitBox, MATS.concrete, cx, y - 0.05, -8.925, w, 0.1, 1.95);
+    Colliders.addBoxBySize(cx, y - 0.05, -8.925, w, 0.1, 1.95);
+  }
 
   // Flight 1 (y=4 → 6.4): lane A, bottom at NORTH, top at SOUTH landing.
   flight(4.0, 6.4, LANE_A, -8.6, -1.4, W_WALL_FACE, LANE_B_W);
