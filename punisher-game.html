@@ -2405,12 +2405,24 @@ function buildBalcony() {
   // East cantilever rails — now SEALED on the east side (the old stairwell
   // window has moved away). South edge stays OPEN so the cantilever joins the
   // wrap walkway as one continuous balcony surface.
+  // PERF: balusters + top rails are merged into the shared metal decor bucket
+  // (one draw call/material/zone) via pushDecor + flushDecor. Colliders are
+  // emitted separately so walkability/raycasts stay byte-identical to the
+  // previous addBox path.
   // North rail (inside, z=EZ1+0.05).
-  for (let x = EX1; x <= EX2; x += 0.6) addBox(x, BY + railH / 2, EZ1 + 0.05, postW, railH, postW, MATS.metal);
-  addBox(ecCx, BY + railH, EZ1 + 0.05, ecW, topT, 0.08, MATS.metal);
+  for (let x = EX1; x <= EX2; x += 0.6) {
+    pushDecor(_BG.unitBox, MATS.metal, x, BY + railH / 2, EZ1 + 0.05, postW, railH, postW);
+    Colliders.addBoxBySize(x, BY + railH / 2, EZ1 + 0.05, postW, railH, postW);
+  }
+  pushDecor(_BG.unitBox, MATS.metal, ecCx, BY + railH, EZ1 + 0.05, ecW, topT, 0.08);
+  Colliders.addBoxBySize(ecCx, BY + railH, EZ1 + 0.05, ecW, topT, 0.08);
   // East rail (fully closed — no doorway any more).
-  for (let z = EZ1; z <= EZ2; z += 0.6) addBox(EX2 - 0.05, BY + railH / 2, z, postW, railH, postW, MATS.metal);
-  addBox(EX2 - 0.05, BY + railH, ecCz, 0.08, topT, ecD, MATS.metal);
+  for (let z = EZ1; z <= EZ2; z += 0.6) {
+    pushDecor(_BG.unitBox, MATS.metal, EX2 - 0.05, BY + railH / 2, z, postW, railH, postW);
+    Colliders.addBoxBySize(EX2 - 0.05, BY + railH / 2, z, postW, railH, postW);
+  }
+  pushDecor(_BG.unitBox, MATS.metal, EX2 - 0.05, BY + railH, ecCz, 0.08, topT, ecD);
+  Colliders.addBoxBySize(EX2 - 0.05, BY + railH, ecCz, 0.08, topT, ecD);
   // Invisible tall boundary colliders sealing the cantilever's north and east
   // edges — the discrete post collision is too sparse for a 0.45m-radius
   // capsule to be reliably contained (matches the south-walkway treatment at
@@ -2423,10 +2435,12 @@ function buildBalcony() {
   // the entire deck. The stairwell doorway is on the building face at z=0,
   // not on this south outer rail at z=WZ2, so no gap is needed here.
   for (let x = WX1; x <= WX2; x += 0.6) {
-    addBox(x, BY + railH / 2, WZ2 - 0.05, postW, railH, postW, MATS.metal);
+    pushDecor(_BG.unitBox, MATS.metal, x, BY + railH / 2, WZ2 - 0.05, postW, railH, postW);
+    Colliders.addBoxBySize(x, BY + railH / 2, WZ2 - 0.05, postW, railH, postW);
   }
   // Continuous top rail spanning the full walkway.
-  addBox((WX1 + WX2) / 2, BY + railH, WZ2 - 0.05, WX2 - WX1, topT, 0.08, MATS.metal);
+  pushDecor(_BG.unitBox, MATS.metal, (WX1 + WX2) / 2, BY + railH, WZ2 - 0.05, WX2 - WX1, topT, 0.08);
+  Colliders.addBoxBySize((WX1 + WX2) / 2, BY + railH, WZ2 - 0.05, WX2 - WX1, topT, 0.08);
   // Invisible tall boundary collider sealing the south edge — the discrete
   // post collision is too sparse for a 0.45m-radius capsule to be reliably
   // contained, so this guarantees the player cannot fall/walk south off the
@@ -2441,13 +2455,13 @@ function buildBalcony() {
   // stairwell south wall handles the rest of the closure).
   Colliders.addBoxBySize(WX1 + 0.05, BY + 1.5, (WZ1 + WZ2) / 2, 0.1, 3.0, WZ2 - WZ1);
   // Decorative cap posts at the two termini (visible only).
-  addBox(WX2 - 0.05, BY + railH / 2, WZ1 + 0.05, postW, railH, postW, MATS.metal, { collide: false });
-  addBox(WX1 + 0.05, BY + railH / 2, WZ1 + 0.05, postW, railH, postW, MATS.metal, { collide: false });
+  pushDecor(_BG.unitBox, MATS.metal, WX2 - 0.05, BY + railH / 2, WZ1 + 0.05, postW, railH, postW);
+  pushDecor(_BG.unitBox, MATS.metal, WX1 + 0.05, BY + railH / 2, WZ1 + 0.05, postW, railH, postW);
 
   // Steel support brackets visible under the wrap walkway (decorative).
   for (let x = WX1 + 1.0; x <= WX2 - 1.0; x += 4.0) {
-    addBox(x, BY - 0.6, WZ2 - 0.1, 0.12, 1.0, 0.12, MATS.metal, { collide: false, cast: false });
-    addBox(x, BY - 0.6, WZ1 + 0.1, 0.12, 1.0, 0.12, MATS.metal, { collide: false, cast: false });
+    pushDecor(_BG.unitBox, MATS.metal, x, BY - 0.6, WZ2 - 0.1, 0.12, 1.0, 0.12);
+    pushDecor(_BG.unitBox, MATS.metal, x, BY - 0.6, WZ1 + 0.1, 0.12, 1.0, 0.12);
   }
 
   // Distant skyline silhouettes (decorative-only, no collision) — sit further
