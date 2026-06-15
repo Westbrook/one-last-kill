@@ -998,7 +998,7 @@ const Audio = (() => {
   let muted = (() => {
     try {
       const p = new URLSearchParams(location.search);
-      return p.get('mute') === '1' || p.get('mute') === 'true';
+      return p.get('mute') === '1' || p.get('mute') === 'true' || navigator.webdriver === true;
     } catch (_) { return false; }
   })();
   function ensure() {
