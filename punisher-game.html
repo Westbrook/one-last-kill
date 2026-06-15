@@ -3361,6 +3361,9 @@ const WeaponDrops = {
       if (!slot.inUse) {
         slot.inUse = true;
         slot.light.intensity = 0.45;
+        // PERF: pool lights are parked invisible at init so the fragment
+        // shader light loop only iterates slots actually carrying a drop.
+        slot.light.visible = true;
         return slot.light;
       }
     }
@@ -3384,6 +3387,7 @@ const WeaponDrops = {
         slot.inUse = false;
         light.intensity = 0;
         light.position.set(0, -200, 0);
+        light.visible = false;
         return;
       }
     }
@@ -5523,6 +5527,14 @@ Weapons.init();
 // shader variant and prevents any per-drop recompile during play. Runs once.
 WeaponDrops._initHaloPool();
 EnemyPool.init();
+// PERF: now that renderer.compile() has baked the shader variant with the
+// full pool of halo PointLights in scope, park them all invisible. They
+// re-show on demand in WeaponDrops._acquireHalo / _releaseHalo, so per-
+// fragment cost only pays for slots that are actually carrying a drop.
+for (const slot of WeaponDrops._haloPool) slot.light.visible = false;
+// PERF: kick off forward light culling now that the world is built — only
+// the apartment's adjacent zones stay lit until the player progresses.
+ZoneCull.setActiveZone('apartment');
 Audio.startFireCrackle();
 window.__punisherWeapons = Weapons;
 window.__punisherWeaponDrops = WeaponDrops;
