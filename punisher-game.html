@@ -1829,6 +1829,9 @@ function zoneChanged(zone) {
   // PERF: hide meshes from zones the player has permanently left.
   const hideList = (typeof ZONE_HIDE_ON_ENTER !== 'undefined') ? ZONE_HIDE_ON_ENTER[zone] : null;
   if (hideList) for (const z of hideList) ZoneCull.setHidden(z, true);
+  // PERF: forward light culling — only zones genuinely visible from the
+  // current one keep their PointLights lit.
+  if (typeof ZoneCull !== 'undefined' && ZoneCull.setActiveZone) ZoneCull.setActiveZone(zone);
 }
 function triggersUpdate() {
   const p = Player.pos;
