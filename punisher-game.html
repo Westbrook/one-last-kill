@@ -2163,10 +2163,14 @@ const ZoneCull = {
   },
 };
 // Forward zone progression — when player enters key, hide all entries listed.
+// PERF: hide aggressively. The balcony view in particular looks across most of
+// the world; hiding the interior zones the player has already left collapses
+// both the main pass AND the directional shadow pass for those meshes.
 const ZONE_HIDE_ON_ENTER = {
+  balcony:     ['apartment'],
   stairwell:   ['apartment', 'neighbor'],
-  roof:        ['balcony', 'stairwell'],
-  scaffolding: ['roof'],
+  roof:        ['apartment', 'neighbor', 'balcony', 'stairwell'],
+  scaffolding: ['apartment', 'neighbor', 'balcony', 'stairwell', 'roof'],
   street:      ['apartment', 'neighbor', 'balcony', 'stairwell', 'roof', 'scaffolding'],
   bakery:      ['apartment', 'neighbor', 'balcony', 'stairwell', 'roof', 'scaffolding'],
 };
