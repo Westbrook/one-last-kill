@@ -1,0 +1,18 @@
+SPDX-License-Identifier: CC0-1.0
+
+The WAV sound assets in this directory and its subdirectories are derived from
+sources explicitly offered under Creative Commons CC0 1.0 Universal.
+
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Original authors: Kenney, Jeffrey M. Smith (included voice performance),
+SpringySpringo, LFA, and JumboSizedFish. Kenney's source performer credits also
+name Giselle; her recordings are not included in this subset.
+
+See licenses/ for the preserved source notices and original Kenney documents.
+See manifest.json for exact source pages, direct download URLs, hashes,
+individual source filenames, and the transformations applied to each asset.
+
+The offline conversions and new asset metadata preserve the CC0 dedication.
+No additional restrictions are imposed on these sound assets. This notice does
+not change the license of the surrounding game code, artwork, or other files.

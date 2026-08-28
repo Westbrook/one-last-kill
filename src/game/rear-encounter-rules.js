@@ -31,8 +31,13 @@ export function isBehindPlayer(playerFoot, yaw, candidate, { minDistance = 5, mi
  * Use the original composition index, retained on a pending entry. Removing or
  * retrying another pending entry must not change who owns the single rear role.
  */
-export function encounterSpawnRole(entryIndex, waveSize = 2) {
-  return waveSize === 2 && Number.isInteger(entryIndex) && entryIndex === 1 ? 'rear' : 'front';
+export function encounterSpawnRole(entryIndex, waveSize = 2, rearEntryIndices) {
+  if (!Number.isInteger(entryIndex) || !Number.isInteger(waveSize)
+    || entryIndex < 0 || entryIndex >= waveSize) return 'front';
+  // Explicit roles let a rear reserve accompany a whole forward pair without
+  // taking either of its slots. Legacy two-contact waves retain slot one.
+  if (Array.isArray(rearEntryIndices)) return rearEntryIndices.includes(entryIndex) ? 'rear' : 'front';
+  return waveSize === 2 && entryIndex === 1 ? 'rear' : 'front';
 }
 
 const BLOCKED_POLICY = Object.freeze({ tryRear: false, allowForwardFallback: false, spawnGraceSeconds: 1 });

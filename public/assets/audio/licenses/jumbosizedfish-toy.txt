@@ -1,0 +1,14 @@
+SPDX-License-Identifier: CC0-1.0
+
+Toy Double Barrel Shotgun Sounds by JumboSizedFish
+Source: https://opengameart.org/content/toy-double-barrel-shotgun-sounds
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Verified on 2026-08-28: the author submission identifies CC0.
+
+The author recorded an Adventure Force Double Fire toy in July 2023. Used as a mechanical cocking proxy, not claimed as an actual firearm recording.
+
+Included original: toy-double-barrel-shotgun-cocked.wav
+Direct download: https://opengameart.org/sites/default/files/toy-double-barrel-shotgun-cocked.wav
+Original SHA-256: 8e227d26dfff14b8f58294b929414c1d2db9ac2182ddd1a60d4560dc7d967204
+
+The game copy is an offline mono PCM conversion. Its exact transformation and hash are in ../manifest.json. CC0 continues to apply. This notice records the license stated on the author page; it is not a separately supplied author license file.

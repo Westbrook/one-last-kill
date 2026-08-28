@@ -82,6 +82,7 @@ function missionHarness() {
       commitCar: record('carCommit'), commitBakery: record('bakeryCommit') },
     Enemies: { clearAll: record('enemiesClear') }, WeaponDrops: { clearAll: record('dropsClear') },
     Input: { pause: record('pause'), reset: record('inputReset') }, EndCard: { hide: record('endCardHide') },
+    Audio: { clearRadio: record('radioClear'), reset: record('audioReset') },
     Weapons: { cancelAttack: record('cancelAttack'), restore: record('weaponRestore') },
     AmmoSupplies: { restore: record('ammoRestore'), setZone: record('ammoZone') },
     HealPickups: { restoreZone: record('healRestore') }, ZoneCull: { setHidden: record('zoneCull') },
@@ -269,6 +270,9 @@ test('actual lethal damage clears its just-recorded threat immediately and death
   }
   const pause = h.calls.lifecycle.find(([name]) => name === 'pause');
   assert.equal(pause[1].showOverlay, false);
+  const events = h.calls.lifecycle.map(([name]) => name);
+  assert.equal(events.filter(name => name === 'radioClear').length, 1);
+  assert.ok(events.indexOf('pause') < events.indexOf('radioClear'), 'Death pauses input before cancelling checkpoint radio');
   h.PlayerState.dead = false;
   assert.equal(h.update(0), null, 'The lethal hit cannot return when play resumes');
 });
@@ -283,6 +287,9 @@ test('actual checkpoint restart clears threat state before resuming the restored
   assert.deepEqual(h.Player.pos.toArray(), [-9, 5.72, -4]); near(h.Player.yaw, 0.35);
   const events = h.calls.lifecycle.map(([name]) => name);
   assert.ok(events.indexOf('threatClear') < events.indexOf('waveStart'), 'Old cues are cleared before the new encounter starts');
+  assert.equal(events.filter(name => name === 'audioReset').length, 1);
+  assert.ok(events.indexOf('audioReset') < events.indexOf('zoneChanged'),
+    'Successful retry drops old audio and cue history before announcing the restored checkpoint');
   assert.ok(events.includes('enemiesClear') && events.includes('inputReset'));
   assert.equal(h.calls.health.at(-1), 100);
   h.ThreatFeedback.hit(source);
@@ -296,5 +303,6 @@ test('a blocked checkpoint does not execute the successful restart feedback path
   assert.equal(h.restartFromZone(), false);
   assert.equal(h.PlayerState.dead, true); assert.equal(h.Player.health, 0);
   assert.equal(h.calls.lifecycle.some(([name]) => name === 'threatClear'), false);
+  assert.equal(h.calls.lifecycle.some(([name]) => name === 'audioReset'), false);
   assert.ok(h.calls.lifecycle.some(([name, text]) => name === 'message' && text.includes('CHECKPOINT BLOCKED')));
 });

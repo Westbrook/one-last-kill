@@ -5,6 +5,7 @@ import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { lerp, clamp } from '../../src/core/math.js';
 import { capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
+import { createBallisticHit } from '../../src/core/ballistics.js';
 
 // Actual player/camera code, with explicit quiet services. These joined floor
 // fixtures isolate camera behavior; stair-layout tests cover the built world.
@@ -23,8 +24,9 @@ function fixture(reducedMotion) {
   assert.doesNotMatch(source, /^import\s/m);
   const api = runInNewContext(`${source}\n;({ Player, playerInit, playerUpdate, resetPlayerMotion });`, {
     THREE, lerp, clamp, camera, Colliders: { list: colliders }, capsuleHasClearance, moveCapsule, Input,
+    Ballistics: { raycast: () => null }, createBallisticHit, currentZone: 'roof',
     Settings: { get: key => key === 'reducedMotion' ? reducedMotion : 1 },
-    Audio: { footstep() {} }, HUD: { setHealth() {} }, Weapons: { handleInput() {} },
+    Audio: { footstep() {}, movement() {} }, HUD: { setHealth() {} }, Weapons: { handleInput() {} },
   }, { filename: 'player.js' });
   return { ...api, camera, Input, floorY };
 }

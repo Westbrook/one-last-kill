@@ -7,6 +7,7 @@ import { beginHumanoidCollapse, updateHumanoidCollapse } from '../render/corpse-
 import { Player, PlayerState } from './player.js';
 import { Audio } from '../core/audio.js';
 import { Colliders, resolveCapsuleAABB } from '../core/collision.js';
+import { Ballistics, createBallisticHit } from '../core/ballistics.js';
 import { World } from '../world/world.js';
 import { BUILDING, BALCONY, ROOF } from '../world/layout.js';
 import { DISTRICT } from '../world/district-layout.js';
@@ -18,7 +19,7 @@ import { EnemyNavigationPlanner, createNavigationAgent, enemyPoolCapacity, inves
 import { createStairPursuit, stairPursuitWaypoint, stairPursuitMemorySeconds, resetStairPursuit, primeEnemyInvestigation } from './stair-pursuit.js';
 import {
   CORPSE_LIMIT, CORPSE_LIFETIME, damageForHit, advanceAttackWindup,
-  updateAwareness, canMeleeHit, isSegmentOccluded, oldestCorpseIndex, invalidateEnemy,
+  updateAwareness, canMeleeHit, oldestCorpseIndex, invalidateEnemy,
 } from './combat-rules.js';
 
 // Enemy archetypes separate presentation from movement and attack tuning.
@@ -321,7 +322,7 @@ const _losTarget = new THREE.Vector3();
 function _hasLineOfSightRaw(enemy) {
   _losOrigin.set(enemy.pos.x, enemy.pos.y + enemy.height - 0.18, enemy.pos.z);
   _losTarget.set(Player.pos.x, Player.pos.y - 0.2, Player.pos.z);
-  return !isSegmentOccluded(_losOrigin, _losTarget, Colliders.list);
+  return !Ballistics.segmentOccluded(_losOrigin, _losTarget);
 }
 // Throttled wrapper: each enemy refreshes its cached LoS at ~6 Hz (every
 // ~0.16s), staggered across frames via the enemy.losPhase offset assigned at
@@ -438,7 +439,7 @@ function seekLocalCover(enemy) {
     _coverPosition.y = floor;
     if (isBlocked(_coverPosition, 0, 0, enemy.radius, enemy.height)) continue;
     _coverEye.set(_coverPosition.x, floor + enemy.height - 0.18, _coverPosition.z);
-    if (!isSegmentOccluded(_coverEye, _coverTargetEye, Colliders.list)) continue;
+    if (!Ballistics.segmentOccluded(_coverEye, _coverTargetEye)) continue;
     bestDistance = distance;
     enemy.coverTarget.copy(_coverPosition);
     found = true;
@@ -454,8 +455,11 @@ const _enemyFireScratch = {
   ray: new THREE.Ray(new THREE.Vector3(), new THREE.Vector3()),
   hp: new THREE.Vector3(), endPt: new THREE.Vector3(),
   playerBox: new THREE.Box3(new THREE.Vector3(), new THREE.Vector3()),
-  target: new THREE.Vector3(),
+  target: new THREE.Vector3(), anchor: new THREE.Vector3(), barrelDirection: new THREE.Vector3(),
+  worldHit: createBallisticHit(),
 };
+const _enemyFireSound = { pos: _enemyFireScratch.muzzle, environment: '' };
+const _enemyImpactSound = { pos: _enemyFireScratch.endPt, surface: 'concrete', intensity: 0.6, environment: '' };
 function enemyAttackPlayer(enemy) {
   if (!enemy.alive || enemy.removed || enemy.spawnGrace > 0 || PlayerState.dead || Player.health <= 0) return false;
   const def = enemy.def;
@@ -470,11 +474,12 @@ function enemyAttackPlayer(enemy) {
       distance, range: def.attackRange,
       heightDifference: playerFoot - enemy.pos.y,
       facingDot: distance < 0.01 ? 1 : (Math.sin(enemy.yaw) * dx + Math.cos(enemy.yaw) * dz) / distance,
-      clear: !isSegmentOccluded(_losOrigin, _losTarget, Colliders.list),
+      clear: !Ballistics.segmentOccluded(_losOrigin, _losTarget, 'bullet'),
     });
     if (connects) {
       applyPlayerDamage(def.damage, enemy.pos, enemy);
-      Audio.meleeHit();
+      Audio.meleeHit({ weapon: def.weaponType, pos: enemy.pos,
+        intensity: def.weaponType === 'bat' ? 1 : 0.75, environment: enemy.zone });
     }
     return connects;
   }
@@ -482,7 +487,8 @@ function enemyAttackPlayer(enemy) {
   if (!_hasLineOfSightRaw(enemy)) return false;
   const s = _enemyFireScratch;
   const shoulderY = enemy.pos.y + enemy.height - 0.32;
-  s.muzzle.set(enemy.pos.x, shoulderY, enemy.pos.z);
+  s.anchor.set(enemy.pos.x, shoulderY, enemy.pos.z);
+  s.muzzle.copy(s.anchor);
   const aimYaw = Math.atan2(Player.pos.x - enemy.pos.x, Player.pos.z - enemy.pos.z);
   s.muzzle.x += Math.sin(aimYaw) * 0.45;
   s.muzzle.z += Math.cos(aimYaw) * 0.45;
@@ -499,31 +505,46 @@ function enemyAttackPlayer(enemy) {
   const dist = s.dir.length();
   s.dir.divideScalar(dist || 1);
   s.ray.origin.copy(s.muzzle); s.ray.direction.copy(s.dir);
-  let hitDist = 80;
-  for (const box of Colliders.list) {
-    if (s.ray.intersectBox(box, s.hp)) {
-      const d = s.hp.distanceTo(s.muzzle);
-      if (d < hitDist) hitDist = d;
-    }
-  }
+  // A barrel animated across nearby cover cannot start a bullet on its far
+  // side. Eye visibility and the physical muzzle path are separate checks.
+  s.barrelDirection.copy(s.muzzle).sub(s.anchor);
+  const barrelLength = s.barrelDirection.length();
+  const barrelBlocked = barrelLength > 1e-5
+    && Boolean(Ballistics.raycast(s.anchor, s.barrelDirection, barrelLength, 'bullet', s.worldHit));
+  const worldHit = barrelBlocked ? s.worldHit : Ballistics.raycast(s.muzzle, s.dir, 80, 'bullet', s.worldHit);
+  let hitDist = worldHit ? worldHit.distance : 80;
   const footY = Player.pos.y - Player._eyeH;
   const radius = Player.radius;
   s.playerBox.min.set(Player.pos.x - radius, footY, Player.pos.z - radius);
   s.playerBox.max.set(Player.pos.x + radius, footY + Player._bodyH, Player.pos.z + radius);
   let playerHit = false;
-  if (s.ray.intersectBox(s.playerBox, s.hp)) {
+  if (!barrelBlocked && s.ray.intersectBox(s.playerBox, s.hp)) {
     const playerDist = s.hp.distanceTo(s.muzzle);
     if (playerDist < hitDist) { playerHit = true; hitDist = playerDist; }
   }
-  s.endPt.copy(s.muzzle).addScaledVector(s.dir, hitDist);
-  FX.muzzleFlash(s.muzzle);
-  FX.tracer(s.muzzle, s.endPt);
-  if (def.weaponType === 'pistol') Audio.pistolShot();
-  else if (def.weaponType === 'shotgun') Audio.shotgunShot();
-  else if (def.weaponType === 'smg') Audio.smgShot();
-  else Audio.machinegunShot();
-  if (playerHit) applyPlayerDamage(def.damage, enemy.pos, enemy);
-  else if (hitDist < 80) FX.impact(s.endPt.x, s.endPt.y, s.endPt.z, 3);
+  if (barrelBlocked) s.endPt.copy(s.worldHit.point);
+  else s.endPt.copy(s.muzzle).addScaledVector(s.dir, hitDist);
+  // The shotgun's existing burst models four pellet contacts. Keep its
+  // damage timing, but give the cluster one blast instead of four discharges.
+  const discharge = def.weaponType !== 'shotgun' || enemy.burstLeft === def.burst || enemy.burstLeft === 0;
+  if (discharge) FX.muzzleFlash(s.muzzle);
+  FX.tracer(barrelBlocked ? s.anchor : s.muzzle, s.endPt);
+  _enemyFireSound.environment = enemy.zone;
+  if (discharge) {
+    if (def.weaponType === 'pistol') Audio.pistolShot(_enemyFireSound);
+    else if (def.weaponType === 'shotgun') Audio.shotgunShot(_enemyFireSound);
+    else if (def.weaponType === 'smg') Audio.smgShot(_enemyFireSound);
+    else Audio.machinegunShot(_enemyFireSound);
+  }
+  if (playerHit) {
+    Audio.impact({ surface: 'body', pos: Player.pos, intensity: 0.45, environment: enemy.zone });
+    applyPlayerDamage(def.damage, enemy.pos, enemy);
+  } else if (worldHit) {
+    FX.impact(s.endPt.x, s.endPt.y, s.endPt.z, 3, s.worldHit);
+    _enemyImpactSound.surface = s.worldHit.surfaceKind;
+    _enemyImpactSound.environment = enemy.zone;
+    Audio.impact(_enemyImpactSound);
+  }
   if (enemy.aimCommitted) {
     s.target.set(Player.pos.x, Player.pos.y - 0.3, Player.pos.z);
     enemy.aimTarget.lerp(s.target, 0.4);
@@ -669,6 +690,8 @@ function enemyTick(enemy, dt) {
         enemy.attackTimer = def.attackCooldown;
         enemy.windupRemaining = def.swingTime * 0.5;
         enemy.swingSide = def.weaponType === 'fists' && enemy.attackCount++ % 2 ? 'L' : 'R';
+        Audio.meleeSwing({ weapon: def.weaponType, pos: enemy.pos,
+          intensity: def.weaponType === 'bat' ? 1 : 0.65, environment: enemy.zone });
       }
       if (attackReady) enemyAttackPlayer(enemy);
     }
@@ -821,11 +844,15 @@ const _rayScratch = {
   hp: new THREE.Vector3(),
   result: { enemy: null, part: 'body', point: new THREE.Vector3(), dist: 0 },
 };
-function raycastEnemies(origin, direction, maxDist = 80) {
+function raycastEnemies(origin, direction, maxDist = 80, worldDistance) {
   const s = _rayScratch;
   s.dir.copy(direction).normalize();
   s.ray.origin.copy(origin); s.ray.direction.copy(s.dir);
-  let nearestDist = maxDist;
+  // Ranged weapons already query the world for impact information; their
+  // optional fourth argument reuses that limit. Other callers get the same
+  // geometry-faithful cover check without allocating a separate hit result.
+  const obstruction = worldDistance === undefined ? Ballistics.raycast(origin, s.dir, maxDist) : null;
+  let nearestDist = Math.min(maxDist, worldDistance ?? obstruction?.distance ?? maxDist);
   let hitEnemy = null, hitPart = 'body';
   s.result.point.set(0, 0, 0);
   for (const e of Enemies.list) {
@@ -849,13 +876,6 @@ function raycastEnemies(origin, direction, maxDist = 80) {
     if (s.ray.intersectBox(s.bodyBox, s.hp)) {
       const d = s.hp.distanceTo(origin);
       if (d < nearestDist) { nearestDist = d; hitEnemy = e; hitPart = 'body'; s.result.point.copy(s.hp); }
-    }
-  }
-  // Colliders blocking the shot.
-  for (const box of Colliders.list) {
-    if (s.ray.intersectBox(box, s.hp)) {
-      const d = s.hp.distanceTo(origin);
-      if (d < nearestDist) return null;
     }
   }
   if (!hitEnemy) return null;

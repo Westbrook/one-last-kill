@@ -164,28 +164,61 @@
         <h2 id="settingstitle">MAKE IT<br>YOUR FIGHT.</h2>
         <p class="panel-intro">Changes apply immediately. Preferences save when device storage is available.</p>
         <form id="settingsform">
-          <div class="setting-row">
-            <label for="settingquality">Render quality</label>
-            <select id="settingquality" name="quality"><option value="auto">Automatic</option><option value="high">High detail</option><option value="performance">Performance</option></select>
-            <p>Automatic balances resolution and frame rate for your display.</p>
-          </div>
-          <div class="setting-row">
-            <div class="setting-label"><label for="settingsensitivity">Look sensitivity</label><output id="sensitivityvalue" for="settingsensitivity">1.00×</output></div>
-            <input id="settingsensitivity" name="sensitivity" type="range" min="0.35" max="2.5" step="0.05" value="1">
-            <div class="range-labels"><span>PRECISE</span><span>FAST</span></div>
-          </div>
-          <div class="setting-row">
-            <div class="setting-label"><label for="settingfov">Field of view</label><output id="fovvalue" for="settingfov">82°</output></div>
-            <input id="settingfov" name="fov" type="range" min="70" max="100" step="1" value="82">
-            <div class="range-labels"><span>70°</span><span>100°</span></div>
-          </div>
-          <div class="setting-row setting-checkbox">
-            <div><label for="settingmotion">Reduced camera motion</label><p>Reduce camera movement and interface animation.</p></div>
-            <input id="settingmotion" name="reducedMotion" type="checkbox">
-          </div>
+          <fieldset class="settings-group audio-mix">
+            <legend>AUDIO MIX</legend>
+            <p id="settingsaudionote" class="settings-audio-note">Audio starts muted. Changing levels or voice preferences does not enable sound. Use the audio control or press <kbd>M</kbd> to unmute.</p>
+            <div class="audio-mix-grid">
+              <div class="setting-row">
+                <div class="setting-label"><label for="settingaudiomaster">Master</label><output id="audiomastervalue" for="settingaudiomaster">75%</output></div>
+                <input id="settingaudiomaster" name="audioMaster" type="range" min="0" max="100" step="1" value="75" aria-valuetext="75 percent" aria-describedby="settingsaudionote audiomasterhelp">
+                <p id="audiomasterhelp">Overall volume. The channels below keep their own levels.</p>
+              </div>
+              <div class="setting-row">
+                <div class="setting-label"><label for="settingaudioeffects">Effects</label><output id="audioeffectsvalue" for="settingaudioeffects">85%</output></div>
+                <input id="settingaudioeffects" name="audioEffects" type="range" min="0" max="100" step="1" value="85" aria-valuetext="85 percent" aria-describedby="settingsaudionote">
+              </div>
+              <div class="setting-row">
+                <div class="setting-label"><label for="settingaudioambience">Ambience</label><output id="audioambiencevalue" for="settingaudioambience">40%</output></div>
+                <input id="settingaudioambience" name="audioAmbience" type="range" min="0" max="100" step="1" value="40" aria-valuetext="40 percent" aria-describedby="settingsaudionote">
+              </div>
+              <div class="setting-row">
+                <div class="setting-label"><label for="settingaudiomusic">Music</label><output id="audiomusicvalue" for="settingaudiomusic">28%</output></div>
+                <input id="settingaudiomusic" name="audioMusic" type="range" min="0" max="100" step="1" value="28" aria-valuetext="28 percent" aria-describedby="settingsaudionote">
+              </div>
+              <div class="setting-row">
+                <div class="setting-label"><label for="settingaudioradio">Radio / voice</label><output id="audioradiovalue" for="settingaudioradio">90%</output></div>
+                <input id="settingaudioradio" name="audioRadio" type="range" min="0" max="100" step="1" value="90" aria-valuetext="90 percent" aria-describedby="settingsaudionote">
+              </div>
+            </div>
+            <div class="setting-row setting-checkbox">
+              <div><label for="settingcheckpointvoice">Checkpoint voice</label><p id="checkpointvoicehelp">Play recorded checkpoint radio, with an available local device voice as fallback. On-screen text and radio tones remain when off.</p></div>
+              <input id="settingcheckpointvoice" name="checkpointVoice" type="checkbox" checked aria-describedby="checkpointvoicehelp settingsaudionote">
+            </div>
+          </fieldset>
+          <fieldset class="settings-group">
+            <legend>DISPLAY &amp; CONTROLS</legend>
+            <div class="setting-row">
+              <label for="settingquality">Render quality</label>
+              <select id="settingquality" name="quality"><option value="auto">Automatic</option><option value="high">High detail</option><option value="performance">Performance</option></select>
+              <p>Automatic balances resolution and frame rate for your display.</p>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label"><label for="settingsensitivity">Look sensitivity</label><output id="sensitivityvalue" for="settingsensitivity">1.00×</output></div>
+              <input id="settingsensitivity" name="sensitivity" type="range" min="0.35" max="2.5" step="0.05" value="1">
+              <div class="range-labels"><span>PRECISE</span><span>FAST</span></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label"><label for="settingfov">Field of view</label><output id="fovvalue" for="settingfov">82°</output></div>
+              <input id="settingfov" name="fov" type="range" min="70" max="100" step="1" value="82">
+              <div class="range-labels"><span>70°</span><span>100°</span></div>
+            </div>
+            <div class="setting-row setting-checkbox">
+              <div><label for="settingmotion">Reduced camera motion</label><p>Reduce camera movement and interface animation.</p></div>
+              <input id="settingmotion" name="reducedMotion" type="checkbox">
+            </div>
+          </fieldset>
           <div class="settings-actions"><button id="resetsettings" class="button-text" type="button">RESTORE DEFAULTS</button><span id="settingssaved" role="status">CURRENT PREFERENCES</span></div>
         </form>
-        <p class="settings-audio-note">Audio starts muted. Use the audio control or press <kbd>M</kbd> to change it.</p>
         <button class="button button-outline" type="button" data-close-panel>BACK TO MISSION <span aria-hidden="true">↗</span></button>
       </section>
     </main>

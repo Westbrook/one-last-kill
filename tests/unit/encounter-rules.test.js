@@ -5,6 +5,8 @@ import {
 } from '../../src/game/encounter-rules.js';
 import { CHECKPOINTS, FINAL_ENCOUNTERS, MIN_SPAWN_DISTANCE, ZONE_WAVE_CONFIG, selectSafeSpawn } from '../../src/game/mission-data.js';
 import { STAIRS } from '../../src/world/stair-layout.js';
+import { selectEncounterFrontPair } from '../../src/game/encounter-spawns.js';
+import { encounterSpawnRole } from '../../src/game/rear-encounter-rules.js';
 
 const config = ZONE_WAVE_CONFIG.balcony;
 const route = config.route;
@@ -14,19 +16,14 @@ const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-6,
 const ready = (index, timer, progress, footY = route.floorY) => encounterWaveReady(config, index, timer, progress, footY);
 
 function placePair(index, position, progress) {
-  const candidates = encounterSpawnCandidates(config, index, progress);
-  const enemies = [];
-  for (const type of config.composition(index)) {
-    const point = selectSafeSpawn(candidates, {
-      playerFoot: position, enemies,
-      floorAt: candidate => candidate.y,
-      blocked: () => false,
-      maxHeightDifference: config.maxHeightDifference,
-    });
-    assert.ok(point, `Stage ${index} must have room for ${type}`);
-    enemies.push({ type, alive: true, pos: point });
-  }
-  return enemies;
+  const entries = config.composition(index).slice(0, config.frontPairSize)
+    .map((type, entryIndex) => ({ type, entryIndex, waveIndex: index }));
+  const pair = selectEncounterFrontPair({
+    config, waveIndex: index, entries, playerFoot: position, yaw: index ? Math.PI / 2 : Math.PI,
+    routeProgress: progress, floorAt: candidate => candidate.y, blocked: () => false,
+  });
+  assert.ok(pair, `Stage ${index} must have room for both forward contacts`);
+  return pair.map(selection => ({ type: selection.type, alive: true, pos: selection.point }));
 }
 
 test('route distance follows the east landing and turns west along the wrap', () => {
@@ -123,13 +120,12 @@ test('each forward stage offers two safe contacts ahead, with no point-blank or 
   }
 });
 
-test('the initial pair includes an east-landing approach instead of only hidden wrap contacts', () => {
+test('the initial pair occupies two separate east-landing lanes in front of the checkpoint', () => {
   const position = CHECKPOINTS.balcony;
   const pair = placePair(0, position, routeDistanceAt(route, position));
-  assert.equal(pair[0].pos.x, 11);
-  assert.equal(pair[0].pos.z, config.spawns[2].z);
-  assert.notEqual(pair[0].pos.z, pair[1].pos.z, 'the pair uses staggered lanes');
-  assert.ok(pair[1].pos.x < pair[0].pos.x);
+  assert.deepEqual(pair.map(enemy => enemy.pos.x), [10, 12]);
+  assert.ok(pair.every(enemy => enemy.pos.z === 1.18));
+  assert.ok(pair[0].pos.x < position.x && pair[1].pos.x > position.x, 'Both faces have distinct horizontal bearings');
 });
 
 test('the forward selector keeps its progress gate while rear entries use their own selector', () => {
@@ -194,30 +190,42 @@ test('arena stages retain arrival timers, authored pockets and stair height gate
 
 // No AI, renderer or wall clock: a confirmed callback represents a successful
 // geometry/pool allocation. Retiring a platform removes contacts without kills.
-function driveEncounter(settings, defaultFootY) {
-  const schedule = new EncounterSchedule(settings);
+function driveEncounter(settings, defaultFootY, options) {
+  const schedule = new EncounterSchedule(settings, options);
   return {
     schedule, alive: [], history: [],
     counts() {
-      const aliveByWave = Array(settings.waveCount).fill(0), byType = {};
+      const aliveByWave = Array(settings.waveCount).fill(0), frontAliveByWave = Array(settings.waveCount).fill(0), byType = {};
+      let rearAlive = 0;
       for (const enemy of this.alive) {
         aliveByWave[enemy.waveIndex]++;
+        const role = settings.rearPressure
+          ? encounterSpawnRole(enemy.entryIndex, settings.waves[enemy.waveIndex].length, settings.rearEntryIndices) : 'front';
+        if (role === 'rear') rearAlive++;
+        else frontAliveByWave[enemy.waveIndex]++;
         byType[enemy.type] = (byType[enemy.type] || 0) + 1;
       }
-      return { alive: this.alive.length, total: this.alive.length, aliveByWave, byType };
+      return { alive: this.alive.length, total: this.alive.length, aliveByWave, frontAliveByWave, rearAlive, byType };
     },
     spawn(canSpawn = () => true) {
-      return schedule.spawnAvailable(this.counts(), (entry, firstForWave) => {
-        if (!canSpawn(entry)) return false;
+      const commit = (entry, firstForWave) => {
         this.alive.push({ ...entry });
         this.history.push({ ...entry, firstForWave });
+      };
+      return schedule.spawnAvailable(this.counts(), (entry, firstForWave) => {
+        if (!canSpawn(entry)) return false;
+        commit(entry, firstForWave);
+        return true;
+      }, (entries, firstForWave) => {
+        if (!entries.every(canSpawn)) return false;
+        entries.forEach((entry, index) => commit(entry, firstForWave && index === 0));
         return true;
       });
     },
     tick(dt, { footY = defaultFootY, routeProgress = 0, grounded = true, spawn = true, canSpawn } = {}) {
       const result = schedule.update(dt, { ...this.counts(), footY, routeProgress, grounded });
       const events = {
-        ...result, clearedWaves: [...result.clearedWaves], retiredWaves: [...result.retiredWaves],
+        ...result, clearedWaves: [...result.clearedWaves], clearedFrontWaves: [...result.clearedFrontWaves], retiredWaves: [...result.retiredWaves],
       };
       if (settings.retireLive !== false) {
         this.alive = this.alive.filter(enemy => !events.retiredWaves.includes(enemy.waveIndex));
@@ -646,7 +654,293 @@ test('scheduled balcony pairs keep the full holding breather and minimum advanci
     game.tick(0.25, { routeProgress: progress });
     assert.equal(plan.waveIndex, 2);
     assert.deepEqual(game.alive.map(enemy => enemy.type), config.waves[1]);
+    assert.equal(game.alive.length, 3);
+  }
+});
+
+test('the opening pair becomes eligible on exactly the twelfth 120 Hz simulation tick', () => {
+  const game = driveEncounter(config, route.floorY);
+  for (let tick = 1; tick <= 12; tick++) {
+    game.tick(1 / 120);
+    assert.equal(game.alive.length, tick < 12 ? 0 : 2, `tick ${tick}`);
+  }
+  assert.equal(game.schedule.spawned, 2);
+});
+
+test('a blocked partner keeps both forward slots pending without singleton arrivals or clear credit', () => {
+  const game = driveEncounter(config, route.floorY), plan = game.schedule;
+  const onlyFirstFits = entry => entry.entryIndex === 0;
+  game.tick(config.firstWave, { canSpawn: onlyFirstFits });
+  const pending = [...plan.pending];
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const event = game.tick(20, { routeProgress: 30, canSpawn: onlyFirstFits });
+    assert.equal(game.alive.length, 0);
+    assert.equal(plan.spawned, 0);
+    assert.equal(plan.waveIndex, 1);
+    assert.deepEqual(event.clearedFrontWaves, []);
+    assert.deepEqual(event.clearedWaves, []);
+    assert.equal(plan.pending[0], pending[0]);
+    assert.equal(plan.pending[1], pending[1]);
+    assert.equal(plan.groups[0].frontPending, 2);
+  }
+  game.tick(0);
+  assert.equal(game.alive.length, 2);
+  assert.equal(plan.pending.length, 0);
+  assert.equal(plan.groups[0].frontSpawned, 2);
+  const second = game.alive[1];
+  game.alive.shift();
+  assert.deepEqual(game.tick(100, { routeProgress: 30 }).clearedFrontWaves, []);
+  assert.equal(game.alive[0], second, 'A quick first kill cannot erase or replace its already committed partner');
+  assert.equal(plan.waveIndex, 1);
+  assert.equal(plan.spawned, 2);
+});
+
+test('a forward pair requires two free slots and an explicit all-or-nothing callback', () => {
+  const plan = new EncounterSchedule(config);
+  plan.update(config.firstWave, { footY: route.floorY });
+  const neverSingle = () => assert.fail('An atomic forward slot cannot fall through to a singleton callback');
+  const neverPair = () => assert.fail('One free slot cannot acquire a forward pair');
+  assert.equal(plan.spawnAvailable({ total: 2 }, neverSingle, neverPair), 0);
+  assert.equal(plan.spawnAvailable({ total: 0 }, neverSingle), 0);
+  let attempts = 0;
+  assert.equal(plan.spawnAvailable({ total: 0 }, neverSingle, entries => {
+    attempts++;
+    assert.deepEqual(entries.map(entry => entry.entryIndex), [0, 1]);
+    return false;
+  }), 0);
+  assert.equal(attempts, 1, 'A failed batch is attempted only once per call');
+  assert.deepEqual(plan.pendingTypes, config.waves[0]);
+  assert.equal(plan.spawned, 0);
+  assert.equal(plan.groups[0].frontSpawned, 0);
+  assert.equal(plan.spawnAvailable({ total: 1, rearAlive: 1 }, neverSingle, () => true), 2);
+  assert.equal(plan.pending.length, 0);
+});
+
+test('pending rear reserves never suppress a later forward pair or disappear on front clearance', () => {
+  const game = driveEncounter(config, route.floorY), plan = game.schedule;
+  const frontOnly = entry => entry.entryIndex < config.frontPairSize;
+  game.tick(config.firstWave);
+  game.clear();
+  game.tick(0, { routeProgress: config.stages[1].advanceAt });
+  game.tick(config.minRecovery, { routeProgress: config.stages[1].advanceAt, canSpawn: frontOnly });
+  assert.equal(game.alive.length, 2);
+  const firstRear = plan.pending[0];
+  assert.equal(firstRear.entryIndex, 2);
+  assert.equal(firstRear.waveIndex, 1);
+  game.clear();
+  const event = game.tick(0, { routeProgress: config.stages[2].advanceAt, canSpawn: frontOnly });
+  assert.deepEqual(event.clearedFrontWaves, [1]);
+  assert.deepEqual(event.clearedWaves, [], 'An unspawned reserve cannot earn health or clear credit');
+  assert.equal(plan.pending[0], firstRear);
+  game.tick(config.minRecovery, { routeProgress: config.stages[2].advanceAt, canSpawn: frontOnly });
+  assert.equal(game.alive.length, 2);
+  assert.ok(game.alive.every(enemy => enemy.waveIndex === 2));
+  assert.equal(plan.spawned, 6);
+  assert.deepEqual(plan.pending.map(entry => [entry.waveIndex, entry.entryIndex]), [[1, 2], [2, 2]]);
+  const secondRear = plan.pending[1];
+  game.clear();
+  for (let tick = 0; tick < 3; tick++) game.tick(100, { routeProgress: 0, canSpawn: frontOnly });
+  assert.equal(plan.pending[0], firstRear);
+  assert.equal(plan.pending[1], secondRear);
+  assert.equal(plan.cleared, false);
+  assert.equal(plan.skipped, 0);
+  assert.equal(plan.clearedWaves, 1);
+
+  game.tick(0);
+  assert.equal(game.alive.length, 1, 'The two retained rear entries cannot occupy both forward slots');
+  assert.equal(plan.pending[0], secondRear);
+  game.clear();
+  game.tick(0);
+  assert.equal(game.alive.length, 1);
+  assert.equal(plan.pending.length, 0);
+  assert.equal(plan.cleared, false);
+  game.clear();
+  assert.equal(game.tick(0).completed, true);
+  assert.equal(plan.spawned, 8);
+  assert.equal(plan.clearedWaves, 3);
+  assert.equal(new Set(game.history.map(entry => `${entry.waveIndex}:${entry.entryIndex}`)).size, 8);
+});
+
+test('a living rear attacker leaves capacity for the next complete forward pair', () => {
+  const game = driveEncounter(config, route.floorY), plan = game.schedule;
+  game.tick(config.firstWave);
+  game.clear();
+  game.tick(0, { routeProgress: config.stages[1].advanceAt });
+  game.tick(config.minRecovery, { routeProgress: config.stages[1].advanceAt });
+  assert.equal(game.alive.length, 3);
+  const rear = game.alive.find(enemy => enemy.entryIndex === 2);
+  game.alive = [rear];
+  const event = game.tick(0, { routeProgress: config.stages[2].advanceAt });
+  assert.deepEqual(event.clearedFrontWaves, [1]);
+  assert.deepEqual(event.clearedWaves, []);
+  game.tick(config.minRecovery - 0.01, { routeProgress: config.stages[2].advanceAt });
+  assert.deepEqual(game.alive, [rear]);
+  game.tick(0.01, { routeProgress: config.stages[2].advanceAt });
+  assert.equal(game.alive[0], rear);
+  assert.equal(game.alive.length, 3);
+  assert.deepEqual(game.alive.slice(1).map(enemy => [enemy.waveIndex, enemy.entryIndex]), [[2, 0], [2, 1]]);
+  assert.deepEqual(plan.pending.map(entry => [entry.waveIndex, entry.entryIndex]), [[2, 2]]);
+  assert.equal(plan.spawned, 7);
+
+  const survivor = game.alive[2];
+  game.alive.splice(1, 1);
+  game.tick(100);
+  assert.equal(game.alive.length, 2);
+  assert.equal(game.alive[1], survivor);
+  assert.equal(plan.pending.length, 1, 'A freed forward slot cannot become a second rear attacker');
+  assert.equal(plan.cleared, false);
+  game.clear(1);
+  game.tick(0);
+  assert.equal(game.alive.length, 2);
+  assert.equal(plan.spawned, 8);
+  assert.equal(plan.pending.length, 0);
+  game.clear();
+  assert.equal(game.tick(0).completed, true);
+});
+
+test('retry discards front-clear timing and restores all authored balcony roles', () => {
+  const game = driveEncounter(config, route.floorY), plan = game.schedule;
+  game.tick(config.firstWave);
+  game.clear();
+  game.tick(0, { routeProgress: config.stages[1].advanceAt });
+  game.tick(config.minRecovery, { routeProgress: config.stages[1].advanceAt });
+  game.clear();
+  plan.reset();
+  assert.equal(plan.timer, config.firstWave);
+  assert.deepEqual(plan.groups, []);
+  assert.deepEqual(plan.unstartedTypes, config.waves.flat());
+  assert.equal(plan.spawned, 0);
+  game.tick(config.firstWave);
+  assert.deepEqual(game.alive.map(enemy => [enemy.waveIndex, enemy.entryIndex, enemy.type]), [[0, 0, 'brawler'], [0, 1, 'thug']]);
+  assert.equal(plan.groups[0].frontCleared, false);
+});
+
+test('a seeded schedule keeps its initial deadline and plan across failed attempts and reset', () => {
+  for (const seed of [0, 1, 93, 0xffffffff]) {
+    const settings = ZONE_WAVE_CONFIG.roof, plan = new EncounterSchedule(settings, { seed });
+    const variation = plan.variation, duration = variation.firstDelay;
+    assert.equal(plan.seed, seed);
+    assert.equal(plan.timer, duration);
+    assert.equal(plan.timerDuration, duration);
+    plan.update(duration - 0.001, { footY: 14 });
+    for (let attempt = 0; attempt < 30; attempt++) {
+      assert.equal(plan.update(0, { footY: 14 }).queuedWave, null);
+      assert.equal(plan.spawnAvailable({ total: 0 }, () => false), 0);
+      assert.equal(plan.timerDuration, duration);
+    }
+    assert.equal(plan.update(0.001, { footY: 14 }).queuedWave, 0);
+    for (let attempt = 0; attempt < 30; attempt++) {
+      plan.update(0.01, { footY: 14 });
+      plan.spawnAvailable({ total: 0 }, () => false);
+      assert.equal(plan.variation, variation);
+      assert.equal(plan.timerDuration, duration);
+      assert.deepEqual(plan.pendingTypes, settings.waves[0]);
+    }
+    plan.reset();
+    assert.equal(plan.variation, variation);
+    assert.equal(plan.seed, seed);
+    assert.equal(plan.timer, duration);
+    assert.equal(plan.timerDuration, duration);
+    assert.equal(plan.spawned, 0);
+    assert.equal(plan.pending.length, 0);
+  }
+});
+
+test('shorter and longer sampled recoveries cannot bypass the minimum on an advancing route or flight', () => {
+  let shorter = 0, longer = 0;
+  for (const settings of [config, ZONE_WAVE_CONFIG.stairwell]) {
+    for (let seed = 0; seed < 32; seed++) {
+      const game = driveEncounter(settings, 4, { seed }), plan = game.schedule;
+      game.tick(plan.variation.firstDelay);
+      assert.equal(game.alive.length, 2);
+      game.clear();
+      const stage = settings.stages[1];
+      const advancing = { routeProgress: stage.advanceAt ?? 0, footY: stage.advanceFootY ?? 4 };
+      game.tick(0, advancing);
+      assert.equal(plan.recoveryDelay, plan.variation.recoveryDelays[1]);
+      assert.equal(plan.timerDuration, plan.recoveryDelay);
+      if (plan.recoveryDelay < settings.waveInterval) shorter++;
+      if (plan.recoveryDelay > settings.waveInterval) longer++;
+      game.tick(settings.minRecovery - 0.001, advancing);
+      assert.equal(plan.waveIndex, 1, `seed ${seed}: no early wave after a shorter sampled breather`);
+      assert.equal(plan.timerDuration, plan.recoveryDelay);
+      game.tick(0.001, advancing);
+      assert.equal(plan.waveIndex, 2);
+    }
+  }
+  assert.ok(shorter > 10 && longer > 10, 'Both sides of the timing range must be exercised');
+});
+
+test('holding a balcony segment observes its whole sampled recovery instead of the authored base interval', () => {
+  for (let seed = 0; seed < 32; seed++) {
+    const game = driveEncounter(config, 4, { seed }), plan = game.schedule;
+    game.tick(plan.variation.firstDelay);
+    game.clear();
+    const holding = { routeProgress: config.stages[1].minProgress };
+    game.tick(0, holding);
+    const sampled = plan.recoveryDelay;
+    game.tick(sampled - 0.001, holding);
+    assert.equal(plan.waveIndex, 1);
+    game.tick(0.001, holding);
+    assert.equal(plan.waveIndex, 2);
+    assert.equal(game.alive.length, 3);
+  }
+});
+
+test('seeded roof reserves still require both sentries to die and obey sampled delays and the five-live cap', () => {
+  const roof = ZONE_WAVE_CONFIG.roof;
+  for (let seed = 0; seed < 24; seed++) {
+    const game = driveEncounter(roof, 14, { seed }), plan = game.schedule;
+    game.tick(plan.variation.firstDelay);
+    game.tick(100);
+    assert.equal(plan.waveIndex, 1);
     assert.equal(game.alive.length, 2);
+    game.alive.pop();
+    game.tick(100);
+    assert.equal(plan.reinforcementsActive, false);
+    game.clear();
+    game.tick(0);
+    assert.equal(plan.reinforcementsActive, true);
+    assert.equal(plan.timerDuration, plan.variation.reinforcementFirstDelay);
+    game.tick(plan.timerDuration - 0.001);
+    assert.equal(plan.waveIndex, 1);
+    game.tick(0.001);
+    assert.equal(plan.waveIndex, 2);
+    assert.equal(game.alive.length, 4);
+    assert.equal(plan.timerDuration, plan.variation.reinforcementIntervals[2]);
+    game.tick(plan.timerDuration - 0.001);
+    assert.equal(game.alive.length, 4);
+    game.tick(0.001);
+    assert.equal(game.alive.length, 5);
+    assert.equal(plan.pending.length, 2);
+    game.tick(100);
+    assert.equal(plan.waveIndex, 3, 'A full group cannot bury a pending reserve beneath another wave');
+    for (let tick = 0; tick < 100 && !plan.cleared; tick++) {
+      game.clear();
+      game.tick(0.25);
+    }
+    assert.equal(plan.spawned, 12);
+    assert.equal(plan.skipped, 0);
+    assert.equal(plan.cleared, true);
+    assert.equal(new Set(game.history.map(entry => `${entry.waveIndex}:${entry.entryIndex}`)).size, 12);
+  }
+});
+
+test('frame subdivision and extra failed probes do not reroll a seeded initial arrival', () => {
+  for (const settings of [config, ZONE_WAVE_CONFIG.roof]) {
+    const reference = new EncounterSchedule(settings, { seed: 0x3920fbae });
+    for (const parts of [1, 7, 60, 120]) {
+      const plan = new EncounterSchedule(settings, { seed: reference.seed });
+      for (let step = 0; step < parts; step++) {
+        plan.update(reference.variation.firstDelay / parts, { footY: settings === config ? 4 : 14 });
+        for (let probe = 0; probe < step % 4; probe++) plan.spawnAvailable({ total: 0 }, () => false, () => false);
+      }
+      assert.deepEqual(plan.variation, reference.variation);
+      assert.equal(plan.waveIndex, 1);
+      assert.equal(plan.timerDuration, reference.variation.firstDelay);
+      assert.deepEqual(plan.pendingTypes, settings.waves[0]);
+      assert.ok(plan.pending.every(entry => entry.waitedSeconds === 0));
+    }
   }
 });
 

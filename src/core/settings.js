@@ -3,13 +3,27 @@ export const DEFAULT_SETTINGS = Object.freeze({
   sensitivity: 1,
   fov: 82,
   reducedMotion: false,
+  audioMaster: 0.75,
+  audioEffects: 0.85,
+  audioAmbience: 0.4,
+  audioMusic: 0.28,
+  audioRadio: 0.9,
+  checkpointVoice: true,
+});
+
+export const AUDIO_MIX_SETTINGS = Object.freeze({
+  master: 'audioMaster',
+  effects: 'audioEffects',
+  ambience: 'audioAmbience',
+  music: 'audioMusic',
+  radio: 'audioRadio',
 });
 
 const QUALITY_OPTIONS = new Set(['auto', 'high', 'performance']);
 const STORAGE_KEY = 'one-last-kill.settings.v1';
 
 function finiteNumber(value, fallback, min, max) {
-  if (value === '' || value == null || typeof value === 'boolean') return fallback;
+  if ((typeof value !== 'number' && typeof value !== 'string') || (typeof value === 'string' && !value.trim())) return fallback;
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
 }
@@ -22,7 +36,15 @@ export function normalizeSettings(value = {}) {
     sensitivity: finiteNumber(source.sensitivity, DEFAULT_SETTINGS.sensitivity, 0.35, 2.5),
     fov: Math.round(finiteNumber(source.fov, DEFAULT_SETTINGS.fov, 70, 100)),
     reducedMotion: typeof source.reducedMotion === 'boolean' ? source.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
+    ...Object.fromEntries(Object.values(AUDIO_MIX_SETTINGS).map((key) => [key, finiteNumber(source[key], DEFAULT_SETTINGS[key], 0, 1)])),
+    checkpointVoice: typeof source.checkpointVoice === 'boolean' ? source.checkpointVoice : DEFAULT_SETTINGS.checkpointVoice,
   };
+}
+
+/** Mix preferences never contain mute state or permission to create an audio device. */
+export function audioMixFromSettings(value = {}) {
+  const settings = normalizeSettings(value);
+  return Object.fromEntries(Object.entries(AUDIO_MIX_SETTINGS).map(([channel, key]) => [channel, settings[key]]));
 }
 
 /** Storage is optional: restricted browsers still get working session preferences. */

@@ -1,0 +1,14 @@
+SPDX-License-Identifier: CC0-1.0
+
+Equipment Clicks II by LFA
+Source: https://opengameart.org/content/equipment-clicks-ii
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Verified on 2026-08-28: the author submission identifies CC0.
+
+Recorded desk-object foley: a ruler/cup and bottle-lid clicks, captured with a laptop microphone and processed by the author. Used as a handling proxy, not claimed as an actual pistol recording.
+
+Included original: equipmentclicks.wav
+Direct download: https://opengameart.org/sites/default/files/equipmentclicks.wav
+Original SHA-256: 42d40e4970fcee45b86088dab9c6a6e7f87b6dc29a6dd9dbbf4d98da7a4e3a47
+
+The game copy is an offline mono PCM conversion. Its exact transformation and hash are in ../manifest.json. CC0 continues to apply. This notice records the license stated on the author page; it is not a separately supplied author license file.

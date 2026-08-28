@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { camera } from '../core/renderer.js';
+import { Audio } from '../core/audio.js';
 import { Player } from './player.js';
 import { currentZone, onZoneChange } from '../world/world.js';
 import { Endings } from './mission.js';
 import { BALCONY, ROOF, SCAFFOLD_LEVELS } from '../world/layout.js';
 import { STAIRS } from '../world/stair-layout.js';
 import { DISTRICT } from '../world/district-layout.js';
+import { CHECKPOINT_COMMS } from './checkpoint-comms.js';
 import '../navigation.css';
 
 // Original fan-mission dialogue, not a transcription of the film.
@@ -30,6 +32,7 @@ const ROUTES = {
 };
 
 let marker, caption, captionTime = 0, routeIndex = 0;
+let pendingRadio = null;
 const projected = new THREE.Vector3();
 const toward = new THREE.Vector3();
 const forward = new THREE.Vector3();
@@ -42,7 +45,8 @@ export function initNavigation() {
   caption = document.createElement('div');
   caption.id = 'mission-caption';
   caption.setAttribute('role', 'status');
-  caption.innerHTML = '<span></span><p></p>';
+  caption.setAttribute('aria-atomic', 'true');
+  caption.innerHTML = '<span></span><p></p><small class="radio-caption"></small>';
   document.getElementById('hud').append(caption);
   onZoneChange(zone => {
     routeIndex = 0;
@@ -50,6 +54,10 @@ export function initNavigation() {
     if (!line) return;
     caption.querySelector('span').textContent = line[0];
     caption.querySelector('p').textContent = line[1];
+    pendingRadio = CHECKPOINT_COMMS[zone] ?? null;
+    const radioCaption = caption.querySelector('.radio-caption');
+    radioCaption.hidden = !pendingRadio;
+    radioCaption.textContent = pendingRadio ? `INTERCEPTED RADIO · ${pendingRadio.text}` : '';
     caption.classList.add('show');
     captionTime = 6;
   });
@@ -101,6 +109,20 @@ function target() {
 
 export function updateNavigation(dt) {
   if (!marker) return;
+  // A restore can change the zone while paused. Play only its current cue on
+  // the next simulation step; inspection and muted sessions never speak.
+  if (pendingRadio && dt > 0 && !Endings.isResolved()) {
+    const status = Audio.getStatus();
+    const resuming = status.active && status.supported && !status.muted && !status.hardMuted
+      && !status.blocked && !status.running && status.mix.master > 0 && status.mix.radio > 0;
+    // Context resume is asynchronous on some devices. Retain only this visible
+    // cue for at most 1.5 seconds of play; never queue muted checkpoints to be
+    // spoken later or let an old message follow the player into another zone.
+    if (!resuming) {
+      Audio.announceCheckpoint(pendingRadio);
+      pendingRadio = null;
+    } else if (captionTime <= 4.5) pendingRadio = null;
+  }
   captionTime = Math.max(0, captionTime - dt);
   caption.classList.toggle('show', captionTime > 0);
   const next = target();

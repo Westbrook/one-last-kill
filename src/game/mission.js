@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { camera, GameTime } from '../core/renderer.js';
 import { Audio } from '../core/audio.js';
 import { Input, engageLock } from '../core/input.js';
-import { Colliders } from '../core/collision.js';
+import { Colliders, capsuleHasClearance } from '../core/collision.js';
 import { Player, PlayerState, resetPlayerMotion } from './player.js';
 import { HUD, ObjectiveBanner, EndCard } from '../ui/hud.js';
 import { World, currentZone, zoneChanged, onZoneChange, ZoneCull } from '../world/world.js';
@@ -14,7 +14,9 @@ import {
   createCheckpoint,
 } from './mission-data.js';
 import { EncounterSchedule, EncounterRouteProgress } from './encounter-rules.js';
-import { selectEncounterSpawn } from './encounter-spawns.js';
+import { selectEncounterSpawn, selectEncounterFrontPair } from './encounter-spawns.js';
+import { EncounterSeeds } from './encounter-session.js';
+import { HEALTH_SUPPLIES } from './health-supply-data.js';
 import { isSegmentOccluded } from './combat-rules.js';
 import { readThreatView, ThreatFeedback } from './threat-feedback.js';
 import { DISTRICT } from '../world/district-layout.js';
@@ -50,6 +52,7 @@ function playerDie() {
   StreetChoice.dismiss();
   HUD.showDeath(true);
   Input.pause({ showOverlay: false });
+  Audio.clearRadio();
   HUD.message('DOWN — RESTART FROM CHECKPOINT', 4);
 }
 
@@ -97,6 +100,7 @@ function restartFromZone() {
   Input.reset();
   EndCard.hide();
   ThreatFeedback.clear();
+  Audio.reset();
 
   PlayerState.dead = false;
   Player.health = 100;
@@ -185,18 +189,27 @@ function spawnConcealed(source) {
   return false;
 }
 
-function pickFromConfig(key, config, waveIndex = 0, routeProgress = 0, entry = {}) {
+function encounterPlacement(key, config, waveIndex, routeProgress, variation = null) {
   const foot = playerFootPosition();
   const cursorKey = key + ':' + waveIndex;
   const cursor = spawnCursors.get(cursorKey) || 0;
   spawnCursors.set(cursorKey, cursor + 1);
-  return selectEncounterSpawn({
-    config, waveIndex, routeProgress, entryIndex: entry.entryIndex, waitedSeconds: entry.waitedSeconds,
-    type: entry.type, playerFoot: foot, yaw: Player.yaw, view: readThreatView(), weapon: Weapons.snapshot(),
+  return {
+    config, waveIndex, routeProgress, variation,
+    playerFoot: foot, yaw: Player.yaw, view: readThreatView(), weapon: Weapons.snapshot(),
     enemies: Enemies.list, encounterKey: key, startIndex: cursor,
     floorAt: point => surfaceTopAt(point.x, point.y, point.z, 0.28, 0.16),
-    blocked: point => isBlocked(point, 0, 0, 0.48, 2.02),
+    // Arrival space uses the full conservative envelope. The AI steering
+    // probe deliberately shrinks its radius to slide beside walls.
+    blocked: point => !capsuleHasClearance(point, 0.48, 2.02, Colliders.list),
     occluded: spawnConcealed,
+  };
+}
+
+function pickFromConfig(key, config, waveIndex = 0, routeProgress = 0, entry = {}, variation = null) {
+  return selectEncounterSpawn({
+    ...encounterPlacement(key, config, waveIndex, routeProgress, variation),
+    entryIndex: entry.entryIndex, waitedSeconds: entry.waitedSeconds, type: entry.type,
   });
 }
 
@@ -205,7 +218,8 @@ function pickSafeSpawn(zone) {
   if (!config) return null;
   const active = WaveDirector.zone === zone;
   const waveIndex = active ? (WaveDirector.wavePending ? WaveDirector.waveIndex - 1 : WaveDirector.waveIndex) : 0;
-  return pickFromConfig(zone, config, waveIndex, active ? WaveDirector.routeProgress?.distance ?? 0 : 0)?.point ?? null;
+  return pickFromConfig(zone, config, waveIndex, active ? WaveDirector.routeProgress?.distance ?? 0 : 0,
+    {}, active ? WaveDirector.schedule?.variation : null)?.point ?? null;
 }
 
 function countAliveInZone(zone) {
@@ -215,19 +229,24 @@ function countAliveInZone(zone) {
 }
 
 function createEncounterCounts(config) {
-  return { total: 0, alive: 0, aliveByWave: Array(config.waveCount).fill(0), byType: {} };
+  return { total: 0, alive: 0, rearAlive: 0, aliveByWave: Array(config.waveCount).fill(0),
+    frontAliveByWave: Array(config.waveCount).fill(0), byType: {} };
 }
 
 function collectEncounterCounts(zone, key, counts) {
   counts.total = 0;
+  counts.rearAlive = 0;
   counts.aliveByWave.fill(0);
+  counts.frontAliveByWave.fill(0);
   for (const type in counts.byType) counts.byType[type] = 0;
   for (const enemy of Enemies.list) {
     if (!enemy.alive || enemy.zone !== zone) continue;
     counts.total++;
+    if (enemy.arrivalRole === 'rear') counts.rearAlive++;
     counts.byType[enemy.type] = (counts.byType[enemy.type] || 0) + 1;
     if (enemy.encounterKey === key && Number.isInteger(enemy.encounterWave)) {
       counts.aliveByWave[enemy.encounterWave] = (counts.aliveByWave[enemy.encounterWave] || 0) + 1;
+      if (enemy.arrivalRole !== 'rear') counts.frontAliveByWave[enemy.encounterWave] = (counts.frontAliveByWave[enemy.encounterWave] || 0) + 1;
     }
   }
   counts.alive = counts.total;
@@ -236,16 +255,7 @@ function collectEncounterCounts(zone, key, counts) {
 
 function spawnScheduled(key, zone, schedule, counts, progress = 0) {
   collectEncounterCounts(zone, key, counts);
-  return schedule.spawnAvailable(counts, (entry, firstForWave) => {
-    const spawn = pickFromConfig(key, schedule.config, entry.waveIndex, progress, entry);
-    if (!spawn) return false;
-    // Check the final type too: a rear downgrade is committed only after all
-    // placement and pool checks pass, never by mutating a pending preview.
-    const typeCount = Enemies.list.filter(enemy => enemy.alive && enemy.zone === zone && enemy.type === spawn.type).length;
-    if (typeCount >= (schedule.config.typeCaps?.[spawn.type] ?? Infinity)) return false;
-    const { point } = spawn;
-    const enemy = Enemies.spawn(spawn.type, point.x, point.z, point.y);
-    if (!enemy) return false;
+  function commitArrival(enemy, entry, spawn) {
     enemy.zone = zone;
     enemy.encounterKey = key;
     enemy.encounterWave = entry.waveIndex;
@@ -258,11 +268,58 @@ function spawnScheduled(key, zone, schedule, counts, progress = 0) {
       enemy.spawnGrace = Math.max(enemy.spawnGrace, spawn.graceSeconds);
     }
     entry.type = spawn.type;
+  }
+  function announce(entry, firstForWave) {
     if (firstForWave) {
       const label = schedule.config.stages?.[entry.waveIndex]?.label;
       const incoming = schedule.reinforcementsActive ? 'REINFORCEMENTS' : (zone === 'balcony' ? 'CLOSE CONTACTS' : 'CONTACTS');
       HUD.message(incoming + ' · ' + (label || (entry.waveIndex + 1) + ' / ' + schedule.config.waveCount), 1.8);
     }
+  }
+  function hasCapacity(spawns) {
+    const types = {};
+    let total = 0;
+    for (const enemy of Enemies.list) {
+      if (!enemy.alive || enemy.zone !== zone) continue;
+      total++;
+      types[enemy.type] = (types[enemy.type] || 0) + 1;
+    }
+    if (total + spawns.length > schedule.config.maxAlive) return false;
+    for (const spawn of spawns) {
+      types[spawn.type] = (types[spawn.type] || 0) + 1;
+      if (types[spawn.type] > (schedule.config.typeCaps?.[spawn.type] ?? Infinity)) return false;
+    }
+    return true;
+  }
+  return schedule.spawnAvailable(counts, (entry, firstForWave) => {
+    const spawn = pickFromConfig(key, schedule.config, entry.waveIndex, progress, entry, schedule.variation);
+    // Only commit a rear downgrade after placement and final-type pool checks.
+    if (!spawn || !hasCapacity([spawn])) return false;
+    const { point } = spawn;
+    const enemy = Enemies.spawn(spawn.type, point.x, point.z, point.y);
+    if (!enemy) return false;
+    commitArrival(enemy, entry, spawn);
+    announce(entry, firstForWave);
+    return true;
+  }, (entries, firstForWave) => {
+    const spawns = selectEncounterFrontPair({
+      ...encounterPlacement(key, schedule.config, entries[0].waveIndex, progress, schedule.variation), entries,
+    });
+    if (!spawns || !hasCapacity(spawns)) return false;
+    const acquired = [];
+    for (const spawn of spawns) {
+      const { point } = spawn;
+      const enemy = Enemies.spawn(spawn.type, point.x, point.z, point.y);
+      if (!enemy) {
+        // The second rig can fail independently. Roll back the first without
+        // consuming either authored slot, granting kills, or dropping loot.
+        for (const first of acquired) Enemies.remove(first);
+        return false;
+      }
+      acquired.push(enemy);
+    }
+    acquired.forEach((enemy, index) => commitArrival(enemy, entries[index], spawns[index]));
+    announce(entries[0], firstForWave);
     return true;
   });
 }
@@ -309,6 +366,10 @@ function encounterStatus(zone, schedule) {
     waveIndex: schedule?.waveIndex ?? 0,
     clearedWaves: schedule?.clearedWaves ?? 0,
     reinforcementsActive: schedule?.reinforcementsActive ?? false,
+    seed: schedule?.seed ?? null,
+    variationEnabled: schedule?.variation?.enabled ?? false,
+    timerDuration: schedule?.timerDuration ?? 0,
+    recoveryDelay: schedule?.recoveryDelay ?? 0,
     skipped: schedule?.skipped ?? 0,
   };
 }
@@ -334,7 +395,7 @@ const WaveDirector = {
     this.zone = zone;
     this.active = true;
     this.cleared = false;
-    this.schedule = new EncounterSchedule(config);
+    this.schedule = new EncounterSchedule(config, { seed: EncounterSeeds.next() });
     this.counts = createEncounterCounts(config);
     this.spawnTimer = 0;
     this.routeProgress = config.route ? new EncounterRouteProgress(config.route) : null;
@@ -435,6 +496,7 @@ function spawnBakeryRaiders(types = [...FINAL_ENCOUNTERS.bakery.waves[0]]) {
 const HealPickups = (() => {
   const list = [];
   let activeZone = 'apartment';
+  const haloIntensity = 0.35;
   const bodyGeometry = new THREE.BoxGeometry(0.24, 0.08, 0.18);
   const bandGeometry = new THREE.BoxGeometry(0.245, 0.025, 0.06);
   const crossH = new THREE.BoxGeometry(0.10, 0.012, 0.025);
@@ -446,11 +508,17 @@ const HealPickups = (() => {
     const visible = pickup.active && (!pickup.zone || pickup.zone === activeZone);
     pickup.mesh.visible = visible;
     pickup.halo.visible = visible;
+    // Practical lights are pooled by intensity, not their source visibility.
+    pickup.halo.intensity = visible ? haloIntensity : 0;
   }
   return {
     list,
-    spawn(x, y, z, amount = 25, zone = null) {
+    spawn(x, y, z, amount = 25, zone = null, id = null) {
       const mesh = new THREE.Group();
+      if (id) {
+        mesh.name = 'health:' + id;
+        mesh.userData.healthSupplyId = id;
+      }
       mesh.add(new THREE.Mesh(bodyGeometry, bodyMaterial), new THREE.Mesh(bandGeometry, bandMaterial));
       for (const geometry of [crossH, crossV]) {
         const cross = new THREE.Mesh(geometry, redMaterial);
@@ -458,10 +526,11 @@ const HealPickups = (() => {
         mesh.add(cross);
       }
       mesh.position.set(x, y + 0.18, z);
-      const halo = new THREE.PointLight(0xffa0a0, 0.35, 1.8, 1.8);
+      const halo = new THREE.PointLight(0xffa0a0, haloIntensity, 1.8, 1.8);
+      halo.userData.zone = zone;
       halo.position.copy(mesh.position);
       halo.position.y += 0.05;
-      const pickup = { mesh, halo, amount, zone, active: true, baseY: mesh.position.y, phase: Math.random() * Math.PI * 2 };
+      const pickup = { id, mesh, halo, amount, zone, active: true, baseY: mesh.position.y, phase: Math.random() * Math.PI * 2 };
       list.push(pickup);
       syncVisibility(pickup);
       World.add(mesh, halo);
@@ -572,7 +641,7 @@ const Endings = (() => {
     mode = branch;
     const config = FINAL_ENCOUNTERS[branch];
     bakeryDeadline = config.deadlineSeconds;
-    schedule = new EncounterSchedule(config);
+    schedule = new EncounterSchedule(config, { seed: EncounterSeeds.next() });
     counts = createEncounterCounts(config);
     spawnTimer = 0;
     objectiveTimer = 0;
@@ -685,22 +754,7 @@ function initMission() {
   AmmoSupplies.setZone('apartment');
   // Explicit initialization avoids cross-module access before World and the
   // weapon view model exist. It also makes repeated startup calls harmless.
-  const supplies = [
-    ['apartment', -10, 4, -4, 25],
-    ['neighbor', 3, 4, -7, 25],
-    ['balcony', 11.5, 4, -3.5, 25],
-    ['balcony', -18, 4, ZONE_WAVE_CONFIG.balcony.route.points[1].z, 25],
-    ['stairwell', -16.55, 6.4, -0.85, 30],
-    ['roof', 13, 14, -5, 30],
-    ['roof', -10, 14, -5, 30],
-    ['scaffolding', 15.5, 7, 4.2, 25],
-    ['scaffolding', 18, 1.5, 5.2, 25],
-    ['street', 0, 0.05, 14, 35],
-    ['street', 29, 0.05, 16, 35],
-    ['bakery', -22.5, 0.08, 33.1, 35],
-    ['bakery', -22.6, 0.08, 39.4, 35],
-  ];
-  for (const [zone, x, y, z, amount] of supplies) HealPickups.spawn(x, y, z, amount, zone);
+  for (const { id, zone, x, y, z, amount } of HEALTH_SUPPLIES) HealPickups.spawn(x, y, z, amount, zone, id);
   saveCheckpoint('apartment');
   WaveDirector.start('apartment');
   document.getElementById('restartbutton')?.addEventListener('click', () => {

@@ -15,7 +15,8 @@ import { Player, PlayerState } from './player.js';
 import { HUD } from '../ui/hud.js';
 import { Audio } from '../core/audio.js';
 import { Colliders } from '../core/collision.js';
-import { World } from '../world/world.js';
+import { Ballistics, createBallisticHit } from '../core/ballistics.js';
+import { World, currentZone } from '../world/world.js';
 import { raycastEnemies, damageEnemy } from './enemies.js';
 import { FX } from '../render/effects.js';
 import { prepareViewModel, getViewModelMuzzle } from '../render/viewmodel.js';
@@ -473,10 +474,13 @@ const Weapons = {
   _scratch: {
     origin: new THREE.Vector3(), fwd: new THREE.Vector3(),
     muzzle: new THREE.Vector3(), dir: new THREE.Vector3(),
-    end: new THREE.Vector3(),
-    wallRay: new THREE.Ray(new THREE.Vector3(), new THREE.Vector3()),
-    wallHit: new THREE.Vector3(),
+    end: new THREE.Vector3(), barrelDirection: new THREE.Vector3(), travelDirection: new THREE.Vector3(),
+    worldHit: createBallisticHit(), barrelHit: createBallisticHit(), muzzleHit: createBallisticHit(),
+    meleeWorldHit: createBallisticHit(),
     meleeHit: { enemy: null, part: 'body', point: new THREE.Vector3(), dist: 0 },
+    worldSound: { surface: 'concrete', intensity: 0.7, pos: new THREE.Vector3(), environment: '' },
+    bodySound: { surface: 'body', intensity: 0.42, pos: new THREE.Vector3(), environment: '' },
+    shotSound: { environment: '' },
   },
   // Fire one shot from the held ranged weapon. Caller verifies cooldown/loaded.
   _fireRanged() {
@@ -485,14 +489,20 @@ const Weapons = {
     s.origin.copy(camera.position);
     camera.getWorldDirection(s.fwd);
     // Effects originate at the visible barrel, including hip-fire/aim offsets.
-    // Hitscan still uses the camera so the reticle remains the aiming reference.
+    // The camera selects the aim point; the muzzle still cannot shoot through
+    // nearby furniture or start a round on the far side of a wall.
     if (!getViewModelMuzzle(this._vm(this.current), s.muzzle)) {
       s.muzzle.copy(s.origin).addScaledVector(s.fwd, 0.55);
     }
+    s.barrelDirection.copy(s.muzzle).sub(s.origin);
+    const barrelLength = s.barrelDirection.length();
+    const barrelBlocked = barrelLength > 1e-5
+      && Boolean(Ballistics.raycast(s.origin, s.barrelDirection, barrelLength, 'bullet', s.barrelHit));
     FX.muzzleFlash(s.muzzle);
     const pellets = d.pellets || 1;
     let anyHit = false;
     let killed = false, headshot = false;
+    let worldSoundDistance = Infinity, bodySoundDistance = Infinity;
     const spread = d.spread * (Player.aiming ? 0.30 : 1);
     for (let i = 0; i < pellets; i++) {
       s.dir.copy(s.fwd);
@@ -500,9 +510,20 @@ const Weapons = {
       s.dir.y += (Math.random() - 0.5) * spread * 2;
       s.dir.z += (Math.random() - 0.5) * spread * 2;
       s.dir.normalize();
-      const hit = raycastEnemies(s.origin, s.dir, d.range);
+      const worldHit = barrelBlocked ? null : Ballistics.raycast(s.origin, s.dir, d.range, 'bullet', s.worldHit);
+      let hit = barrelBlocked ? null : raycastEnemies(s.origin, s.dir, d.range, worldHit?.distance ?? d.range);
+      let impact = barrelBlocked ? s.barrelHit : worldHit;
+      if (hit) s.end.copy(hit.point);
+      else if (impact) s.end.copy(impact.point);
+      else s.end.copy(s.origin).addScaledVector(s.dir, d.range);
+      if (!barrelBlocked) {
+        s.travelDirection.copy(s.end).sub(s.muzzle);
+        const travel = s.travelDirection.length();
+        const obstruction = travel > 1e-4
+          ? Ballistics.raycast(s.muzzle, s.travelDirection, travel - 1e-4, 'bullet', s.muzzleHit) : null;
+        if (obstruction) { hit = null; impact = obstruction; s.end.copy(obstruction.point); }
+      }
       if (hit) {
-        s.end.copy(hit.point);
         const wasAlive = hit.enemy.alive;
         damageEnemy(hit.enemy, d.dmg, hit.part, hit.point);
         if (wasAlive && !hit.enemy.alive) {
@@ -511,26 +532,21 @@ const Weapons = {
         }
         headshot = headshot || hit.part === 'head';
         anyHit = true;
-      } else {
-        // Cheap world raycast so wall misses spawn an impact spark at the
-        // first collider face the bullet would strike. Scratch ray reused.
-        s.wallRay.origin.copy(s.origin); s.wallRay.direction.copy(s.dir);
-        let wallDist = d.range;
-        let wallFound = false;
-        const list = Colliders.list;
-        for (let bi = 0, bn = list.length; bi < bn; bi++) {
-          if (s.wallRay.intersectBox(list[bi], s.wallHit)) {
-            const dd = s.wallHit.distanceTo(s.origin);
-            if (dd < wallDist) { wallDist = dd; wallFound = true; s.end.copy(s.wallHit); }
-          }
+        const distance = s.origin.distanceToSquared(hit.point);
+        if (distance < bodySoundDistance) {
+          bodySoundDistance = distance;
+          s.bodySound.pos.copy(hit.point);
         }
-        if (wallFound) {
-          FX.impact(s.end.x, s.end.y, s.end.z, 4);
-        } else {
-          s.end.copy(s.origin).addScaledVector(s.dir, d.range);
+      } else if (impact) {
+        FX.impact(s.end.x, s.end.y, s.end.z, 4, impact);
+        const distance = s.origin.distanceToSquared(impact.point);
+        if (distance < worldSoundDistance) {
+          worldSoundDistance = distance;
+          s.worldSound.pos.copy(impact.point);
+          s.worldSound.surface = impact.surfaceKind;
         }
       }
-      FX.tracer(s.muzzle, s.end);
+      FX.tracer(barrelBlocked ? s.origin : s.muzzle, s.end);
     }
     CombatStats.recordShot(anyHit);
     if (anyHit) HUD.hit?.({ killed, headshot });
@@ -540,7 +556,18 @@ const Weapons = {
     this.loaded -= 1;
     this.cooldown = d.rate;
     this.swingT = 1.0;
-    if (Audio[d.sound]) Audio[d.sound]();
+    s.shotSound.environment = currentZone;
+    if (Audio[d.sound]) Audio[d.sound](s.shotSound);
+    // A shotgun may make many real contacts, but one trigger pull must not
+    // stack a full-volume sound for every pellet on the same piece of cover.
+    if (Number.isFinite(worldSoundDistance)) {
+      s.worldSound.environment = currentZone;
+      Audio.impact(s.worldSound);
+    }
+    if (Number.isFinite(bodySoundDistance)) {
+      s.bodySound.environment = currentZone;
+      Audio.impact(s.bodySound);
+    }
     this._syncHUD();
     return anyHit;
   },
@@ -557,6 +584,7 @@ const Weapons = {
     this.swingT = 1;
     this.impactHold = 0;
     if (type === 'fists') this.punchIndex = (this.punchIndex + 1) & 1;
+    Audio.meleeSwing({ weapon: type, intensity: type === 'bat' ? 1 : 0.65, environment: currentZone });
     return true;
   },
   _commitMeleeContact() {
@@ -567,6 +595,7 @@ const Weapons = {
     camera.getWorldDirection(s.fwd);
     const best = s.meleeHit;
     best.enemy = null; best.dist = Infinity;
+    s.meleeWorldHit.distance = Infinity;
     // A short fan makes close combat forgiving without striking enemies
     // behind the player. Each ray performs its own current wall/cover check.
     const rayCount = d.contactArc > 0 ? 3 : 1;
@@ -574,12 +603,28 @@ const Weapons = {
       const angle = index === 0 ? 0 : index === 1 ? -d.contactArc : d.contactArc;
       const cosine = Math.cos(angle), sine = Math.sin(angle);
       s.dir.set(s.fwd.x * cosine + s.fwd.z * sine, s.fwd.y, -s.fwd.x * sine + s.fwd.z * cosine);
-      const hit = raycastEnemies(s.origin, s.dir, d.range);
+      const worldHit = Ballistics.raycast(s.origin, s.dir, d.range, 'bullet', s.worldHit);
+      const hit = raycastEnemies(s.origin, s.dir, d.range, worldHit?.distance ?? d.range);
       if (hit && hit.dist < best.dist) {
         best.enemy = hit.enemy; best.part = hit.part; best.point.copy(hit.point); best.dist = hit.dist;
       }
+      if (worldHit && worldHit.distance < s.meleeWorldHit.distance) {
+        s.meleeWorldHit.distance = worldHit.distance;
+        s.meleeWorldHit.point.copy(worldHit.point);
+        s.meleeWorldHit.normal.copy(worldHit.normal);
+        s.meleeWorldHit.surfaceKind = worldHit.surfaceKind;
+        s.meleeWorldHit.material = worldHit.material;
+      }
     }
-    if (!best.enemy) return false;
+    if (!best.enemy) {
+      if (Number.isFinite(s.meleeWorldHit.distance)) {
+        const hit = s.meleeWorldHit;
+        Audio.impact({ surface: hit.surfaceKind, pos: hit.point, intensity: 0.65, environment: currentZone });
+        FX.impact(hit.point.x, hit.point.y, hit.point.z, 2, hit);
+        this.impactHold = 0.018;
+      }
+      return false;
+    }
     const wasAlive = best.enemy.alive;
     damageEnemy(best.enemy, d.dmg, best.part, best.point);
     const killed = wasAlive && !best.enemy.alive;
@@ -588,19 +633,20 @@ const Weapons = {
     // Only the held pose pauses briefly at impact; the world and input keep
     // advancing, so this feedback cannot grant invulnerability or extra hits.
     this.impactHold = this.melee.type === 'bat' ? 0.028 : 0.018;
-    if (Audio[d.sound]) Audio[d.sound]();
+    if (Audio[d.sound]) Audio[d.sound]({ weapon: this.melee.type, pos: best.point,
+      intensity: this.melee.type === 'bat' ? 1 : 0.75, environment: currentZone });
     return true;
   },
   startReload() {
     const d = this.def();
-    if (d.kind !== 'ranged') return false;
+    if (PlayerState.dead || d.kind !== 'ranged') return false;
     if (this.reloading > 0) return false;
     if (this.loaded >= d.mag) return false;
     if (this.reserve <= 0) return false;
     this.cancelAttack();
     this.reloading = d.reloadTime;
     HUD.setReloading(true);
-    Audio.reloadClack();
+    Audio.weaponMechanical({ weapon: this.current, action: 'reload-start', environment: currentZone });
     return true;
   },
   _finishReload() {
@@ -609,6 +655,7 @@ const Weapons = {
     this.loaded = next.loaded;
     this.reserve = next.reserve;
     this.reloading = 0;
+    Audio.weaponMechanical({ weapon: this.current, action: 'reload-end', environment: currentZone });
     HUD.setReloading(false);
     this._syncHUD();
   },
@@ -664,6 +711,9 @@ const Weapons = {
     // Consume the picked-up drop and equip it.
     WeaponDrops.remove(drop);
     this._equip(newType, newAmmo);
+    if (WEAPON_DEFS[newType].kind === 'ranged') {
+      Audio.weaponMechanical({ weapon: newType, action: 'equip', intensity: 0.6, environment: currentZone });
+    }
     Audio.pickupChime();
     HUD.message('PICKED UP ' + WEAPON_DEFS[newType].name, 1.4);
     return true;
@@ -683,10 +733,16 @@ const Weapons = {
   // pickup-prompt visibility. Input handling lives in handleInput().
   tick(dt) {
     if (!Number.isFinite(dt) || dt <= 0) return;
-    if (PlayerState.dead || (this.melee.active && this.melee.owner !== this.current)) this.cancelAttack();
+    if (PlayerState.dead) { this.cancelAttack(); return; }
+    if (this.melee.active && this.melee.owner !== this.current) this.cancelAttack();
     if (this.cooldown > 0) this.cooldown = Math.max(0, this.cooldown - dt);
     if (this.reloading > 0) {
+      const previous = this.reloading;
       this.reloading -= dt;
+      const insertAt = this.def().reloadTime * 0.34;
+      if (previous > insertAt && this.reloading <= insertAt) {
+        Audio.weaponMechanical({ weapon: this.current, action: 'reload-insert', environment: currentZone });
+      }
       if (this.reloading <= 0) this._finishReload();
     }
     this.impactHold = Math.max(0, this.impactHold - dt);
@@ -773,7 +829,7 @@ const Weapons = {
         if (this.loaded > 0) {
           this._fireRanged();
         } else if (inp.leftPressed) {
-          Audio.dryClick();
+          Audio.dryClick({ weapon: this.current, environment: currentZone });
           this.cooldown = 0.25;
           if (this.reserve > 0) this.startReload();
         }

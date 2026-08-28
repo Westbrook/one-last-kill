@@ -1,0 +1,164 @@
+{
+  "version": 1,
+  "samples": {
+    "footstep:concrete": [
+      {
+        "url": "/assets/audio/foley/footstep-concrete-01.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/footstep-concrete-02.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/footstep-concrete-03.wav",
+        "bus": "effects",
+        "gain": 1
+      }
+    ],
+    "footstep:wood": [
+      {
+        "url": "/assets/audio/foley/footstep-wood-01.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/footstep-wood-02.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/footstep-wood-03.wav",
+        "bus": "effects",
+        "gain": 1
+      }
+    ],
+    "impact:metal": [
+      {
+        "url": "/assets/audio/foley/impact-metal-01.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/impact-metal-02.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/impact-metal-03.wav",
+        "bus": "effects",
+        "gain": 1
+      }
+    ],
+    "impact:wood": [
+      {
+        "url": "/assets/audio/foley/impact-wood-01.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/impact-wood-02.wav",
+        "bus": "effects",
+        "gain": 1
+      }
+    ],
+    "impact:glass": [
+      {
+        "url": "/assets/audio/foley/impact-glass-01.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/impact-glass-02.wav",
+        "bus": "effects",
+        "gain": 1
+      }
+    ],
+    "impact:body": [
+      {
+        "url": "/assets/audio/foley/impact-body-01.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/impact-body-02.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/impact-body-03.wav",
+        "bus": "effects",
+        "gain": 1
+      }
+    ],
+    "impact:generic": [
+      {
+        "url": "/assets/audio/foley/impact-generic-01.wav",
+        "bus": "effects",
+        "gain": 1
+      },
+      {
+        "url": "/assets/audio/foley/impact-generic-02.wav",
+        "bus": "effects",
+        "gain": 1
+      }
+    ],
+    "mechanical:reload-rifle": {
+      "url": "/assets/audio/mechanical/reload-rifle.wav",
+      "bus": "effects",
+      "gain": 1
+    },
+    "radio:ready": {
+      "url": "/assets/audio/radio/ready.wav",
+      "bus": "radio",
+      "gain": 1
+    },
+    "radio:hold": {
+      "url": "/assets/audio/radio/hold.wav",
+      "bus": "radio",
+      "gain": 1
+    },
+    "radio:hurry-up": {
+      "url": "/assets/audio/radio/hurry-up.wav",
+      "bus": "radio",
+      "gain": 1
+    },
+    "radio:cover-me": {
+      "url": "/assets/audio/radio/cover-me.wav",
+      "bus": "radio",
+      "gain": 1
+    },
+    "radio:get-down": {
+      "url": "/assets/audio/radio/get-down.wav",
+      "bus": "radio",
+      "gain": 1
+    },
+    "radio:go-go-go": {
+      "url": "/assets/audio/radio/go-go-go.wav",
+      "bus": "radio",
+      "gain": 1
+    },
+    "radio:target-engaged": {
+      "url": "/assets/audio/radio/target-engaged.wav",
+      "bus": "radio",
+      "gain": 1
+    },
+    "radio:watch-my-back": {
+      "url": "/assets/audio/radio/watch-my-back.wav",
+      "bus": "radio",
+      "gain": 1
+    },
+    "mechanical:reload-pistol": {
+      "url": "/assets/audio/mechanical/reload-pistol.wav",
+      "bus": "effects",
+      "gain": 1
+    },
+    "mechanical:cock-shotgun": {
+      "url": "/assets/audio/mechanical/cock-shotgun.wav",
+      "bus": "effects",
+      "gain": 1
+    }
+  }
+}

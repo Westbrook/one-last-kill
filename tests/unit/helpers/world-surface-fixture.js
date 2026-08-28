@@ -13,6 +13,7 @@ import { createDoorAssemblies } from '../../../src/world/door-assemblies.js';
 import { applyBoxWorldUV } from '../../../src/render/world-uv.js';
 import { SURFACE_METERS } from '../../../src/render/surface-detail.js';
 import { Colliders } from '../../../src/core/collision.js';
+import { createBallisticWorld } from '../../../src/core/ballistics.js';
 import { mulberry32 } from '../../../src/core/math.js';
 
 function loadFunctions(path, bindings, names) {
@@ -31,7 +32,7 @@ function loadFunctions(path, bindings, names) {
  * can be attributed before material batching. Character rigs, transient effect
  * geometry and distant environmental instances are outside this fixture.
  */
-export function buildWorldSurfaceFixture() {
+export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld() } = {}) {
   Architecture.clear(); Colliders.clear();
   const World = new THREE.Group(), materials = new Map(), additions = new Map();
   const boxes = [], decorations = [], triggers = [];
@@ -46,6 +47,7 @@ export function buildWorldSurfaceFixture() {
     if (!materials.has(key)) {
       const material = new THREE.MeshStandardMaterial();
       material.name = String(key); material.userData.surfaceKind = key;
+      if (key === 'glass') { material.transparent = true; material.opacity = 0.45; }
       material.userData.surfaceMeters = SURFACE_METERS[key] ?? 1;
       materials.set(key, material);
     }
@@ -100,7 +102,7 @@ export function buildWorldSurfaceFixture() {
   const WorldState = { fires: [], smokeSystems: [], flickerLights: [], bakeryLights: [] };
   const bindings = {
     THREE, RoundedBoxGeometry, mergeGeometries, World, WorldState, MATS, ...caches,
-    Architecture, boxBounds, Colliders, BUILDING, BALCONY, ROOF, OPENINGS, APARTMENT_DOORS, STAIRS, DISTRICT,
+    Architecture, boxBounds, Colliders, Ballistics: ballistics, BUILDING, BALCONY, ROOF, OPENINGS, APARTMENT_DOORS, STAIRS, DISTRICT,
     SCAFFOLD_LEVELS, SCAFFOLD_TRIGGER_MIN_Z, createInteriorProps, createDoorAssemblies,
     addBox, addDecor, pushDecor,
     addWallX: (...args) => wall('x', ...args), addWallZ: (...args) => wall('z', ...args),
@@ -112,9 +114,10 @@ export function buildWorldSurfaceFixture() {
     },
     makeHumanoid: () => new THREE.Group(), HUMANOID_PRESETS: { shopkeeper: {}, woman: {} },
     makeSmokeSystem: () => ({ points: new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()) }),
-    addFlickerLight() {}, setFireActive() {},
-    spawnFire() { const group = new THREE.Group(), light = new THREE.PointLight(); group.add(light); World.add(group); return { group, light }; },
-    Triggers: { add(name, min, max) { triggers.push({ name, bounds: new THREE.Box3(min, max) }); } },
+    addFlickerLight() {},
+    setFireActive(entry, active) { entry.group.visible = active; },
+    spawnFire() { const group = new THREE.Group(), light = new THREE.PointLight(); group.userData.ballistics = false; group.add(light); World.add(group); return { group, light }; },
+    Triggers: { add(name, min, max, onEnter, onReset) { triggers.push({ name, bounds: new THREE.Box3(min, max), onEnter, onReset }); } },
   };
   Object.assign(bindings, loadFunctions('src/world/structures.js', bindings, ['addBeam', 'addProtectiveScreen']));
   const builders = [
@@ -139,7 +142,7 @@ export function buildWorldSurfaceFixture() {
     entry.bounds = new THREE.Box3().setFromObject(mesh);
     entries.set(mesh, entry);
   });
-  return { World, boxes, decorations, entries: [...entries.values()], records: new Map(Architecture.elements), materials, triggers, colliders: [...Colliders.list] };
+  return { World, boxes, decorations, entries: [...entries.values()], records: new Map(Architecture.elements), materials, triggers, colliders: [...Colliders.list], ballistics };
 }
 
 const AXES = ['x', 'y', 'z'];

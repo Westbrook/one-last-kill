@@ -7,6 +7,7 @@ import {
 import { BALCONY, ROOF, SCAFFOLD_LEVELS } from '../../src/world/layout.js';
 import { STAIRS } from '../../src/world/stair-layout.js';
 import { DISTRICT } from '../../src/world/district-layout.js';
+import { encounterSpawnRole } from '../../src/game/rear-encounter-rules.js';
 
 const safeContext = overrides => ({
   playerFoot: { x: 0, y: 0, z: 0 },
@@ -49,18 +50,27 @@ test('completed encounters never replenish or escalate into unlimited waves', ()
   }
 });
 
-test('balcony fields three finite bat-and-fist pairs without increasing its live cap', () => {
+test('balcony retains three forward pairs and adds two separately capped rear reserves', () => {
   const config = ZONE_WAVE_CONFIG.balcony;
   assert.equal(config.waveCount, 3);
-  assert.equal(config.maxAlive, 2);
-  assert.deepEqual(config.waves, [['brawler', 'thug'], ['thug', 'brawler'], ['brawler', 'thug']]);
-  assert.equal(config.waves.flat().length, 6);
+  assert.equal(config.maxAlive, 3);
+  assert.equal(config.frontPairSize, 2);
+  assert.equal(config.maxRearAlive, 1);
+  assert.equal(config.advanceOnFrontClear, true);
+  assert.deepEqual(config.rearEntryIndices, [2]);
+  assert.deepEqual(config.waves, [['brawler', 'thug'], ['thug', 'brawler', 'thug'], ['brawler', 'thug', 'thug']]);
+  assert.equal(config.waves.flat().length, 8);
+  assert.deepEqual(config.waves.map(wave => wave.map((_, index) => encounterSpawnRole(index, wave.length, config.rearEntryIndices))),
+    [['front', 'front'], ['front', 'front', 'rear'], ['front', 'front', 'rear']]);
   assert.deepEqual(config.stages.map(stage => stage.id), ['east-landing', 'wrap-walkway', 'stair-approach']);
   assert.equal(config.stages.length, config.waveCount);
   assert.ok(config.minRecovery >= 1.25);
   assert.ok(config.waveInterval >= 4.5);
   assert.throws(() => { config.stages[0].spawnIndices.push(0); }, TypeError);
+  assert.deepEqual(config.stages[0].preferredSpawnIndices, [11, 12]);
+  assert.throws(() => { config.stages[0].preferredSpawnIndices.push(1); }, TypeError);
   assert.throws(() => { config.route.points[0].x = 0; }, TypeError);
+  assert.throws(() => { config.rearEntryIndices[0] = 1; }, TypeError);
   for (const stage of config.stages) {
     assert.ok(stage.spawnIndices.length >= config.maxAlive);
     for (const index of stage.spawnIndices) {
@@ -84,13 +94,19 @@ test('balcony spawns alternate clear lanes around the shared walkway route', () 
   }
   const wrap = config.spawns.filter(point => point.z >= BALCONY.wrap.z1);
   assert.equal(new Set(wrap.map(point => point.z)).size, 2);
-  for (let index = 1; index < wrap.length; index++) assert.ok(Math.abs(wrap[index].z - wrap[index - 1].z) >= 0.55);
+  const westApproach = config.spawns.slice(2, 11);
+  for (let index = 1; index < westApproach.length; index++) {
+    assert.ok(Math.abs(westApproach[index].z - westApproach[index - 1].z) >= 0.55);
+  }
+  const eastPair = config.stages[0].spawnIndices.slice(0, 2).map(index => config.spawns[index]);
+  assert.deepEqual(eastPair.map(point => point.x), [10, 12], 'The south-facing approach staggers across X');
+  assert.ok(eastPair.every(point => point.z === 1.18));
   assert.equal(config.rearPressure.stagger, true);
 });
 
 test('authored contact budgets grow across all eight checkpoints while live groups remain bounded', () => {
-  assert.deepEqual(ZONE_ORDER.map(zone => ZONE_WAVE_CONFIG[zone].totalContacts), [2, 4, 6, 8, 12, 14, 16, 18]);
-  assert.deepEqual(ZONE_ORDER.map(zone => ZONE_WAVE_CONFIG[zone].maxAlive), [2, 2, 2, 2, 5, 3, 5, 5]);
+  assert.deepEqual(ZONE_ORDER.map(zone => ZONE_WAVE_CONFIG[zone].totalContacts), [2, 4, 8, 8, 12, 14, 16, 18]);
+  assert.deepEqual(ZONE_ORDER.map(zone => ZONE_WAVE_CONFIG[zone].maxAlive), [2, 2, 3, 2, 5, 3, 5, 5]);
 });
 
 test('opening combat teaches fists and bats before the first firearm is earned', () => {
@@ -128,6 +144,8 @@ test('four stair pairs use separate authored landings and progressively higher a
   const config = ZONE_WAVE_CONFIG.stairwell;
   assert.equal(config.waveCount, 4);
   assert.equal(config.maxAlive, 2);
+  assert.deepEqual(config.rearEntryIndices, [1]);
+  assert.equal(config.frontPairSize, undefined, 'Stairs retain their individual forward/rear arrival policy');
   assert.equal(config.retireLive, false, 'Living stair contacts keep pursuing after their landing is passed');
   assert.ok(config.waves.every(group => group.length === 2));
   for (const [index, stage] of config.stages.entries()) {
@@ -195,7 +213,24 @@ test('encounter and checkpoint authoring data cannot mutate between lives', () =
   assert.throws(() => { ZONE_WAVE_CONFIG.stairwell.rearSpawns[0].y = 100; }, TypeError);
   assert.throws(() => { ZONE_WAVE_CONFIG.stairwell.stages[0].rearSpawnIndices.push(3); }, TypeError);
   assert.throws(() => { ZONE_WAVE_CONFIG.balcony.rearPressure.maxDistance = 100; }, TypeError);
+  assert.throws(() => { ZONE_WAVE_CONFIG.balcony.variation.maxFirstDelay = 10; }, TypeError);
   assert.throws(() => { FINAL_ENCOUNTERS.bakery.waves[3].pop(); }, TypeError);
+});
+
+test('variation limits reflect each route width without changing rosters or recovery floors', () => {
+  for (const [zone, config] of Object.entries(ZONE_WAVE_CONFIG)) {
+    assert.equal(config.variation.key, zone);
+    assert.equal(config.variation.timingFraction, 0.18);
+    assert.ok(Object.isFrozen(config.variation));
+  }
+  assert.deepEqual([ZONE_WAVE_CONFIG.balcony.variation.jitterX, ZONE_WAVE_CONFIG.balcony.variation.jitterZ], [0.1, 0.025]);
+  assert.equal(ZONE_WAVE_CONFIG.balcony.variation.maxFirstDelay, 0.1);
+  assert.deepEqual([ZONE_WAVE_CONFIG.stairwell.variation.jitterX, ZONE_WAVE_CONFIG.stairwell.variation.jitterZ], [0.05, 0.05]);
+  assert.equal(ZONE_WAVE_CONFIG.roof.variation.jitterX, 0.6);
+  assert.equal(ZONE_WAVE_CONFIG.street.variation.jitterX, 0.75);
+  assert.equal(ZONE_WAVE_CONFIG.balcony.minRecovery, 1.25);
+  assert.equal(ZONE_WAVE_CONFIG.stairwell.minRecovery, 0.25);
+  assert.equal(ZONE_WAVE_CONFIG.balcony.totalContacts, 8);
 });
 
 test('safe spawn returns a grounded copy without mutating authored data', () => {

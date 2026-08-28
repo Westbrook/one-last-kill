@@ -1,7 +1,7 @@
 import { clamp } from '../core/math.js';
 import { engageLock } from '../core/input.js';
 import { Audio } from '../core/audio.js';
-import { Settings } from '../core/settings.js';
+import { AUDIO_MIX_SETTINGS, Settings } from '../core/settings.js';
 import { CombatStats } from '../game/combat-stats.js';
 
 const byId = (id) => document.getElementById(id);
@@ -455,24 +455,42 @@ document.addEventListener('keydown', (event) => {
   }
 }, true);
 
+const audioSettingKeys = new Set(Object.values(AUDIO_MIX_SETTINGS));
 const settingFields = {
   quality: byId('settingquality'),
   sensitivity: byId('settingsensitivity'),
   fov: byId('settingfov'),
   reducedMotion: byId('settingmotion'),
+  ...Object.fromEntries([...audioSettingKeys].map((key) => [key, byId('setting' + key.toLowerCase())])),
+  checkpointVoice: byId('settingcheckpointvoice'),
 };
 function syncSettings(settings = Settings.snapshot()) {
-  settingFields.quality.value = settings.quality;
-  settingFields.sensitivity.value = settings.sensitivity;
-  settingFields.fov.value = settings.fov;
-  settingFields.reducedMotion.checked = settings.reducedMotion;
+  for (const [key, field] of Object.entries(settingFields)) {
+    if (field.type === 'checkbox') {
+      field.checked = settings[key];
+      continue;
+    }
+    const audioLevel = audioSettingKeys.has(key);
+    const value = String(audioLevel ? Math.round(settings[key] * 100) : settings[key]);
+    if (field.value !== value) field.value = value;
+    if (audioLevel) {
+      write(byId(key.toLowerCase() + 'value'), value + '%');
+      const description = value + ' percent';
+      if (field.getAttribute('aria-valuetext') !== description) field.setAttribute('aria-valuetext', description);
+    }
+  }
   write(byId('sensitivityvalue'), settings.sensitivity.toFixed(2) + '×');
   write(byId('fovvalue'), settings.fov + '°');
   document.documentElement.dataset.reducedMotion = String(settings.reducedMotion);
 }
 for (const [key, field] of Object.entries(settingFields)) {
   field.addEventListener(field.type === 'range' ? 'input' : 'change', () => {
-    Settings.set(key, field.type === 'checkbox' ? field.checked : field.value);
+    const value = field.type === 'checkbox' ? field.checked : audioSettingKeys.has(key)
+      ? (field.value.trim() ? Number(field.value) / 100 : NaN)
+      : field.value;
+    // Editing the mix only saves preferences. Unmuting remains an explicit,
+    // separate audio-control gesture, including after restoring defaults.
+    Settings.set(key, value);
     write(byId('settingssaved'), 'PREFERENCES APPLIED');
   });
 }
@@ -487,22 +505,26 @@ syncSettings();
 
 function syncAudio({ muted = true, hardMuted = false, supported = true } = {}) {
   const button = byId('audiotoggle');
-  button.dataset.muted = String(muted);
+  const outputMuted = hardMuted || muted;
+  button.dataset.muted = String(outputMuted);
   button.dataset.forced = String(hardMuted);
   button.disabled = hardMuted || !supported;
-  button.setAttribute('aria-pressed', String(!muted));
-  const label = !supported ? 'AUDIO UNAVAILABLE' : hardMuted ? 'AUDIO LOCKED OFF' : muted ? 'AUDIO OFF' : 'AUDIO ON';
+  button.setAttribute('aria-pressed', String(!outputMuted));
+  const label = hardMuted ? 'AUDIO LOCKED OFF' : !supported ? 'AUDIO UNAVAILABLE' : muted ? 'AUDIO OFF' : 'AUDIO ON';
   write(byId('audiostatus'), label);
-  const description = !supported ? 'Audio is not supported in this browser.' : hardMuted ? 'Audio is locked off for this silent session.' : muted ? 'Audio is muted. Enable audio.' : 'Audio is enabled. Mute audio.';
+  const description = hardMuted ? 'Audio is locked off for this silent session.' : !supported ? 'Audio is not supported in this browser.' : muted ? 'Audio is muted. Enable audio.' : 'Audio is enabled. Mute audio.';
   button.setAttribute('aria-label', description);
   button.title = description;
   const note = document.querySelector('.settings-audio-note');
   if (note) {
-    note.textContent = !supported
-      ? 'Audio is not supported in this browser.'
-      : hardMuted
-        ? 'Audio is locked off for this silent session and cannot be enabled.'
-        : 'Audio starts muted. Use the audio control or press M to change it.';
+    note.dataset.forced = String(hardMuted);
+    write(note, hardMuted
+      ? 'Audio is locked off for this silent session and cannot be enabled. Levels and voice preferences can still be saved.'
+      : !supported
+        ? 'Audio is not supported in this browser. Levels and voice preferences can still be saved.'
+        : muted
+          ? 'Audio is muted. Changing levels or voice preferences does not enable sound. Use the audio control or press M to unmute.'
+          : 'Audio is on. Master scales every channel. Use the audio control or press M to mute.');
   }
 }
 document.addEventListener('audiochange', (event) => syncAudio(event.detail));

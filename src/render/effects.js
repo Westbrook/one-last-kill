@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { scene, camera } from '../core/renderer.js';
 import { makeCanvas } from '../render/materials.js';
+import { resolveImpactProfile, impactParticleStyle } from './impact-profile.js';
 
 // ── Procedural blood-puff particle pool ─────────────────────────────────────
 function makeBloodTexture() {
@@ -77,17 +78,16 @@ const Blood = (() => {
   };
 })();
 
-// ── Muzzle flash + bullet tracer + impact sparks ────────────────────────────
+// ── Muzzle flash + bullet tracer + material-aware impacts ───────────────────
 // All three effect systems use pre-allocated pools — spawn() rotates a cursor,
-// update() walks active slots and hides expired entries. ZERO allocations in
-// the hot path. Three sub-pools:
+// update() walks active slots and hides expired entries. No per-hit geometry,
+// material, light or scene-node allocation. Three sub-pools:
 //   FLASH (24 slots × 3 sprites): core plane + flare-star sprite + smoke puff,
 //     with per-shot scale/rotation jitter; per-slot PointLight kept.
 //   TRACER (48 slots): thin additive cylinder stretched between origin/end —
 //     reads as a glowing beam instead of a 1-px line.
-//   IMPACT (64 sprites): tiny additive spark/puff burst for shots that strike
-//     walls (player misses go through a cheap Colliders raycast in the firing
-//     path so we know WHERE the bullet stopped).
+//   IMPACT (64 sprites): muted dust/chips or tiny sparks/flecks selected from
+//     the actual struck material and emitted outside its contact plane.
 const FX = (() => {
   const FLASH_MAX = 24;
   const TRACER_MAX = 48;
@@ -134,10 +134,11 @@ const FX = (() => {
   function makeSparkTex() {
     const c = makeCanvas(32); const ctx = c.getContext('2d');
     const g = ctx.createRadialGradient(16, 16, 0.5, 16, 16, 14);
-    g.addColorStop(0,    'rgba(255,250,200,1)');
-    g.addColorStop(0.3,  'rgba(255,200,80,0.8)');
-    g.addColorStop(0.7,  'rgba(255,120,30,0.25)');
-    g.addColorStop(1,    'rgba(120,60,20,0)');
+    // A neutral mask accepts wood/glass tints without an orange halo.
+    g.addColorStop(0,    'rgba(255,255,255,1)');
+    g.addColorStop(0.3,  'rgba(245,245,245,0.8)');
+    g.addColorStop(0.7,  'rgba(210,210,210,0.2)');
+    g.addColorStop(1,    'rgba(255,255,255,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 32, 32);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true;
@@ -168,7 +169,7 @@ const FX = (() => {
   const flareMatBase = new THREE.MeshBasicMaterial({ map: FLARE_TEX, color: 0xffe0a0, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending });
   const smokeMatBase = new THREE.MeshBasicMaterial({ map: SMOKE_TEX, color: 0xb8a890, transparent: true, opacity: 0.55, depthWrite: false });
   const beamMatBase  = new THREE.MeshBasicMaterial({ color: 0xffe090, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending });
-  const sparkMatBase = new THREE.MeshBasicMaterial({ map: SPARK_TEX, color: 0xffd070, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending });
+  const sparkMatBase = new THREE.MeshBasicMaterial({ map: SPARK_TEX, color: 0xffffff, transparent: true, opacity: 1, depthTest: true, depthWrite: false, blending: THREE.NormalBlending });
 
   const flashes = new Array(FLASH_MAX);
   const tracers = new Array(TRACER_MAX);
@@ -204,16 +205,23 @@ const FX = (() => {
   for (let i = 0; i < IMPACT_MAX; i++) {
     const mat = sparkMatBase.clone();
     const mesh = new THREE.Mesh(sparkGeom, mat);
+    mesh.name = 'impact-particle'; mesh.userData.impactKind = 'neutral';
     mesh.visible = false;
     mesh.frustumCulled = false;
     scene.add(mesh);
-    impacts[i] = { mesh, mat, age: 0, life: 0.22, scale0: 1, active: false };
+    impacts[i] = {
+      mesh, mat, age: 0, life: 0.22, width0: 0, height0: 0, active: false, style: null,
+      origin: new THREE.Vector3(), start: new THREE.Vector3(), normal: new THREE.Vector3(), velocity: new THREE.Vector3(),
+      normalX: 0, normalY: 0,
+    };
   }
 
   let flashCursor = 0, tracerCursor = 0, impactCursor = 0;
   // Scratch vectors / quaternion — used by tracer().
   const _tFrom = new THREE.Vector3(), _tDir = new THREE.Vector3();
   const _tUp = new THREE.Vector3(0, 1, 0), _tQuat = new THREE.Quaternion();
+  const _iOrigin = new THREE.Vector3(), _iNormal = new THREE.Vector3(), _iTangent = new THREE.Vector3();
+  const _iBitangent = new THREE.Vector3(), _iAxis = new THREE.Vector3();
 
   return {
     muzzleFlash(pos) {
@@ -254,24 +262,51 @@ const FX = (() => {
       t.mat.opacity = 0.95;
       t.age = 0; t.active = true;
     },
-    impact(x, y, z, count = 4) {
-      // Pooled burst — `count` sprites jittered around the hit point. Used
-      // for both wall hits (player + enemy fire) so misses leave a visible
-      // scuff. Caller passes a point — we never new anything per call.
-      for (let i = 0; i < count; i++) {
+    impact(x, y, z, count = 4, hit = null) {
+      const point = hit?.point;
+      if (point && Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z)) _iOrigin.copy(point);
+      else _iOrigin.set(x, y, z);
+      if (!Number.isFinite(_iOrigin.x) || !Number.isFinite(_iOrigin.y) || !Number.isFinite(_iOrigin.z)) return;
+      const amount = Number.isFinite(count) ? Math.min(IMPACT_MAX, Math.max(0, Math.floor(count))) : 0;
+      if (!amount) return;
+      const profile = resolveImpactProfile(hit), normal = hit?.normal;
+      _iNormal.set(normal?.x ?? 0, normal?.y ?? 0, normal?.z ?? 0);
+      let normalLength = Math.hypot(_iNormal.x, _iNormal.y, _iNormal.z);
+      if (!Number.isFinite(normalLength) || normalLength < 1e-8) {
+        _iNormal.subVectors(camera.position, _iOrigin);
+        normalLength = Math.hypot(_iNormal.x, _iNormal.y, _iNormal.z);
+      }
+      if (normalLength > 1e-8 && Number.isFinite(normalLength)) _iNormal.multiplyScalar(1 / normalLength);
+      else _iNormal.set(0, 1, 0);
+      _iAxis.set(1, 0, 0);
+      _iTangent.crossVectors(_iNormal, Math.abs(_iNormal.y) > 0.9 ? _iAxis : _tUp).normalize();
+      _iBitangent.crossVectors(_iNormal, _iTangent);
+      for (let i = 0; i < amount; i++) {
         const sp = impacts[impactCursor];
         impactCursor = (impactCursor + 1) % IMPACT_MAX;
-        sp.mesh.position.set(
-          x + (Math.random() - 0.5) * 0.10,
-          y + (Math.random() - 0.5) * 0.10,
-          z + (Math.random() - 0.5) * 0.10,
-        );
+        const style = impactParticleStyle(profile, i), jitter = 0.8 + Math.random() * 0.4;
+        sp.style = style; sp.width0 = style.width * jitter; sp.height0 = style.height * jitter;
+        // Ballistics reuses its result object. Store only values in pooled state.
+        sp.origin.copy(_iOrigin); sp.normal.copy(_iNormal);
+        sp.mesh.position.copy(_iOrigin);
         sp.mesh.lookAt(camera.position);
-        sp.mesh.rotation.z = Math.random() * Math.PI * 2;
-        const s0 = 0.6 + Math.random() * 0.7;
-        sp.scale0 = s0;
-        sp.mesh.scale.setScalar(s0);
-        sp.mat.opacity = 1;
+        sp.mesh.rotateZ(Math.random() * Math.PI * 2);
+        _iAxis.set(1, 0, 0).applyQuaternion(sp.mesh.quaternion); sp.normalX = Math.abs(_iAxis.dot(_iNormal));
+        _iAxis.set(0, 1, 0).applyQuaternion(sp.mesh.quaternion); sp.normalY = Math.abs(_iAxis.dot(_iNormal));
+        const clearance = 0.004 + (sp.width0 * sp.normalX + sp.height0 * sp.normalY) * 0.5;
+        sp.start.copy(_iOrigin).addScaledVector(_iNormal, clearance)
+          .addScaledVector(_iTangent, (Math.random() - 0.5) * style.spread)
+          .addScaledVector(_iBitangent, (Math.random() - 0.5) * style.spread);
+        sp.velocity.copy(_iNormal).multiplyScalar(style.speed * (0.75 + Math.random() * 0.5))
+          .addScaledVector(_iTangent, (Math.random() - 0.5) * style.scatter)
+          .addScaledVector(_iBitangent, (Math.random() - 0.5) * style.scatter);
+        sp.velocity.y += style.rise;
+        sp.mesh.position.copy(sp.start); sp.mesh.scale.set(sp.width0 / 0.18, sp.height0 / 0.18, 1);
+        sp.mat.map = style.texture === 'dust' ? SMOKE_TEX : SPARK_TEX;
+        sp.mat.color.setHex(style.color); sp.mat.opacity = style.opacity;
+        sp.mat.blending = style.additive ? THREE.AdditiveBlending : THREE.NormalBlending;
+        sp.mesh.userData.impactKind = profile.id;
+        sp.life = style.life * (0.8 + Math.random() * 0.4);
         sp.mesh.visible = true;
         sp.age = 0; sp.active = true;
       }
@@ -302,15 +337,26 @@ const FX = (() => {
         if (k <= 0) { t.mesh.visible = false; t.active = false; }
         else { t.mat.opacity = 0.95 * k; }
       }
+      const advanceImpacts = Number.isFinite(dt) && dt > 0;
       for (let i = 0; i < IMPACT_MAX; i++) {
         const sp = impacts[i];
-        if (!sp.active) continue;
+        if (!sp.active || !advanceImpacts) continue;
         sp.age += dt;
         const k = 1 - sp.age / sp.life;
-        if (k <= 0) { sp.mesh.visible = false; sp.active = false; }
+        if (k <= 0) { sp.mesh.visible = false; sp.active = false; sp.mat.opacity = 0; }
         else {
-          sp.mat.opacity = k;
-          sp.mesh.scale.setScalar(sp.scale0 * (1 + (1 - k) * 0.8));
+          const growth = 1 + (1 - k) * sp.style.growth;
+          const width = sp.width0 * growth, height = sp.height0 * growth;
+          sp.mat.opacity = sp.style.opacity * k * k;
+          sp.mesh.scale.set(width / 0.18, height / 0.18, 1);
+          // Analytic motion stays the same at different frame rates. Expanded
+          // billboard corners remain outside the contacted plane, including floors.
+          sp.mesh.position.copy(sp.start).addScaledVector(sp.velocity, sp.age);
+          sp.mesh.position.y -= 0.5 * sp.style.gravity * sp.age * sp.age;
+          const separation = (sp.mesh.position.x - sp.origin.x) * sp.normal.x
+            + (sp.mesh.position.y - sp.origin.y) * sp.normal.y + (sp.mesh.position.z - sp.origin.z) * sp.normal.z;
+          const clearance = 0.004 + (width * sp.normalX + height * sp.normalY) * 0.5;
+          if (separation < clearance) sp.mesh.position.addScaledVector(sp.normal, clearance - separation);
         }
       }
     },

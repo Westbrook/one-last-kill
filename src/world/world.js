@@ -13,6 +13,7 @@ import { DISTRICT } from './district-layout.js';
 
 import { HUD, ObjectiveBanner } from '../ui/hud.js';
 import { Colliders } from '../core/collision.js';
+import { Ballistics } from '../core/ballistics.js';
 import { Player } from '../game/player.js';
 import { Architecture, boxBounds, signYaw } from './architecture.js';
 import { resolveSurfaceOwnership } from './surface-ownership.js';
@@ -164,6 +165,8 @@ function spawnFire(x, y, z, opts = {}) {
   // blockDepth (z-size) defaults to blockWidth so legacy callers stay square.
   if (o.blockDepth === null) o.blockDepth = o.blockWidth;
   const group = new THREE.Group();
+  // Fire can block a route without becoming an invisible bulletproof wall.
+  group.userData.ballistics = false;
   group.position.set(x, y, z);
   const fireA = makeFireMaterial();
   const fireB = makeFireMaterial();
@@ -471,6 +474,7 @@ function buildZone(zone, fn) {
   ZoneCull.capture(zone, before);
 }
 function buildWorld() {
+  Ballistics.clear();
   buildZone('apartment',   buildPlayerApartment);
   buildZone('neighbor',    buildNeighborApartment);
   buildZone('balcony',     buildBalcony);

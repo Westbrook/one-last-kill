@@ -10,6 +10,8 @@ import { BUILDING, BALCONY, ROOF } from '../../../src/world/layout.js';
 import { DISTRICT } from '../../../src/world/district-layout.js';
 import { ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS } from '../../../src/game/mission-data.js';
 import { Colliders, resolveCapsuleAABB } from '../../../src/core/collision.js';
+import { createBallisticHit } from '../../../src/core/ballistics.js';
+import { resolveSurfaceOwnership } from '../../../src/world/surface-ownership.js';
 import { createAmmoSupplies } from '../../../src/game/ammo-supplies.js';
 import { buildWorldSurfaceFixture } from './world-surface-fixture.js';
 
@@ -18,13 +20,15 @@ import { buildWorldSurfaceFixture } from './world-surface-fixture.js';
  * authored geometry. Only rig presentation, GPU compilation and effect/audio
  * sinks are replaced; no browser, renderer or audio device is constructed.
  */
-export function createEnemyAIHarness() {
+export function createEnemyAIHarness({ audio = null } = {}) {
   const fixture = buildWorldSurfaceFixture();
   const clock = { elapsed: 0 };
   const player = { pos: new THREE.Vector3(), _eyeH: 1.72, _bodyH: 1.84, radius: 0.32, health: 1000 };
   const playerState = { dead: false }, damage = [];
   const supplies = createAmmoSupplies();
   supplies.init({ world: fixture.World, player, canInteract: () => false });
+  resolveSurfaceOwnership(fixture.records.values());
+  fixture.ballistics.rebuild(fixture.World);
   const missionSource = readFileSync(new URL('../../../src/game/mission.js', import.meta.url), 'utf8');
   const floorSource = missionSource.match(/function surfaceTopAt\([^]*?\n\}/)?.[0];
   assert.ok(floorSource, 'keep the actual floor sampler in this harness');
@@ -35,15 +39,15 @@ export function createEnemyAIHarness() {
   assert.doesNotMatch(source, /^import\s/m);
   const silentEffects = new Proxy({}, { get: () => () => {} });
   const deterministicMath = Object.create(Math); deterministicMath.random = () => 0.5;
-  const api = runInNewContext(`${source}\n;({ ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, enemyTick, enemyAttackPlayer, hasLineOfSight, isBlocked, primeEnemyInvestigation });`, {
+  const api = runInNewContext(`${source}\n;({ ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, enemyTick, enemyAttackPlayer, hasLineOfSight, isBlocked, primeEnemyInvestigation, raycastEnemies, damageEnemy });`, {
     THREE, lerp, smoothstep, ...Navigation, ...Combat, ...StairPursuit,
     GameTime: clock, Player: player, PlayerState: playerState,
     scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera(), renderer: { compile() {} },
-    World: fixture.World, Colliders, resolveCapsuleAABB, BUILDING, BALCONY, ROOF, DISTRICT,
+    World: fixture.World, Colliders, resolveCapsuleAABB, Ballistics: fixture.ballistics, createBallisticHit, BUILDING, BALCONY, ROOF, DISTRICT,
     ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS, Math: deterministicMath, surfaceTopAt,
     makeHumanoid: () => new THREE.Group(), attachHeldWeapon: () => null, resetHumanoidPose() {}, updateHumanoidPose() {},
     beginHumanoidCollapse() {}, updateHumanoidCollapse: () => true,
-    WeaponDrops: { _mat: () => null, spawn() {} }, Audio: silentEffects, Blood: silentEffects, FX: silentEffects,
+    WeaponDrops: { _mat: () => null, spawn() {} }, Audio: audio ?? silentEffects, Blood: silentEffects, FX: silentEffects,
     applyPlayerDamage(amount, origin, attacker) { damage.push({ time: clock.elapsed, amount, origin: origin.clone(), attacker }); return true; },
   }, { filename: 'src/game/enemies.js' });
   api.EnemyPool.init();
@@ -67,5 +71,5 @@ export function createEnemyAIHarness() {
     clock.elapsed += dt;
     api.enemiesUpdate(dt);
   }
-  return { ...api, fixture, colliders: Colliders.list, clock, player, playerState, damage, supplies, surfaceTopAt, placePlayer, reset, spawn, step };
+  return { ...api, fixture, ballistics: fixture.ballistics, colliders: Colliders.list, clock, player, playerState, damage, supplies, surfaceTopAt, placePlayer, reset, spawn, step };
 }

@@ -108,6 +108,18 @@ test('blocked retries and earlier successful spawns never reassign the designate
   assert.deepEqual(retry.map(entry => encounterSpawnRole(entry.authoredIndex, 2)), ['front', 'rear']);
 });
 
+test('an explicit third rear slot preserves both forward entries in a three-contact group', () => {
+  const rearEntries = Object.freeze([2]);
+  assert.deepEqual([0, 1, 2].map(index => encounterSpawnRole(index, 3, rearEntries)), ['front', 'front', 'rear']);
+  assert.deepEqual([0, 1].map(index => encounterSpawnRole(index, 2, [1])), ['front', 'rear']);
+  assert.deepEqual([0, 1].map(index => encounterSpawnRole(index, 2, [])), ['front', 'front']);
+  for (const index of [-1, 3, 2.5, NaN, '2']) assert.equal(encounterSpawnRole(index, 3, rearEntries), 'front');
+  const pending = [{ entryIndex: 0 }, { entryIndex: 1 }, { entryIndex: 2 }];
+  pending.splice(0, 2);
+  assert.equal(encounterSpawnRole(pending[0].entryIndex, 3, rearEntries), 'rear');
+  assert.deepEqual(rearEntries, [2], 'Role queries cannot change the authored indices');
+});
+
 test('rear attempts allow a safe forward fallback after a finite simulation-time wait', () => {
   assert.equal(REAR_FALLBACK_AFTER_SECONDS, 1.5);
   assert.deepEqual(rearSpawnPolicy(0), { tryRear: true, allowForwardFallback: false, spawnGraceSeconds: 1 });

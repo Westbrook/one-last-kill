@@ -8,5 +8,7 @@
 #mission-caption.show { opacity: 1; }
 #mission-caption span { font: 600 9px/1.5 Arial,sans-serif; letter-spacing: .2em; color: #cfaa78; }
 #mission-caption p { margin: 5px 0 0; font: 14px/1.5 Arial,sans-serif; color: #e5e3db; text-shadow: 0 1px 3px #000; }
+#mission-caption .radio-caption { display: block; margin-top: 8px; font: 10px/1.4 Arial,sans-serif; letter-spacing: .08em; color: #a6bac1; }
+#mission-caption .radio-caption[hidden] { display: none; }
 @media(max-width:700px) { #mission-caption { width: 85vw; bottom: 130px; } #route-marker span { font-size: 8px; max-width: 180px; text-align: center; } }
 @media(prefers-reduced-motion:reduce) { #mission-caption, #route-marker { transition: none; } }

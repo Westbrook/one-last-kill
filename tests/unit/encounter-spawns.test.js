@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
-import { effectiveRearWeapon, rearSpawnCandidates, selectEncounterSpawn } from '../../src/game/encounter-spawns.js';
+import { effectiveRearWeapon, rearSpawnCandidates, selectEncounterSpawn, selectEncounterFrontPair } from '../../src/game/encounter-spawns.js';
 import { EncounterSchedule, routeDistanceAt } from '../../src/game/encounter-rules.js';
 import { describeOffscreenThreat } from '../../src/game/offscreen-threats.js';
 import { isSegmentOccluded } from '../../src/game/combat-rules.js';
-import { MIN_SPAWN_DISTANCE, SPAWN_CLEARANCE, ZONE_WAVE_CONFIG } from '../../src/game/mission-data.js';
+import { CHECKPOINTS, MIN_SPAWN_DISTANCE, SPAWN_CLEARANCE, ZONE_WAVE_CONFIG } from '../../src/game/mission-data.js';
+import { hasPairBearingSeparation, isBehindPlayer } from '../../src/game/rear-encounter-rules.js';
+import { createEncounterVariation, variedSpawnCandidates } from '../../src/game/encounter-variation.js';
 import { WEAPON_DEFS } from '../../src/game/weapon-data.js';
 import { createAmmoSupplies } from '../../src/game/ammo-supplies.js';
 import { AMMO_SUPPLY_CACHES } from '../../src/game/ammo-supply-rules.js';
@@ -108,6 +110,115 @@ function assertPlacement(selection, args, { fullClearance = false } = {}) {
   }
 }
 
+function pairEntries(config, waveIndex = 0) {
+  return config.waves[waveIndex].slice(0, 2).map((type, entryIndex) => ({ type, entryIndex, waveIndex }));
+}
+
+function assertFrontPair(pair, args, fullClearance = false) {
+  assert.equal(pair?.length, 2, 'Both forward positions are proposed together');
+  for (const selected of pair) {
+    assertPlacement(selected, args, { fullClearance });
+    assert.equal(selected.role, 'front');
+    assert.equal(selected.rear, false);
+    assert.equal(selected.usedRearAnchor, false);
+    assert.equal(isBehindPlayer(args.playerFoot, args.yaw, selected.point, { minDistance: 0, minRearDot: 0 }), false);
+  }
+  assert.ok(horizontalDistance(pair[0].point, pair[1].point) >= 1.5);
+  assert.equal(hasPairBearingSeparation(args.playerFoot, pair[0].point, pair[1].point), true);
+}
+
+test('actual balcony geometry offers two unobscured staggered fronts at every authored stage', () => {
+  const fixture = realWorld(), config = ZONE_WAVE_CONFIG.balcony;
+  const positions = [CHECKPOINTS.balcony, point(4, 0.95), point(-6, 0.95)];
+  for (const [waveIndex, anchor] of positions.entries()) {
+    const yaw = waveIndex ? Math.PI / 2 : Math.PI;
+    for (const dx of [-0.15, 0, 0.15]) for (const dz of [-0.15, 0, 0.15]) {
+      const playerFoot = { x: anchor.x + dx, y: anchor.y, z: anchor.z + dz };
+      const view = placeView(fixture, playerFoot, yaw);
+      const args = options(config, { ...fixture.probes, playerFoot, yaw, view, waveIndex,
+        entries: pairEntries(config, waveIndex), routeProgress: routeDistanceAt(config.route, playerFoot) });
+      const pair = selectEncounterFrontPair(args);
+      assertFrontPair(pair, args, true);
+      for (const selected of pair) {
+        assert.equal(describeOffscreenThreat(view, sourceAt(selected.point)).visible, true);
+        const head = { ...selected.point, y: selected.point.y + 1.7 };
+        assert.equal(isSegmentOccluded(view.position, head, Colliders.list), false,
+          `Stage ${waveIndex} must expose both head bearings, not hide one around the corner`);
+      }
+      if (waveIndex === 0) assert.deepEqual(pair.map(selected => selected.point.x).sort((a, b) => a - b), [10, 12]);
+    }
+  }
+});
+
+test('the east pair retains strict five metre clearance after a tenth-second sprint from the checkpoint', () => {
+  const fixture = realWorld(), config = ZONE_WAVE_CONFIG.balcony;
+  for (const dx of [-0.15, 0, 0.15]) {
+    const schedule = new EncounterSchedule(config);
+    let playerFoot;
+    for (let tick = 1; tick <= 12; tick++) {
+      playerFoot = { x: CHECKPOINTS.balcony.x + dx, y: 4, z: CHECKPOINTS.balcony.z + tick / 120 * 7 };
+      schedule.update(1 / 120, { footY: 4, routeProgress: routeDistanceAt(config.route, playerFoot) });
+      assert.equal(schedule.pending.length, tick < 12 ? 0 : 2);
+    }
+    const yaw = Math.PI, view = placeView(fixture, playerFoot, yaw);
+    const args = options(config, { ...fixture.probes, playerFoot, yaw, view, entries: schedule.pending,
+      routeProgress: routeDistanceAt(config.route, playerFoot) });
+    const pair = selectEncounterFrontPair(args);
+    assertFrontPair(pair, args, true);
+    assert.deepEqual(pair.map(selected => selected.point.x).sort((a, b) => a - b), [10, 12]);
+  }
+});
+
+test('joint placement backtracks a safe first anchor that leaves no valid second bearing', () => {
+  const fixture = realWorld(), config = ZONE_WAVE_CONFIG.balcony, playerFoot = point(4, 0.95), waveIndex = 1;
+  const yaw = Math.PI / 2, view = placeView(fixture, playerFoot, yaw);
+  const args = options(config, { ...fixture.probes, playerFoot, yaw, view, waveIndex, startIndex: 2,
+    entries: pairEntries(config, waveIndex), routeProgress: routeDistanceAt(config.route, playerFoot) });
+  assert.equal(config.spawns[config.stages[waveIndex].spawnIndices[2]].x, -12);
+  const pair = selectEncounterFrontPair(args);
+  assertFrontPair(pair, args, true);
+  assert.notEqual(pair[0].point.x, -12, 'A safe single anchor must yield to a jointly valid pair');
+  assert.equal(args.enemies.length, 0, 'A proposed pair cannot commit a temporary occupant to the live list');
+  assert.deepEqual(args.entries.map(entry => entry.entryIndex), [0, 1]);
+});
+
+test('a blocked partner or a camera turn cannot downgrade a forward pair into a singleton or rear group', () => {
+  const config = { ...syntheticConfig({ front: [point(-1, -8), point(1, -8)] }), frontPairSize: 2, rearEntryIndices: [2] };
+  const entries = pairEntries(config);
+  const base = options(config, { entries });
+  assertFrontPair(selectEncounterFrontPair(base), base);
+  assert.equal(selectEncounterFrontPair({ ...base, blocked: candidate => candidate.x > 0 }), null);
+  assert.equal(selectEncounterFrontPair({ ...base, floorAt: candidate => candidate.x > 0 ? -Infinity : candidate.y }), null);
+  assert.equal(selectEncounterFrontPair({ ...base, enemies: [{ alive: true, pos: point(1, -8) }] }), null);
+  assert.equal(selectEncounterFrontPair({ ...base, yaw: Math.PI, view: viewAt(base.playerFoot, Math.PI) }), null);
+  assert.equal(selectEncounterFrontPair({ ...base, yaw: NaN }), null);
+  assert.deepEqual(entries, pairEntries(config));
+});
+
+test('a pending opening pair can use safe forward wrap pockets after the player has already turned', () => {
+  const fixture = realWorld(), config = ZONE_WAVE_CONFIG.balcony;
+  for (const playerFoot of [point(11, -2), point(6, 0.95), point(0, 0.95), point(-12, 0.95)]) {
+    const yaw = Math.PI / 2, view = placeView(fixture, playerFoot, yaw);
+    const args = options(config, { ...fixture.probes, playerFoot, yaw, view, entries: pairEntries(config),
+      routeProgress: routeDistanceAt(config.route, playerFoot) });
+    assertFrontPair(selectEncounterFrontPair(args), args, true);
+  }
+  const playerFoot = point(-18, 0.95), yaw = Math.PI / 2;
+  assert.equal(selectEncounterFrontPair(options(config, { ...fixture.probes, playerFoot, yaw,
+    view: placeView(fixture, playerFoot, yaw), entries: pairEntries(config),
+    routeProgress: routeDistanceAt(config.route, playerFoot) })), null, 'Exhausted safe space cannot become an unchecked rear placement');
+});
+
+test('only the two distinct authored forward entries can request an atomic pair', () => {
+  const config = { ...syntheticConfig({ front: [point(-1, -8), point(1, -8)] }), frontPairSize: 2, rearEntryIndices: [2] };
+  const base = options(config, { entries: pairEntries(config), floorAt: () => assert.fail('Invalid roles must fail before probing geometry') });
+  for (const entries of [undefined, null, [], [base.entries[0]], [base.entries[0], base.entries[0]],
+    [base.entries[0], { ...base.entries[1], waveIndex: 2 }], [base.entries[0], { ...base.entries[1], entryIndex: 2 }]]) {
+    assert.equal(selectEncounterFrontPair({ ...base, entries }), null);
+  }
+  assert.equal(selectEncounterFrontPair({ ...base, config: { ...config, frontPairSize: undefined } }), null);
+});
+
 test('usable held ammunition, including reserve, is required to authorize a rear bat', () => {
   for (const [current, definition] of Object.entries(WEAPON_DEFS)) {
     if (definition.kind !== 'ranged') {
@@ -134,15 +245,15 @@ test('usable held ammunition, including reserve, is required to authorize a rear
   }
 });
 
-test('every balcony stage offers a supported rear contact on previously passed route ground', () => {
+test('both later balcony stages offer a separate rear contact on previously passed route ground', () => {
   const fixture = realWorld(), config = ZONE_WAVE_CONFIG.balcony;
-  const positions = [point(11, -2.5), point(4, 0.95), point(-6, 0.95)];
-  for (const [waveIndex, playerFoot] of positions.entries()) {
-    const yaw = waveIndex ? Math.PI / 2 : Math.PI;
+  const positions = [point(4, 0.95), point(-6, 0.95)];
+  for (const [offset, playerFoot] of positions.entries()) {
+    const waveIndex = offset + 1, yaw = Math.PI / 2;
     const view = placeView(fixture, playerFoot, yaw), progress = routeDistanceAt(config.route, playerFoot);
     for (let startIndex = 0; startIndex < config.spawns.length; startIndex++) {
       const args = options(config, { ...fixture.probes, occluded: () => false, waveIndex, playerFoot, yaw, view, startIndex,
-        type: config.waves[waveIndex][1], routeProgress: progress });
+        entryIndex: 2, type: config.waves[waveIndex][2], routeProgress: progress });
       const selected = selectEncounterSpawn(args);
       assertPlacement(selected, args, { fullClearance: true });
       assert.equal(selected.usedRearAnchor, true);
@@ -213,7 +324,7 @@ test('a real reserve-only E pickup changes an empty gun rear contact from fists 
   fixture.supplies.setZone('balcony');
   fixture.Weapons.restore({ current: 'pistol', loaded: 0, reserve: 0 });
   const select = () => selectEncounterSpawn(options(config, { ...fixture.probes, waveIndex: 2, playerFoot, yaw, view,
-    type: 'thug', weapon: fixture.Weapons.snapshot() }));
+    entryIndex: 2, type: 'thug', weapon: fixture.Weapons.snapshot() }));
   assert.equal(select().type, 'brawler');
   assert.equal(fixture.Weapons.findNearestPickup(), fixture.supplies.list[0]);
   fixture.Weapons.handleInput({ ePressed: true }, 1 / 120);
@@ -449,15 +560,26 @@ test('the live cap and finite roster still bound all successful callbacks after 
       for (let tick = 0; !schedule.pending.length && tick < 100; tick++) {
         schedule.update(0.25, { footY, routeProgress: stage.minProgress ?? 0, alive: 0, aliveByWave: [] });
       }
-      assert.equal(schedule.pending.length, 2, `${zone} wave ${waveIndex} keeps its original pair`);
+      const groupSize = config.waves[waveIndex].length;
+      assert.equal(schedule.pending.length, groupSize, `${zone} wave ${waveIndex} keeps its original roster`);
       let callbacks = 0;
-      assert.equal(schedule.spawnAvailable({ total: config.maxAlive }, () => { callbacks++; return true; }), 0);
+      const countCallback = () => { callbacks++; return true; };
+      assert.equal(schedule.spawnAvailable({ total: config.maxAlive }, countCallback, countCallback), 0);
       assert.equal(callbacks, 0, 'A full live cap cannot even acquire another rig');
-      schedule.spawnAvailable({ total: 0 }, () => false);
-      assert.equal(schedule.pending.length, 2, 'A blocked attempt neither spends nor invents a roster entry');
-      assert.equal(schedule.spawnAvailable({ total: 1 }, entry => { records.push({ ...entry }); return true; }), 1);
-      assert.equal(schedule.pending.length, 1);
-      assert.equal(schedule.spawnAvailable({ total: 1 }, entry => { records.push({ ...entry }); return true; }), 1);
+      schedule.spawnAvailable({ total: 0 }, () => false, () => false);
+      assert.equal(schedule.pending.length, groupSize, 'A blocked attempt neither spends nor invents a roster entry');
+      const commit = entry => { records.push({ ...entry }); return true; };
+      if (config.frontPairSize) {
+        assert.equal(schedule.spawnAvailable({ total: 1, rearAlive: 1 }, commit, entries => {
+          entries.forEach(commit); return true;
+        }), 2);
+        assert.equal(schedule.pending.length, groupSize - 2);
+        if (groupSize > 2) assert.equal(schedule.spawnAvailable({ total: 2, rearAlive: 0 }, commit), 1);
+      } else {
+        assert.equal(schedule.spawnAvailable({ total: 1 }, commit), 1);
+        assert.equal(schedule.pending.length, 1);
+        assert.equal(schedule.spawnAvailable({ total: 1 }, commit), 1);
+      }
       assert.equal(schedule.pending.length, 0);
       schedule.update(0, { footY, routeProgress: stage.minProgress ?? 0, alive: 0, aliveByWave: [] });
     }
@@ -481,4 +603,54 @@ test('invalid wave or player coordinates cannot reach any placement service', ()
   for (const playerFoot of [null, {}, point(NaN, 0), point(0, Infinity), point(0, 0, NaN)]) {
     assert.equal(selectEncounterSpawn(options(config, { playerFoot, floorAt: never, blocked: never })), null);
   }
+});
+
+test('seeded pending entries keep the same placement through cursor changes and failed probes', () => {
+  const config = syntheticConfig({ front: [point(-1, -8), point(1, -10), point(3, -12)], rear: [point(-1, 8), point(1, 10)] });
+  const variation = createEncounterVariation(config, 0x2827fc03);
+  for (const entryIndex of [0, 1]) {
+    const base = options(config, { entryIndex, variation });
+    const expected = selectEncounterSpawn(base);
+    assertPlacement(expected, base);
+    for (const startIndex of [0, 1, 2, 3, 17, -1, 1000]) {
+      assert.equal(selectEncounterSpawn({ ...base, startIndex, blocked: () => true }), null);
+      assert.deepEqual(selectEncounterSpawn({ ...base, startIndex, waitedSeconds: 100 }), expected);
+    }
+  }
+});
+
+test('an unsafe seeded offset falls back to its authored anchor without relaxing any probe', () => {
+  const anchor = point(0, -8), config = syntheticConfig({ front: [anchor] });
+  const variation = createEncounterVariation(config, 73);
+  const isOriginal = candidate => candidate.x === anchor.x && candidate.z === anchor.z;
+  const base = options(config, { entryIndex: 0, variation });
+  const blockedOffset = selectEncounterSpawn({ ...base, blocked: candidate => !isOriginal(candidate) });
+  assert.ok(blockedOffset);
+  assert.ok(isOriginal(blockedOffset.point));
+  const unsupportedOffset = selectEncounterSpawn({ ...base, floorAt: candidate => isOriginal(candidate) ? 4 : -Infinity });
+  assert.ok(isOriginal(unsupportedOffset.point));
+  assert.equal(selectEncounterSpawn({ ...base, blocked: () => true }), null);
+  assert.equal(selectEncounterSpawn({ ...base, floorAt: () => -Infinity }), null);
+  assert.equal(selectEncounterSpawn({ ...base, enemies: [{ alive: true, pos: anchor }] }), null);
+});
+
+test('jitter is checked against retained forward progress after a player retreats', () => {
+  const anchor = point(10.3, 0);
+  const config = { ...syntheticConfig({ front: [anchor] }), rearPressure: null,
+    variation: { key: 'progress-fixture', jitterX: 0.6, jitterZ: 0 },
+    route: { floorY: 4, maxLateralDistance: 1, points: [{ x: 0, z: 0 }, { x: 20, z: 0 }] } };
+  let rejectedOffsets = 0;
+  for (let seed = 0; seed < 32; seed++) {
+    const variation = createEncounterVariation(config, seed);
+    const shifted = variedSpawnCandidates([anchor], variation, { waveIndex: 0, entryIndex: 0 })[0];
+    const selected = selectEncounterSpawn(options(config, { variation, entryIndex: 0, yaw: -Math.PI / 2,
+      view: viewAt(point(0, 0), -Math.PI / 2), routeProgress: 10 }));
+    assert.ok(selected);
+    assert.ok(selected.point.x > 10.25, 'A safe floor cannot move an offset behind retained progress');
+    if (shifted.x <= 10.25) {
+      rejectedOffsets++;
+      assert.equal(selected.point.x, anchor.x);
+    }
+  }
+  assert.ok(rejectedOffsets > 5);
 });

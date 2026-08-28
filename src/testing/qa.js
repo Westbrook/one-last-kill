@@ -19,9 +19,11 @@
  */
 import { Box3, Ray, Vector3 } from 'three';
 import { Audio } from '../core/audio.js';
+import { Ballistics, createBallisticHit } from '../core/ballistics.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../core/collision.js';
 import { Input, engageLock } from '../core/input.js';
 import { scene, camera, renderer, GameTime } from '../core/renderer.js';
+import { AUDIO_MIX_SETTINGS, audioMixFromSettings, Settings } from '../core/settings.js';
 import { Player, PlayerState, resetPlayerMotion } from '../game/player.js';
 import { Weapons, WeaponDrops, WEAPON_DEFS } from '../game/weapons.js';
 import { AmmoSupplies } from '../game/ammo-supplies.js';
@@ -31,6 +33,9 @@ import {
 } from '../game/enemies.js';
 import { CORPSE_LIMIT, CORPSE_LIFETIME, isSegmentOccluded } from '../game/combat-rules.js';
 import { CombatStats } from '../game/combat-stats.js';
+import { CHECKPOINT_COMMS } from '../game/checkpoint-comms.js';
+import { EncounterSeeds } from '../game/encounter-session.js';
+import { HEALTH_SUPPLIES, ROOF_HEALTH_ROUTES } from '../game/health-supply-data.js';
 import { describeOffscreenThreat } from '../game/offscreen-threats.js';
 import { readThreatView } from '../game/threat-feedback.js';
 import { CHECKPOINTS, FINAL_ENCOUNTERS, ZONE_ORDER, ZONE_WAVE_CONFIG } from '../game/mission-data.js';
@@ -87,6 +92,14 @@ function assertSilent() {
   assert(status.hardMuted && status.muted && !status.running,
     'QA must remain hard muted, with no running audio output');
   assert(!status.initialized, 'A silent QA session must never create an AudioContext');
+  assert(status.resources.voices === 0 && status.resources.noiseBuffers === 0
+    && !status.radioActive && !status.radioWaiting && status.radioQueued === 0,
+  'Hard mute must create no voices, noise buffers or pending radio');
+  for (const key of ['queued', 'pending', 'inFlight', 'cached', 'bytes']) {
+    near(status.resources.samples[key], 0, `Silent sample ${key}`);
+  }
+  near(status.elapsed, 0, 'Muted audio cannot accumulate a score clock');
+  near(status.score.elapsed, 0, 'Muted score remains stopped');
 }
 
 function placePlayer(anchor) {
@@ -134,7 +147,7 @@ function fixtureBodyRayContacts(enemy, definition) {
       -forward.x * sine + forward.z * cosine).normalize();
     const point = new Ray(camera.position, direction).intersectBox(body, new Vector3());
     if (point) contacts.push({ distance: camera.position.distanceTo(point),
-      blocked: isSegmentOccluded(camera.position, point, Colliders.list) });
+      blocked: Ballistics.segmentOccluded(camera.position, point, 'bullet') });
   }
   return contacts;
 }
@@ -731,6 +744,7 @@ export function installQA(api) {
   let busy = false;
   let disposed = false;
   let abortBenchmark = null;
+  let abortSuite = null;
   let restoreFixtureTriggers = null;
   let inspectedActor = null;
   let inspectedWeapon = null;
@@ -872,12 +886,16 @@ export function installQA(api) {
     function capture() {
       const alive = Enemies.list.filter(enemy => enemy.alive && enemy.zone === zone);
       assert(alive.length <= config.maxAlive, `${zone} must retain its authored live cap`);
+      const newlyArrived = new Set(alive.filter(enemy => !arrivals.has(enemy)));
+      if (config.maxRearAlive) assert(alive.filter(enemy => enemy.arrivalRole === 'rear').length <= config.maxRearAlive,
+        'A living rear contact must occupy the single authored rear slot');
       for (const enemy of alive) {
         if (arrivals.has(enemy)) continue;
         const authored = config.waves[enemy.encounterWave]?.[enemy.encounterEntry];
         assert(enemy.encounterKey === zone && authored && enemy.authoredType === authored,
           `${zone} arrival must retain its original wave, entry and authored type`);
-        same(enemy.arrivalRole, enemy.encounterEntry === 1 ? 'rear' : 'front', 'The original second entry owns the rear role');
+        same(enemy.arrivalRole, (config.rearEntryIndices ?? [1]).includes(enemy.encounterEntry) ? 'rear' : 'front',
+          'Each arrival must retain its explicitly authored front or rear slot');
         const dx = enemy.pos.x - Player.pos.x, dz = enemy.pos.z - Player.pos.z, distance = Math.hypot(dx, dz);
         assert(distance >= 5 - 1e-5, `${zone} actual arrival must start at least five metres away, got ${distance}`);
         const rear = dx * Math.sin(Player.yaw) + dz * Math.cos(Player.yaw) >= -1e-7;
@@ -889,6 +907,19 @@ export function installQA(api) {
         near(enemy.pos.y, floor + 0.03, `${zone} arrival retains the authored spawn clearance`, 1e-5);
         assert(capsuleHasClearance(enemy.pos, 0.48, 2.02, Colliders.list, 1e-5),
           `${zone} arrival must clear the full conservative director capsule`);
+        if (config.frontPairSize === 2 && enemy.encounterEntry < 2) {
+          const pair = alive.filter(other => other.encounterWave === enemy.encounterWave && other.encounterEntry < 2);
+          same(pair.map(other => other.encounterEntry).sort(), [0, 1], 'Both front slots must exist in the same actual simulation step');
+          assert(pair.every(other => newlyArrived.has(other) && other.arrivalRole === 'front' && other.arrivalSide === 'front'),
+            'A front pair cannot appear across separate frames or surrender its second member to the rear');
+          const head = enemy.mesh.userData.rig.anchors.headCenter.getWorldPosition(new Vector3());
+          camera.updateWorldMatrix(true, false);
+          const projected = head.clone().project(camera);
+          assert(Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1 && projected.z >= -1 && projected.z <= 1,
+            'Both arriving front heads must be inside the actual rendered field of view');
+          assert(!Ballistics.segmentOccluded(camera.position, head, 'sight'),
+            'The actual rendered world cannot conceal a member of the promised visible front pair');
+        }
         if (rear || enemy.arrivalRole === 'rear') {
           near(enemy.spawnGrace, 1, 'Grace begins on the actual spawn, not the earlier pending request');
           assert(enemy.lastSeenPlayer && enemy.timeSinceSeen === 0 && enemy.windupRemaining < 0 && !enemy.burstLeft,
@@ -1274,11 +1305,60 @@ export function installQA(api) {
   }
 
   const tests = [
-    ['Silent audio policy', () => {
-      Audio.setMuted(false);
+    ['Silent audio policy, real mix controls and checkpoint captions', () => {
+      const preferences = Settings.snapshot(), inventory = Weapons.snapshot(), supplies = AmmoSupplies.snapshot();
+      const panel = document.getElementById('settingspanel');
+      try {
+        api.setInspection(false); Input.pause();
+        document.getElementById('settingsbutton').click();
+        assert(panel && !panel.hidden, 'The real Settings button must expose the audio mix controls');
+        let percent = 23;
+        for (const [bus, key] of Object.entries(AUDIO_MIX_SETTINGS)) {
+          const slider = document.getElementById('setting' + key.toLowerCase());
+          assert(slider?.type === 'range', `${bus} requires its actual native range control`);
+          slider.value = String(percent);
+          slider.dispatchEvent(new Event('input', { bubbles: true }));
+          near(Settings.get(key), percent / 100, `${bus} stores the native input value`);
+          near(Audio.getStatus().mix[bus], percent / 100, `${bus} reaches the actual audio controller`);
+          same(slider.getAttribute('aria-valuetext'), `${percent} percent`, `${bus} accessible value`);
+          same(document.getElementById(key.toLowerCase() + 'value').textContent, `${percent}%`, `${bus} visible value`);
+          percent += 11;
+          assertSilent();
+        }
+        const voice = document.getElementById('settingcheckpointvoice');
+        assert(voice?.type === 'checkbox', 'Checkpoint voice requires its actual native checkbox');
+        for (let toggle = 0; toggle < 2; toggle++) {
+          voice.click();
+          same(Audio.getStatus().voiceEnabled, voice.checked, 'The actual voice preference reaches the controller');
+          same(Settings.get('checkpointVoice'), voice.checked, 'The voice checkbox saves its preference');
+          assertSilent();
+        }
+        Audio.setMuted(false);
+        document.getElementById('audiotoggle').click();
+        assert(document.getElementById('audiotoggle').disabled, 'The normal audio toggle is disabled by the immutable QA policy');
+        same(document.getElementById('audiostatus').textContent, 'AUDIO LOCKED OFF', 'Visible audio status must remain locked');
+        assertSilent();
+        panel.querySelector('[data-close-panel]').click();
+        for (const zone of ZONE_ORDER) {
+          checkpointAt(zone);
+          const cue = CHECKPOINT_COMMS[zone], caption = document.querySelector('#mission-caption .radio-caption');
+          assert(cue && caption && !caption.hidden, `${zone} must retain a separate visible radio subtitle`);
+          same(caption.textContent, `INTERCEPTED RADIO · ${cue.text}`, `${zone} uses the authored short radio subtitle`);
+          near(api.stepFrame(STEP), 0, 'Paused checkpoint inspection cannot advance audio or gameplay');
+          startSimulation(); simulateStep(); pauseSilently();
+          assertSilent();
+        }
+        same(Weapons.snapshot(), inventory, 'Mix changes and checkpoint cues cannot corrupt inventory');
+        same(AmmoSupplies.snapshot(), supplies, 'Mix changes and checkpoint cues cannot consume or refill supply ledgers');
+      } finally {
+        pauseSilently();
+        panel?.querySelector('[data-close-panel]')?.click();
+        Settings.set(preferences);
+      }
+      same(Settings.snapshot(), preferences, 'The QA fixture restores the exact saved preferences');
+      same(Audio.getStatus().mix, audioMixFromSettings(preferences), 'Restored preferences reach every audio bus');
       assertSilent();
-      Audio.setMuted(true);
-      return 'Hard mute cannot be undone; no AudioContext allocated';
+      return 'Five real mix sliders and the voice checkbox update settings without unlocking sound; all eight checkpoint subtitles survive paused/active steps. Preferences, inventory and supply ledgers are preserved; no context, voices, sample work or queued radio';
     }],
     ['Initial load and full reset start with empty hands', () => {
       same(startupWeapon, STARTING_WEAPON, 'The actual first loaded game must start with fists and no ammunition');
@@ -1336,6 +1416,66 @@ export function installQA(api) {
         near(status.foot.y, CHECKPOINTS[zone].y + 0.02, `${zone} supporting floor`, 0.16);
       }
       return ZONE_ORDER.map(zone => ZONE_LABELS[zone]).join(', ');
+    }],
+    ['Boot ballistics follows rendered furniture and open stair guards', () => {
+      const topology = () => Object.fromEntries(Object.entries(Ballistics.snapshot()).filter(([key]) => key !== 'lastQuery'));
+      const before = topology();
+      assert(before.ready && before.objects > 100 && before.geometryCount > 0 && before.nodes > 0 && before.triangles > 0,
+        'Boot must index the final rendered world before gameplay; QA never rebuilds that live index');
+      near(before.unreadableAlphaMasks, 0, 'All loaded browser alpha masks must be readable');
+      const inventory = Weapons.snapshot(), supplies = AmmoSupplies.snapshot(), resources = worldResourceSignature();
+      const health = Player.health, elapsed = GameTime.elapsed, revision = Colliders.revision;
+      let segments = 0;
+      function probe(label, start, end, axis, faces) {
+        for (const [side, [a, b]] of [[start, end], [end, start]].entries()) {
+          const origin = new Vector3(...a), target = new Vector3(...b), direction = target.clone().sub(origin);
+          const hit = Ballistics.raycast(origin, direction, direction.length(), 'bullet', createBallisticHit());
+          if (faces) {
+            assert(hit?.object?.isMesh && hit.material && hit.triangleIndex >= 0, `${label} must hit a rendered triangle from side ${side}`);
+            near(hit.point[axis], faces[side], `${label} actual contact surface`, 1e-5);
+            near(hit.normal.length(), 1, `${label} contact has a unit normal`, 1e-5);
+          } else assert(hit === null, `${label} must not invent solid cover across a visible opening`);
+          for (const channel of ['bullet', 'sight']) same(Ballistics.segmentOccluded(origin, target, channel), Boolean(faces),
+            `${label} ${channel} query agrees with the actual opening`);
+          segments++;
+        }
+      }
+      probe('Dining chair seat', [1.7, 4.415, -5.6], [1.7, 4.415, -4.4], 'z', [-5.2, -4.8]);
+      probe('Dining chair leg without a movement box', [1.55, 4.195, -5.27], [1.55, 4.195, -5.03], 'z', [-5.1775, -5.1225]);
+      probe('Open space between chair legs', [1.7, 4.195, -5.6], [1.7, 4.195, -4.4]);
+      probe('CRT screen and rear housing', [7.05, 5.105, -7.7], [7.05, 5.105, -6.3], 'z', [-7.28, -6.74]);
+      probe('Open space between TV feet', [7, 4.805, -7.5], [7, 4.805, -6.4]);
+      near(AmmoSupplies.list.length, 3, 'The boot index must include all three authored floor ammo boxes');
+      for (const entry of AmmoSupplies.list) {
+        const bounds = new Box3().setFromObject(entry.mesh), origin = bounds.getCenter(new Vector3());
+        origin.y = bounds.max.y + 0.3;
+        const hit = Ballistics.raycast(origin, new Vector3(0, -1, 0), 0.8, 'bullet', createBallisticHit());
+        let owner = hit?.object;
+        while (owner && owner !== entry.mesh) owner = owner.parent;
+        assert(owner === entry.mesh && hit.point.y >= bounds.min.y,
+          `${entry.id} must already own its actual rendered cover in the boot index`);
+        segments++;
+      }
+      for (const flight of STAIRS.flights) {
+        const tread = flight.treads[6], next = flight.treads[7];
+        const postZ = (tread.z1 + tread.z2) / 2, nextZ = (next.z1 + next.z2) / 2;
+        const middleZ = (postZ + nextZ) / 2, floor = (tread.topY + next.topY) / 2;
+        const x1 = flight.guardX - 0.55, x2 = flight.guardX + 0.25;
+        probe(`${flight.id} actual baluster`, [x1, tread.topY + 0.3, postZ], [x2, tread.topY + 0.3, postZ],
+          'x', [flight.guardX - 0.0225, flight.guardX + 0.0225]);
+        probe(`${flight.id} open baluster bay`, [x1, floor + 0.32, middleZ], [x2, floor + 0.32, middleZ]);
+        const start = [x1, floor + 0.62, middleZ], end = [x2, floor + 0.62, middleZ];
+        assert(isSegmentOccluded(new Vector3(...start), new Vector3(...end), Colliders.list),
+          'This positive control must cross the generous movement box above an inclined rail');
+        probe(`${flight.id} air above inclined rail`, start, end);
+      }
+      same(topology(), before, 'Read-only ballistics queries must not rebuild or grow the live index');
+      same(worldResourceSignature(), resources, 'Ballistics queries cannot add scene resources');
+      near(Colliders.revision, revision, 'Queries cannot alter physical collision ownership');
+      same(Weapons.snapshot(), inventory, 'Queries cannot change weapon state');
+      same(AmmoSupplies.snapshot(), supplies, 'Queries cannot change supply state');
+      near(Player.health, health, 'Queries cannot apply damage'); near(GameTime.elapsed, elapsed, 'Queries cannot advance simulation');
+      return `${segments} real bidirectional rendered-surface queries distinguish chair/TV solids and four stair rails from visible air; boot index ${before.objects} objects / ${before.triangles} unique-geometry triangles remains unchanged`;
     }],
     ['Registered architecture matches visible bounds and connected supports', () => {
       const records = [...Architecture.elements.values()];
@@ -1690,7 +1830,7 @@ export function installQA(api) {
       assert(Player.health > 0 && !PlayerState.dead, 'This bounded melee exchange must remain survivable without health injection');
       return `${fistStrikes} actual fist body hits → real thug bat drop → E pickup → one actual bat body hit; two earned kills, no fixture-applied damage or health refill`;
     }],
-    ['Balcony encounters progress forward through three finite melee pairs', () => {
+    ['Balcony encounters retain three front pairs and two finite rear contacts', () => {
       checkpointAt('balcony');
       triggersUpdate();
       const config = ZONE_WAVE_CONFIG.balcony;
@@ -1701,25 +1841,27 @@ export function installQA(api) {
       function advance(seconds) {
         for (let tick = 0; tick < Math.ceil(seconds / STEP); tick++) simulateStep(observer.capture);
       }
-      function checkPair(index) {
-        simulateUntil(() => getMissionState().wave.pending === 0 && Enemies.list.filter(enemy => enemy.alive).length === 2,
-          config.rearPressure.fallbackAfter + 0.75, 'Both safe pair slots must arrive within their bounded fallback window', observer.capture);
+      function checkGroup(index) {
+        simulateUntil(() => getMissionState().wave.pending === 0
+          && Enemies.list.filter(enemy => enemy.alive && enemy.encounterWave === index).length === config.waves[index].length,
+        config.rearPressure.fallbackAfter + 0.75, 'Every safe authored slot must arrive within its bounded fallback window', observer.capture);
         const state = getMissionState();
-        const alive = Enemies.list.filter(enemy => enemy.alive);
+        const alive = Enemies.list.filter(enemy => enemy.alive && enemy.encounterWave === index);
         same(state.zone, 'balcony', 'The wrap lane must not trigger the scaffolding or street');
         same(state.wave.stage, config.stages[index].id, 'The real director exposes its current spatial stage');
         near(state.wave.index, index + 1, 'Each real stage increments the wave index once');
         same(alive.map(enemy => enemy.authoredType).sort(), [...config.waves[index]].sort(),
-          'Rear adaptation must retain the authored identities of both finite entries');
-        same(alive.map(enemy => enemy.encounterEntry).sort(), [0, 1], 'A pair cannot duplicate or exchange its authored slots');
-        assert(alive.length === 2 && state.wave.pending === 0, 'Both contacts must find actual safe, supported balcony positions');
+          'Rear adaptation must retain every original identity in the finite group');
+        same(alive.map(enemy => enemy.encounterEntry).sort(), config.waves[index].map((_, entry) => entry),
+          'A group cannot duplicate or exchange its authored slots');
+        assert(alive.filter(enemy => enemy.arrivalRole === 'front').length === 2 && state.wave.pending === 0,
+          'Every group retains two front contacts and finds actual supported positions for its rear reserve');
         assertBalconyActors('Authored stage');
         for (const enemy of alive) assert(observer.arrivals.get(enemy)?.distance >= 5 - 1e-5,
           'Every contact must start safely separated, before ordinary AI approaches the player');
       }
-      function clearPair() {
-        const alive = Enemies.list.filter(enemy => enemy.alive);
-        for (const enemy of alive) {
+      function clearContacts(contacts = Enemies.list.filter(enemy => enemy.alive)) {
+        for (const enemy of contacts) {
           const result = damageEnemy(enemy, enemy.health, 'body');
           assert(result?.killed, 'Progression fixture clears only real contacts through their damage path');
           fixtureDamage += result.damage; clearedContacts++;
@@ -1727,19 +1869,27 @@ export function installQA(api) {
         advance(1 / 60);
       }
       advance(config.firstWave + 0.04);
-      checkPair(0);
-      clearPair();
+      checkGroup(0);
+      assert(Enemies.list.filter(enemy => enemy.alive).every(enemy => enemy.arrivalRole === 'front'),
+        'The opening must expose two front contacts without a rear substitution');
+      clearContacts();
       advance(config.waveInterval + 0.2);
       assert(getMissionState().wave.index === 1 && Enemies.list.every(enemy => !enemy.alive),
         'Waiting on cleared east ground must not summon the next pair behind the route gate');
-      placeOnClearFloor({ x: 8, y: BALCONY.floorY, z: BALCONY.laneZ, yaw: Math.PI / 2 });
+      placeOnClearFloor({ x: 4, y: BALCONY.floorY, z: BALCONY.laneZ, yaw: Math.PI / 2 });
       advance(1 / 60);
-      checkPair(1);
+      checkGroup(1);
       const forwardProgress = getMissionState().wave.routeProgress;
-      placeOnClearFloor({ x: 9, y: BALCONY.floorY, z: BALCONY.laneZ });
+      placeOnClearFloor({ x: 5, y: BALCONY.floorY, z: BALCONY.laneZ });
       advance(1 / 60);
       near(getMissionState().wave.routeProgress, forwardProgress, 'Backing up must not reset completed route progress');
-      clearPair();
+      const middleRear = Enemies.list.find(enemy => enemy.alive && enemy.encounterWave === 1 && enemy.arrivalRole === 'rear');
+      assert(middleRear, 'The middle group must acquire its separate rear reserve');
+      // This disclosed health fixture detects an undeserved recovery reward.
+      // All arrivals and attacks still use the normal director and simulation.
+      Player.health = 67; HUD.setHealth(67);
+      clearContacts(Enemies.list.filter(enemy => enemy.alive && enemy.encounterWave === 1 && enemy.arrivalRole === 'front'));
+      near(Player.health, 67, 'Defeating only the front pair must not award full-group recovery');
       placeOnClearFloor({ x: -4, y: BALCONY.floorY, z: BALCONY.laneZ });
       advance(0.5);
       near(getMissionState().wave.index, 2, 'The final pair must respect the recovery interval at its entry gate');
@@ -1747,15 +1897,28 @@ export function installQA(api) {
       advance(config.minRecovery - 0.65);
       near(getMissionState().wave.index, 2, 'Pushing forward cannot bypass the guaranteed minimum recovery');
       advance(0.3);
-      checkPair(2);
-      clearPair();
-      assert(getMissionState().wave.cleared && !getMissionState().wave.active, 'Clearing the third pair must complete the encounter');
+      simulateUntil(() => Enemies.list.filter(enemy => enemy.alive && enemy.encounterWave === 2 && enemy.arrivalRole === 'front').length === 2,
+        0.75, 'The next front pair must not wait forever for an older rear contact', observer.capture);
+      const retained = getMissionState().wave;
+      assert(middleRear.alive && middleRear.poolSlot?.owner === middleRear && Enemies.list.includes(middleRear),
+        'The old rear contact must remain a real living actor with its original pool ownership');
+      assert(retained.spawned === 7 && retained.alive === 3 && retained.pending === 1 && retained.remaining === 4
+        && retained.clearedWaves === 1 && retained.skipped === 0,
+      'The old rear occupies capacity while two new fronts arrive; the final rear remains pending without reward or retirement');
+      same(retained.pendingTypes, [config.waves[2][2]], 'The pending final rear retains its authored type');
+      near(Player.health, 67, 'Advancing while an old rear survives cannot grant a recovery heal');
+      clearContacts([middleRear]);
+      checkGroup(2);
+      near(getMissionState().wave.clearedWaves, 2, 'The second group completes only after its actual rear dies');
+      clearContacts();
+      assert(getMissionState().wave.cleared && !getMissionState().wave.active, 'Clearing all eight contacts must complete the encounter');
       advance(config.waveInterval + 1);
       assert(getMissionState().wave.index === 3 && Enemies.list.every(enemy => !enemy.alive),
         'The completed balcony encounter must not repeat or escalate endlessly');
       assertNoPlayerCombatCredit(before);
-      near(observer.arrivals.size, config.totalContacts, 'Rear arrivals cannot enlarge the completed six-contact balcony budget');
-      return `Three finite pairs retain authored slots with weaker rear loadouts, safe hidden arrivals and separated bearings; recovery and route gates finish normally. ${clearedContacts} contacts cleared with ${fixtureDamage} explicitly fixture-applied damage, zero fabricated player kills`;
+      near(observer.arrivals.size, 8, 'Three front pairs plus two rear reserves consume exactly eight contacts');
+      near(config.totalContacts, 8, 'The authored balcony budget remains eight');
+      return `Three visible front pairs commit atomically; two separate rear contacts preserve the eight-slot budget and three-actor cap. The old rear survives the next front pair and blocks a second rear. Disclosed 67 HP fixture proves no early healing; ${clearedContacts} actual contacts cleared with ${fixtureDamage} fixture-applied damage, zero fabricated player kills`;
     }],
     ['Balcony rear arrivals adapt loadouts without expanding the finite roster', () => {
       const variants = [
@@ -1767,36 +1930,121 @@ export function installQA(api) {
       let fixtureDamage = 0;
       for (const { rearType, ...weapon } of variants) {
         freshApartment(); checkpointAt('balcony'); Weapons.restore(weapon);
-        placeOnClearFloor({ x: 11, y: BALCONY.floorY, z: -1.8, yaw: Math.PI });
         triggersUpdate();
         const observer = observeArrivals('balcony'), credit = CombatStats.snapshot(), caches = AmmoSupplies.snapshot();
+        const config = ZONE_WAVE_CONFIG.balcony;
         startSimulation();
-        simulateUntil(() => observer.arrivals.size === 2, ZONE_WAVE_CONFIG.balcony.firstWave + 0.2,
-          'The authored corner must permit one forward and one hidden rear arrival', observer.capture);
-        const pair = [...observer.arrivals.keys()], rear = pair.find(enemy => enemy.arrivalRole === 'rear');
+        simulateUntil(() => observer.arrivals.size === 2, config.firstWave + 0.2,
+          'The opening must expose its complete front pair before a later rear fixture begins', observer.capture);
+        for (const enemy of observer.arrivals.keys()) {
+          assert(enemy.arrivalRole === 'front' && enemy.encounterWave === 0, 'The opening cannot convert its second front slot to a rear');
+          const result = damageEnemy(enemy, enemy.health, 'body');
+          assert(result?.killed, 'The disclosed progression fixture clears the actual opening'); fixtureDamage += result.damage;
+        }
+        simulateStep(observer.capture);
+        placeOnClearFloor({ x: 4, y: BALCONY.floorY, z: BALCONY.laneZ, yaw: Math.PI / 2 });
+        simulateUntil(() => [...observer.arrivals.keys()].some(enemy => enemy.encounterWave === 1 && enemy.arrivalRole === 'rear'),
+          config.minRecovery + 0.75, 'The middle group must acquire its separate protected rear slot', observer.capture);
+        const group = [...observer.arrivals.keys()].filter(enemy => enemy.encounterWave === 1);
+        const rear = group.find(enemy => enemy.arrivalRole === 'rear');
         assert(rear?.arrivalSide === 'rear' && rear.type === rearType, 'The designated rear slot must respect the actual equipped inventory');
-        assert(pair.every(enemy => enemy.encounterWave === 0) && new Set(pair.map(enemy => enemy.encounterEntry)).size === 2,
-          'A rear contact consumes its existing pair slot, not an additional ambush budget');
+        same(group.map(enemy => enemy.encounterEntry).sort(), [0, 1, 2], 'The middle rear supplements both promised front contacts');
+        same(rear.encounterEntry, 2, 'Only the explicitly authored third slot owns this rear arrival');
         const born = observer.arrivals.get(rear).time;
+        let protectedFrames = 0;
         simulateUntil(() => GameTime.elapsed - born >= 0.9, 1.1, 'The protected rear contact must run through actual AI time', () => {
+          protectedFrames++;
           observer.capture(); assertBalconyActors('Rear arrival grace');
           assert(rear.spawnGrace > 0 && rear.windupRemaining < 0 && rear.burstLeft === 0,
             'A newly arrived rear contact cannot begin an attack during its one-second grace');
           near(Player.health, 100, 'The bounded arrival fixture cannot inflict immediate spawn damage');
         });
+        assert(protectedFrames >= 107, 'The grace test must observe real protected frames starting at the rear birth, not pass after waiting elsewhere');
         same(Weapons.snapshot(), weapon, 'Arrival balancing cannot alter the player weapon or ammunition');
         same(AmmoSupplies.snapshot(), caches, 'Rear balancing cannot consume or refill a supply ledger');
-        for (const enemy of pair) {
+        for (const enemy of group) {
           const result = damageEnemy(enemy, enemy.health, 'body');
           assert(result?.killed, 'The finite-roster cleanup uses the actual death path'); fixtureDamage += result.damage;
         }
         simulateStep(observer.capture);
         const wave = getMissionState().wave;
-        assert(wave.totalContacts === 6 && wave.spawned === 2 && wave.remaining === 4 && wave.pending === 0 && !wave.cleared,
-          'Clearing this pair must leave exactly the four unstarted balcony contacts');
+        assert(wave.totalContacts === 8 && wave.spawned === 5 && wave.remaining === 3 && wave.pending === 0
+          && wave.clearedWaves === 2 && !wave.cleared,
+        'Clearing the opening pair and middle trio must leave exactly the three unstarted final contacts');
         assertNoPlayerCombatCredit(credit);
       }
-      return `Four real director fixtures: fists, bat and empty pistol receive a rear brawler; a loaded pistol permits a bat carrier. Actual AI respects arrival grace, supported lanes and the six-contact budget. ${fixtureDamage} explicitly fixture-applied cleanup damage; no player kill credit, ammunition change or health refill`;
+      return `Four real director fixtures preserve both front actors: fists, bat and empty pistol add a rear brawler; a loaded pistol adds a bat carrier. Actual AI respects observed arrival grace, supported lanes and the eight-contact budget. ${fixtureDamage} explicitly fixture-applied cleanup damage; no player kill credit, ammunition change or health refill`;
+    }],
+    ['Fixed encounter seeds vary safe balcony arrivals without expanding the roster', () => {
+      const seeds = [0, 0x71e6b20d, 0xdeadbeef, 0], fingerprints = new Map();
+      let appliedDamage = 0;
+      for (const seed of seeds) {
+        const previous = EncounterSeeds.setOverride(seed);
+        try {
+          freshApartment(); checkpointAt('balcony'); triggersUpdate();
+          const config = ZONE_WAVE_CONFIG.balcony, schedule = WaveDirector.schedule;
+          const plan = schedule.variation, observer = observeArrivals('balcony');
+          const credit = CombatStats.snapshot(), inventory = Weapons.snapshot(), supplies = AmmoSupplies.snapshot();
+          assert(plan.enabled && plan.seed === seed && Object.isFrozen(plan), 'Each controlled seed creates one immutable randomized plan');
+          assert(plan.firstDelay >= config.firstWave * 0.82 && plan.firstDelay <= config.firstWave,
+            'Opening variation cannot delay the immediate two-contact balcony presentation');
+          near(schedule.timerDuration, plan.firstDelay, 'The opening timer uses its sampled plan');
+          for (const delay of plan.recoveryDelays) assert(delay >= config.waveInterval * 0.82
+            && delay <= config.waveInterval * 1.18 && delay >= config.minRecovery,
+          'Randomized full recovery remains bounded and cannot shorten the guaranteed minimum');
+          const started = GameTime.elapsed;
+          startSimulation();
+          for (let wave = 0; wave < config.waveCount; wave++) {
+            if (wave) placeOnClearFloor({ x: wave === 1 ? 4 : -6, y: BALCONY.floorY, z: BALCONY.laneZ, yaw: Math.PI / 2 });
+            simulateUntil(() => Enemies.list.filter(enemy => enemy.alive && enemy.encounterWave === wave).length === config.waves[wave].length
+              && getMissionState().wave.pending === 0,
+            (wave ? plan.recoveryDelays[wave] : plan.firstDelay) + config.rearPressure.fallbackAfter + 0.75,
+            'The fixed plan must acquire every finite contact through actual safe placement', observer.capture);
+            const group = Enemies.list.filter(enemy => enemy.alive && enemy.encounterWave === wave);
+            same(group.map(enemy => enemy.authoredType), [...config.waves[wave]], 'Variation cannot rewrite the authored composition');
+            assert(group.filter(enemy => enemy.arrivalRole === 'front').length === 2,
+              'Randomized groups retain both simultaneous front actors');
+            if (wave === 0) for (const enemy of group) {
+              const born = observer.arrivals.get(enemy).time - started;
+              assert(born >= plan.firstDelay - 1e-6 && born <= plan.firstDelay + STEP + 1e-6,
+                'The real opening occurs at the first accepted step crossing its sampled delay');
+            }
+            for (const enemy of group) {
+              const result = damageEnemy(enemy, enemy.health, 'body');
+              assert(result?.killed, 'Disclosed seeded progression clears only actual spawned contacts');
+              appliedDamage += result.damage;
+            }
+            simulateStep(observer.capture);
+            if (wave < config.waveCount - 1) {
+              near(schedule.recoveryDelay, plan.recoveryDelays[wave + 1], 'The next full recovery uses the same precomputed plan');
+              const timer = schedule.timer;
+              pauseSilently(); near(api.stepFrame(10), 0, 'Pause cannot spend a sampled encounter timer');
+              near(schedule.timer, timer, 'The sampled recovery freezes while paused');
+              assert(schedule.variation === plan, 'Updates and pause cannot reroll a pending plan');
+              startSimulation();
+            }
+          }
+          const state = getMissionState().wave, entries = [...observer.arrivals.entries()];
+          assert(state.cleared && state.spawned === 8 && state.remaining === 0 && state.skipped === 0
+            && entries.filter(([, value]) => value.role === 'front').length === 6
+            && entries.filter(([, value]) => value.role === 'rear').length === 2,
+          'Every randomized attempt finishes exactly six front and two rear contacts without retirement');
+          const fingerprint = JSON.stringify({ firstDelay: plan.firstDelay, recoveryDelays: plan.recoveryDelays,
+            arrivals: entries.map(([enemy, value]) => ({
+            wave: enemy.encounterWave, entry: enemy.encounterEntry, role: value.role, type: value.type,
+            position: value.position.toArray(), time: value.time - started,
+          })) });
+          if (fingerprints.has(seed)) same(fingerprint, fingerprints.get(seed), 'A fixed seed reproduces exact birth positions and simulation timing');
+          else fingerprints.set(seed, fingerprint);
+          same(Weapons.snapshot(), inventory, 'Seed variation cannot grant or consume ammunition');
+          same(AmmoSupplies.snapshot(), supplies, 'Seed variation cannot change supply ledgers');
+          assertNoPlayerCombatCredit(credit);
+        } catch (error) {
+          throw new Error(`Seed ${seed}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+        } finally { EncounterSeeds.setOverride(previous); }
+      }
+      assert(new Set(fingerprints.values()).size === 3, 'Distinct selected seeds must actually vary this encounter');
+      return `Seeds 0, 0x71e6b20d and 0xdeadbeef plus an exact seed-0 replay each finish eight safe contacts, with atomic visible front pairs, protected rear arrivals and frozen pause timers. ${appliedDamage} explicitly fixture-applied damage; no player kill credit or ammunition changes; prior seed mode restored`;
     }],
     ['A stair rear contact climbs the real flight before attacking', () => {
       checkpointAt('stairwell');
@@ -2732,12 +2980,12 @@ export function installQA(api) {
         if (fixture.wall) {
           assert(Player.pos.distanceTo(target) < WEAPON_DEFS.bat.range,
             'The partition fixture must keep the target torso inside bat reach');
-          assert(isSegmentOccluded(Player.pos, target, Colliders.list),
+          assert(Ballistics.segmentOccluded(Player.pos, target, 'bullet'),
             'The moved target must be behind the actual bakery partition');
         } else {
           assert(Player.pos.distanceTo(target) > WEAPON_DEFS.bat.range + enemy.radius,
             'The retreated target must be beyond the complete bat hit volume');
-          assert(!isSegmentOccluded(Player.pos, target, Colliders.list),
+          assert(!Ballistics.segmentOccluded(Player.pos, target, 'bullet'),
             'The retreat miss must not be explained by an intervening wall');
         }
         verifyMissCause();
@@ -2865,6 +3113,7 @@ export function installQA(api) {
       // This is a lower-bound grace period, not a frame-rate assertion. It
       // also catches a regression to wall-clock callbacks from the old AI.
       await new Promise(resolve => setTimeout(resolve, enemy.def.swingTime * 1000 + 100));
+      assert(!disposed, 'QA was disposed while waiting for the cancelled attack');
       assert(!enemyAttackPlayer(enemy), 'A cleared enemy reference must never attack');
       near(Player.health, 100, 'Clearing enemies cancels pending damage');
       assert(enemy.removed && !enemy.alive && enemy.windupRemaining < 0 && enemy.poolSlot === null,
@@ -2873,6 +3122,7 @@ export function installQA(api) {
       assert(restartFromZone(), 'Restart must succeed during a melee windup');
       enemiesUpdate(0.5);
       await new Promise(resolve => setTimeout(resolve, enemy.def.swingTime * 1000 + 100));
+      assert(!disposed, 'QA was disposed while waiting for the restarted attack');
       assert(!enemyAttackPlayer(enemy), 'A previous-life melee reference must never attack');
       near(Player.health, 100, 'Restarted health cannot be damaged by previous-life attacks');
       return 'A live control hits; clear and checkpoint retry cancel old references and windups';
@@ -2984,7 +3234,10 @@ export function installQA(api) {
       // or direct deadline mutation is used; AI, physics and mission all tick.
       for (let frame = 0; frame < Math.round((deadlineSeconds - 0.1) * 30); frame++) {
         timeoutFrame();
-        if (frame % 240 === 239) await new Promise(resolve => requestAnimationFrame(resolve));
+        if (frame % 240 === 239) {
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          assert(!disposed, 'QA was disposed during the simulated bakery deadline');
+        }
       }
       near(GameTime.elapsed - startedAt, deadlineSeconds - 0.1, 'Pre-deadline simulation duration', STEP + 1e-6);
       near(Endings.getStatus().deadline, 0.1, 'Bakery must retain its final tenth of a second', STEP + 1e-6);
@@ -3057,6 +3310,49 @@ export function installQA(api) {
       }
       return 'Both expanded finales and the roof defer real blocked pool requests, retain all future waves and refuse an empty victory';
     }],
+    ['Both rooftop crossings provide finite health supplies and preserve full health', () => {
+      controlledArea('roof');
+      const metadata = HEALTH_SUPPLIES.filter(entry => entry.zone === 'roof');
+      const pickups = metadata.map(entry => HealPickups.list.find(pickup => pickup.id === entry.id));
+      assert(metadata.length === 4 && pickups.every(Boolean), 'The roof must contain all four fixed crossing supplies');
+      const resources = worldResourceSignature(), inventory = Weapons.snapshot(), supplies = AmmoSupplies.snapshot();
+      const identities = pickups.map(pickup => [pickup.mesh, pickup.halo]);
+      for (const route of Object.values(ROOF_HEALTH_ROUTES)) {
+        assert(route.supplyIds.length === 2 && route.supplyIds.every(id => metadata.some(entry => entry.id === id && entry.route === route.id)),
+          `${route.label} must own its two distinct fixed supplies`);
+        near(metadata.filter(entry => route.supplyIds.includes(entry.id)).reduce((total, entry) => total + entry.amount, 0), 60,
+          `${route.label} provides the same finite recovery budget`);
+        const body = makeBody(...route.waypoints[0]); body.radius = 0.48; body.height = 2.02;
+        walkRoute(body, route.waypoints.slice(1), `${route.label} supported capsule route`);
+      }
+      for (const [index, entry] of metadata.entries()) {
+        const pickup = pickups[index];
+        same(pickup.mesh.userData.healthSupplyId, entry.id, 'The actual health prop retains its stable supply identity');
+        near(surfaceTopAt(entry.x, entry.y, entry.z, 0.25, 0.16), entry.y, `${entry.id} has an authored supporting floor`);
+        near(pickup.baseY, entry.y + 0.18, `${entry.id} retains the pickup presentation offset`);
+        placeOnClearFloor({ x: entry.x + 0.55, y: entry.y, z: entry.z });
+        Player.health = 100; HUD.setHealth(100);
+        startSimulation(); simulateFor(1 / 60); pauseSilently();
+        assert(pickup.active && pickup.mesh.visible, 'Full health must preserve each rooftop pack on either crossing');
+        // Controlled low health tests the real automatic collection path;
+        // no enemy hit or player combat credit is invented for this fixture.
+        Player.health = 65; HUD.setHealth(65);
+        startSimulation(); simulateFor(1 / 60);
+        near(Player.health, 95, `${entry.id} grants exactly its fixed 30 HP`);
+        assert(!pickup.active && !pickup.mesh.visible && !pickup.halo.visible, 'A collected rooftop pack hides its existing model and halo');
+        simulateFor(0.1); pauseSilently();
+        near(Player.health, 95, 'Remaining near a collected pack cannot heal twice');
+      }
+      same(Weapons.snapshot(), inventory, 'Roof health collection cannot change inventory');
+      same(AmmoSupplies.snapshot(), supplies, 'Health collection cannot consume or refill ammo boxes');
+      assert(restartFromZone(), 'The actual roof checkpoint must restore its finite health supplies');
+      for (const [index, pickup] of pickups.entries()) {
+        assert(pickup.active && pickup.mesh.visible && pickup.mesh === identities[index][0] && pickup.halo === identities[index][1],
+          'Checkpoint retry reactivates the same four models and halos without allocating replacements');
+      }
+      same(worldResourceSignature(), resources, 'Collection and retry cannot grow world resources');
+      return 'Front and north crossings each retain two fixed 30 HP packs on complete supported routes. Actual simulation preserves them at full health, heals the disclosed 65 HP fixture once per pack, and retry reuses all four props; ammunition is unchanged';
+    }],
     ['Health supplies heal only when needed', () => {
       const pickup = HealPickups.list.find(entry => entry.zone === 'apartment');
       assert(pickup, 'The apartment must contain an authored health supply');
@@ -3077,47 +3373,70 @@ export function installQA(api) {
 
   async function runSuite() {
     if (busy || disposed) return;
-    setBusy(true);
-    api.setTesting(true);
-    pauseSilently();
-    const lines = ['RUNNING · real game integration checks · audio locked off'];
+    const lines = ['RUNNING · real game integration checks · authored encounter fixtures · audio locked off'];
     let failures = 0, passes = 0;
     const start = performance.now();
-    report('running', lines);
+    let finished = false;
+    const previousSeedOverride = EncounterSeeds.setOverride(null);
+    function finish() {
+      if (finished) return;
+      finished = true;
+      abortSuite = null;
+      // Restore the exact previous mode before creating the apartment left
+      // for ordinary play. Seed 0, authored null and random undefined differ.
+      EncounterSeeds.setOverride(previousSeedOverride);
+      try {
+        freshApartment();
+        ui.select.value = 'apartment';
+        pausedRender();
+        lines.push('RESTORED · Fresh apartment · prior encounter seed mode · full health · starting loadout · audio off');
+      } catch (error) {
+        failures++;
+        lines.push(`FAIL · Final reset\n  ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        api.setTesting(false);
+        setBusy(false);
+      }
+      lines[0] = `${failures ? 'FAILED' : 'PASSED'} · ${passes}/${tests.length} checks · ${((performance.now() - start) / 1000).toFixed(2)} s`;
+      if (!disposed) report(failures ? 'fail' : 'pass', lines);
+    }
+    abortSuite = finish;
     try {
+      setBusy(true);
+      api.setTesting(true);
+      pauseSilently();
+      report('running', lines);
       for (const [name, run] of tests) {
         if (disposed) break;
         try {
           freshApartment();
           const detail = await run();
+          if (disposed) break;
           assertSilent();
           lines.push(`PASS · ${name}\n  ${detail}`);
           passes++;
         } catch (error) {
+          if (disposed) break;
           failures++;
           lines.push(`FAIL · ${name}\n  ${error instanceof Error ? error.message : String(error)}`);
         } finally {
-          pauseSilently();
-          api.setInspection(true);
+          if (!disposed) {
+            pauseSilently();
+            api.setInspection(true);
+          }
         }
         report('running', lines);
         // Yield to paint the visible report; this is not a timing assertion.
         await new Promise(resolve => requestAnimationFrame(resolve));
       }
-    } finally {
-      try {
-        freshApartment();
-        ui.select.value = 'apartment';
-        pausedRender();
-        lines.push('RESTORED · Fresh apartment · full health · starting loadout · audio off');
-      } catch (error) {
+    } catch (error) {
+      if (!disposed) {
         failures++;
-        lines.push(`FAIL · Final reset\n  ${error instanceof Error ? error.message : String(error)}`);
+        lines.push(`FAIL · Suite interrupted\n  ${error instanceof Error ? error.message : String(error)}`);
       }
-      api.setTesting(false);
-      setBusy(false);
-      lines[0] = `${failures ? 'FAILED' : 'PASSED'} · ${passes}/${tests.length} checks · ${((performance.now() - start) / 1000).toFixed(2)} s`;
-      report(failures ? 'fail' : 'pass', lines);
+      throw error;
+    } finally {
+      finish();
     }
   }
 
@@ -3528,6 +3847,7 @@ export function installQA(api) {
   return {
     dispose() {
       disposed = true;
+      abortSuite?.();
       abortBenchmark?.();
       renderer.domElement.removeEventListener('click', blockSpecimenClick, true);
       document.removeEventListener('playstatechange', guardSpecimenSession);

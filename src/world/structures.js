@@ -25,6 +25,7 @@ function getScreenMaterial() {
     map: texture, color: 0x6c786e, roughness: 0.91, metalness: 0.25,
     alphaTest: 0.15, side: THREE.DoubleSide,
   });
+  screenMaterial.userData.surfaceKind = 'metal';
   return screenMaterial;
 }
 

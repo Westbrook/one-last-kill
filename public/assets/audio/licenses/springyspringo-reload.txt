@@ -1,0 +1,12 @@
+SPDX-License-Identifier: CC0-1.0
+
+Gun reload sounds by SpringySpringo
+Source: https://opengameart.org/content/gun-reload-sounds
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Verified on 2026-08-28. The author submission identifies CC0 and says credit is optional. It describes the sounds as recordings made with airsoft guns.
+
+Included original: assaultriflereload1_0.wav
+Direct download: https://opengameart.org/sites/default/files/assaultriflereload1_0.wav
+Original SHA-256: efb2d724d634eabe6ba8d3065686abca848bb7497d4d43a5e4aed5e5ea23016f
+
+The game copy is an offline mono PCM conversion. Its exact transformation and hash are in ../manifest.json. CC0 continues to apply. This notice records the license stated on the author page; it is not a separately supplied author license file.

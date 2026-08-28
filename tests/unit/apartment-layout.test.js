@@ -9,6 +9,7 @@ import { BUILDING, BALCONY, APARTMENT_DOORS, OPENINGS } from '../../src/world/la
 import { createInteriorProps } from '../../src/world/interior-props.js';
 import { createDoorAssemblies } from '../../src/world/door-assemblies.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
+import { createBallisticWorld } from '../../src/core/ballistics.js';
 
 // Execute the actual room builders with real geometry and collision math.
 // Browser-facing materials, fire shaders and lights need no renderer here;
@@ -16,6 +17,7 @@ import { Colliders, capsuleHasClearance, moveCapsule } from '../../src/core/coll
 function buildApartments({ withBalcony = false } = {}) {
   Architecture.clear(); Colliders.clear();
   const World = new THREE.Group(), materials = new Map(), decorations = [], fires = [], triggers = new Map();
+  const Ballistics = createBallisticWorld();
   const MATS = new Proxy({}, {
     get(_, key) {
       if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial());
@@ -51,7 +53,7 @@ function buildApartments({ withBalcony = false } = {}) {
     return mesh;
   }
   const bindings = {
-    THREE, World, MATS, _BG, BUILDING, BALCONY, APARTMENT_DOORS, Colliders, addBox, pushDecor, addWallZ, addSign, createInteriorProps, createDoorAssemblies,
+    THREE, World, MATS, _BG, BUILDING, BALCONY, APARTMENT_DOORS, Colliders, Ballistics, addBox, pushDecor, addWallZ, addSign, createInteriorProps, createDoorAssemblies,
     addDecor: (x, y, z, width, height, depth, material) => addBox(x, y, z, width, height, depth, material, { collide: false }),
     addFlickerLight() {}, makeSignTexture: () => new THREE.Texture(),
     Triggers: { add(id, min, max, enter, reset) { triggers.set(id, { min, max, enter, reset }); } },
@@ -83,6 +85,7 @@ function buildApartments({ withBalcony = false } = {}) {
     runBuilder('../../src/world/zones/balcony.js', 'buildBalcony();', { ...bindings, ...structures });
   }
   World.updateMatrixWorld(true);
+  Ballistics.rebuild(World);
   return { World, decorations, fires, triggers, records: new Map(Architecture.elements), boxes: [...Colliders.list] };
 }
 

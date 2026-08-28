@@ -2,11 +2,13 @@ import * as THREE from 'three';
 import { lerp, clamp } from '../core/math.js';
 import { camera } from '../core/renderer.js';
 import { Audio } from '../core/audio.js';
+import { Ballistics, createBallisticHit } from '../core/ballistics.js';
 import { HUD } from '../ui/hud.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../core/collision.js';
 import { Input } from '../core/input.js';
 import { Settings } from '../core/settings.js';
 import { Weapons } from './weapons.js';
+import { currentZone } from '../world/world.js';
 
 const Player = {
   // Public position is the eye anchor; collision movement is anchored at feet.
@@ -40,6 +42,9 @@ const _forward = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _move = new THREE.Vector3();
 const _feet = new THREE.Vector3();
+const _soundProbe = new THREE.Vector3();
+const _soundDown = new THREE.Vector3(0, -1, 0);
+const _soundSurface = createBallisticHit();
 const _body = {
   position: new THREE.Vector3(), velocity: Player.vel,
   radius: Player.radius, height: Player.bodyHeight,
@@ -106,6 +111,19 @@ function updateCamera(dt, horizontalSpeed, stepped) {
   camera.rotation.set(Player.pitch, Player.yaw, 0, 'YXZ');
 }
 
+function movementSound(intensity, speed = 0) {
+  // Sample the actual tread beneath the foot only when a step occurs, not at
+  // render frequency. Moving through a zone does not change a wooden floor
+  // into concrete or turn the roof's metal grating into an indoor footstep.
+  _soundProbe.copy(Player.pos);
+  _soundProbe.y -= Player._eyeH - 0.2;
+  const hit = Ballistics.raycast(_soundProbe, _soundDown, 0.65, 'bullet', _soundSurface);
+  const fallback = currentZone === 'apartment' || currentZone === 'neighbor' ? 'wood'
+    : currentZone === 'scaffolding' ? 'metal' : 'concrete';
+  return { surface: hit && hit.surfaceKind !== 'solid' ? hit.surfaceKind : fallback,
+    intensity, speed, environment: currentZone };
+}
+
 function playerUpdate(dt) {
   if (!Number.isFinite(dt) || dt <= 0) return;
   dt = Math.min(dt, 1 / 30);
@@ -148,13 +166,16 @@ function playerUpdate(dt) {
   Player._jumpHeld = jumpDown;
   Player._jumpBuffer = jumpPressed ? JUMP_BUFFER : Math.max(0, Player._jumpBuffer - dt);
   Player._coyoteTime = Player.onGround ? COYOTE_TIME : Math.max(0, Player._coyoteTime - dt);
+  const wasGrounded = Player.onGround;
   Player.vel.y = Math.max(-32, Player.vel.y - GRAVITY * dt);
   if (Player._jumpBuffer > 0 && Player._coyoteTime > 0 && active) {
     Player.vel.y = Player.jumpVel;
     Player.onGround = false;
     Player._jumpBuffer = 0;
     Player._coyoteTime = 0;
+    Audio.movement({ ...movementSound(0.5), action: 'jump' });
   }
+  const landingSpeed = Math.max(0, -Player.vel.y);
 
   _body.position.copy(Player.pos);
   _body.position.y -= Player._eyeH;
@@ -174,10 +195,14 @@ function playerUpdate(dt) {
 
   const horizontalSpeed = Math.hypot(Player.vel.x, Player.vel.z);
   updateCamera(dt, horizontalSpeed, _body.stepped);
-  if (Player.onGround && horizontalSpeed > 1.5) {
+  if (active && !wasGrounded && Player.onGround && landingSpeed > 2.5) {
+    Audio.movement({ ...movementSound(Math.min(1.4, 0.65 + landingSpeed / 16), horizontalSpeed), action: 'land' });
+    Player.footTimer = 0.24;
+  }
+  if (active && Player.onGround && horizontalSpeed > 1.5) {
     Player.footTimer -= dt;
     if (Player.footTimer <= 0) {
-      Audio.footstep();
+      Audio.footstep(movementSound(Player.isCrouching ? 0.36 : Player.isSprinting ? 1 : 0.68, horizontalSpeed));
       Player.footTimer = Player.isCrouching ? 0.62 : (Player.isSprinting ? 0.32 : 0.45);
     }
   } else {

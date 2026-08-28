@@ -16,6 +16,14 @@ const balconySpawns = [
   ...[BALCONY_LANE_X, 8, 4, 1, -4, -8, -12, -15, BALCONY.wrap.x1 + 1].map((x, index) => ({
     x, y: BALCONY.floorY, z: balconyLanes[index % balconyLanes.length],
   })),
+  // These two east positions expose both actors from the arrival checkpoint.
+  // Their extra depth also preserves five metres while the player accelerates.
+  { x: BALCONY_LANE_X - 1, y: BALCONY.floorY, z: balconyLanes[1] },
+  { x: BALCONY_LANE_X + 1, y: BALCONY.floorY, z: balconyLanes[1] },
+  // Late forward choices retain a stagger when the player pushes west before
+  // an earlier blocked pair can arrive. They never authorize a closer spawn.
+  { x: BALCONY.wrap.x1 + 2, y: BALCONY.floorY, z: balconyLanes[0] },
+  { x: BALCONY.wrap.x1 + 0.6, y: BALCONY.floorY, z: balconyLanes[1] },
 ];
 // A rear contact enters from the bottom of the player's current flight, on
 // that flight's lane. The other lane can lead under a floor or down a flight.
@@ -44,7 +52,7 @@ export const CHECKPOINTS = Object.freeze(Object.fromEntries(Object.entries({
   bakery:      { ...DISTRICT.bakery.checkpoint },
 }).map(([zone, anchor]) => [zone, Object.freeze(anchor)])));
 
-function encounter({ spawns, waves, route, stages, reinforcements, typeCaps, rearPressure, rearSpawns = [], ...settings }) {
+function encounter({ spawns, waves, route, stages, reinforcements, typeCaps, rearPressure, rearSpawns = [], rearEntryIndices, variation, ...settings }) {
   const groups = Object.freeze(waves.map(group => Object.freeze(group)));
   return Object.freeze({
     firstWave: 1.8,
@@ -53,9 +61,11 @@ function encounter({ spawns, waves, route, stages, reinforcements, typeCaps, rea
     maxHeightDifference: 3.2,
     retireLive: true,
     ...settings,
+    variation: Object.freeze({ timingFraction: 0.18, jitterX: 0.18, jitterZ: 0.18, ...variation }),
     spawns: Object.freeze(spawns.map(point => Object.freeze(point))),
     rearSpawns: Object.freeze(rearSpawns.map(point => Object.freeze(point))),
     rearPressure: rearPressure ? Object.freeze({ ...rearPressure }) : null,
+    rearEntryIndices: rearEntryIndices ? Object.freeze([...rearEntryIndices]) : undefined,
     route: route ? Object.freeze({
       ...route,
       points: Object.freeze(route.points.map(point => Object.freeze(point))),
@@ -63,6 +73,7 @@ function encounter({ spawns, waves, route, stages, reinforcements, typeCaps, rea
     stages: stages ? Object.freeze(stages.map(stage => Object.freeze({
       ...stage,
       spawnIndices: Object.freeze(stage.spawnIndices),
+      ...(stage.preferredSpawnIndices ? { preferredSpawnIndices: Object.freeze(stage.preferredSpawnIndices) } : {}),
       ...(stage.rearSpawnIndices ? { rearSpawnIndices: Object.freeze(stage.rearSpawnIndices) } : {}),
     }))) : null,
     reinforcements: reinforcements ? Object.freeze({ ...reinforcements }) : null,
@@ -79,6 +90,7 @@ function encounter({ spawns, waves, route, stages, reinforcements, typeCaps, rea
 export const ZONE_WAVE_CONFIG = Object.freeze({
   apartment: encounter({
     firstWave: 3.5, maxAlive: 2,
+    variation: { key: 'apartment' },
     spawns: [
       { x: -5, y: 4, z: -8.5 },
       { x: -10.6, y: 4, z: -8.8 },
@@ -90,6 +102,7 @@ export const ZONE_WAVE_CONFIG = Object.freeze({
   }),
   neighbor: encounter({
     maxAlive: 2,
+    variation: { key: 'neighbor' },
     spawns: [
       { x: 5.8, y: 4, z: -2.2 },
       { x: 7.5, y: 4, z: -3.2 },
@@ -104,12 +117,14 @@ export const ZONE_WAVE_CONFIG = Object.freeze({
     exitHint: 'REACH THE BALCONY DOOR',
   }),
   balcony: encounter({
-    firstWave: 0.65, maxAlive: 2, waveInterval: 4.5, minRecovery: 1.25,
+    firstWave: 0.1, maxAlive: 3, waveInterval: 4.5, minRecovery: 1.25,
+    frontPairSize: 2, maxRearAlive: 1, advanceOnFrontClear: true, rearEntryIndices: [2],
     maxHeightDifference: 1.2,
+    variation: { key: 'balcony', jitterX: 0.1, jitterZ: 0.025, maxFirstDelay: 0.1 },
     rearPressure: { fallbackAfter: 1.5, maxDistance: 12, stagger: true },
     // The route runs south along the east landing, then west to the stairs.
-    // Forward contacts retain their stage gates. One slot per pair can arrive
-    // from cleared ground behind the player, with a weaker melee loadout.
+    // Each stage owns two forward contacts. Later stages add one weaker rear
+    // reserve, which cannot occupy either slot reserved for the forward pair.
     route: {
       floorY: BALCONY.floorY, maxHeightDifference: 1.2, maxLateralDistance: 2.3,
       points: [
@@ -120,16 +135,18 @@ export const ZONE_WAVE_CONFIG = Object.freeze({
     },
     spawns: balconySpawns,
     stages: [
-      { id: 'east-landing', label: 'EAST LANDING', minProgress: 0, spawnIndices: [1, 2, 3, 4, 5] },
-      { id: 'wrap-walkway', label: 'WRAP WALKWAY', minProgress: BALCONY_TURN_DISTANCE + BALCONY_LANE_X - 8, advanceAt: BALCONY_TURN_DISTANCE + BALCONY_LANE_X - 4, spawnIndices: [6, 7, 8, 9] },
-      { id: 'stair-approach', label: 'STAIR APPROACH', minProgress: BALCONY_TURN_DISTANCE + BALCONY_LANE_X + 4, advanceAt: BALCONY_TURN_DISTANCE + BALCONY_LANE_X + 6, spawnIndices: [8, 9, 10] },
+      { id: 'east-landing', label: 'EAST LANDING', minProgress: 0, preferredSpawnIndices: [11, 12], spawnIndices: [11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14] },
+      { id: 'wrap-walkway', label: 'WRAP WALKWAY', minProgress: BALCONY_TURN_DISTANCE + BALCONY_LANE_X - 8, advanceAt: BALCONY_TURN_DISTANCE + BALCONY_LANE_X - 4, spawnIndices: [6, 7, 8, 9, 10, 13, 14] },
+      { id: 'stair-approach', label: 'STAIR APPROACH', minProgress: BALCONY_TURN_DISTANCE + BALCONY_LANE_X + 4, advanceAt: BALCONY_TURN_DISTANCE + BALCONY_LANE_X + 6, spawnIndices: [8, 9, 10, 13, 14] },
     ],
-    waves: [['brawler', 'thug'], ['thug', 'brawler'], ['brawler', 'thug']],
+    waves: [['brawler', 'thug'], ['thug', 'brawler', 'thug'], ['brawler', 'thug', 'thug']],
     exitHint: 'REACH THE STAIRWELL AT THE WEST END',
   }),
   stairwell: encounter({
     maxAlive: 2, firstWave: 1.2, waveInterval: 4.5, minRecovery: 0.25, stageTransitionDelay: 0,
     retireLive: false,
+    variation: { key: 'stairwell', jitterX: 0.05, jitterZ: 0.05 },
+    rearEntryIndices: [1],
     rearPressure: { fallbackAfter: 4.5, maxDistance: 10 },
     rearSpawns: stairRearSpawns,
     spawns: stairLandings.flatMap(landing => landing.spawnPoints),
@@ -154,6 +171,7 @@ export const ZONE_WAVE_CONFIG = Object.freeze({
   }),
   roof: encounter({
     maxAlive: 5, waveInterval: 5, maxHeightDifference: 1.2,
+    variation: { key: 'roof', jitterX: 0.6, jitterZ: 0.6 },
     typeCaps: { enforcer: 1 },
     reinforcements: { afterClearWave: 0, firstDelay: 1.75, interval: 4.5 },
     spawns: ROOF.spawnPockets.map(([x, z]) => ({ x, y: ROOF.floorY, z })),
@@ -173,6 +191,7 @@ export const ZONE_WAVE_CONFIG = Object.freeze({
   }),
   scaffolding: encounter({
     firstWave: 1.2, waveInterval: 4.5, maxAlive: 3, maxHeightDifference: 1.2,
+    variation: { key: 'scaffolding', jitterX: 0.3, jitterZ: 0.12 },
     stageTransitionDelay: 0.75,
     spawns: scaffoldSpawns,
     stages: SCAFFOLD_LEVELS.map((level, index) => ({
@@ -191,6 +210,7 @@ export const ZONE_WAVE_CONFIG = Object.freeze({
   }),
   street: encounter({
     maxAlive: 5, waveInterval: 5.5, maxHeightDifference: 1.2,
+    variation: { key: 'street', jitterX: 0.75, jitterZ: 0.75 },
     typeCaps: { enforcer: 1 },
     spawns: DISTRICT.street.spawnPockets,
     stages: [
@@ -209,6 +229,7 @@ export const ZONE_WAVE_CONFIG = Object.freeze({
   }),
   bakery: encounter({
     maxAlive: 5, waveInterval: 5, maxHeightDifference: 1.2, deadlineSeconds: 180,
+    variation: { key: 'bakery', jitterX: 0.3, jitterZ: 0.3 },
     typeCaps: { enforcer: 1 },
     spawns: DISTRICT.bakery.spawnPockets,
     stages: [
@@ -231,6 +252,7 @@ export const ZONE_WAVE_CONFIG = Object.freeze({
 export const FINAL_ENCOUNTERS = Object.freeze({
   car: encounter({
     firstWave: 0, maxAlive: 5, waveInterval: 5, maxHeightDifference: 1.2, deadlineSeconds: 0, arrivalRadius: 3.2,
+    variation: { key: 'car', jitterX: 0.5, jitterZ: 0.5 },
     spawns: DISTRICT.car.spawnPockets,
     waves: [['bruiser', 'hitman', 'gunman', 'gunman'], ['thug', 'gunman', 'hitman', 'bruiser']],
   }),

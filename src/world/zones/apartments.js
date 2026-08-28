@@ -4,6 +4,7 @@ import { MATS } from '../../render/materials.js';
 import { _BG, pushDecor } from '../../render/models.js';
 
 import { Colliders } from '../../core/collision.js';
+import { Ballistics } from '../../core/ballistics.js';
 import { World, Triggers, addBox, addDecor, addWallZ, makeSignTexture, spawnFire, setFireActive, addFlickerLight } from '../world.js';
 import { BUILDING, BALCONY, APARTMENT_DOORS } from '../layout.js';
 import { createInteriorProps } from '../interior-props.js';
@@ -366,6 +367,8 @@ function buildNeighborApartment() {
   for (const x of [6.67, 7.33]) pushDecor(_BG.unitBox, MATS.metal, x, FY + 0.82, -6.99, 0.10, 0.04, 0.34);
   const crt = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.45, 0.04),
     new THREE.MeshStandardMaterial({ color: 0x051018, emissive: 0x3a4d80, emissiveIntensity: 1.0, roughness: 0.3, metalness: 0.3 }));
+  // The dark tube is opaque cover, but its front surface is glass for impacts.
+  crt.material.userData.surfaceKind = 'glass';
   crt.position.set(7.05, FY + 1.105, -7.26); World.add(crt);
   for (const y of [FY + 0.99, FY + 1.19]) pushDecor(_BG.unitBox, MATS.wood, 6.58, y, -7.27, 0.055, 0.055, 0.045);
   const crtLight = new THREE.PointLight(0x4a6aa0, 0.7, 4, 2.0);
@@ -404,6 +407,7 @@ function buildNeighborApartment() {
         debris.name = 'neighbor-breach-debris';
         const collider = Colliders.addBoxBySize(-3.0, FY + 0.15, -6.0, 0.6, 0.3, 2.6);
         debris.userData.collider = collider;
+        Ballistics.addObject(debris, { collider });
         breachGate = { fire, debris, collider };
       } else {
         setFireActive(breachGate.fire, true);

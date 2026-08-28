@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { scene, camera, renderer, GameTime, recordRenderTime } from './core/renderer.js';
 import { FixedStepClock } from './core/frame-budget.js';
-import { Settings } from './core/settings.js';
+import { Settings, audioMixFromSettings } from './core/settings.js';
+import { Audio } from './core/audio.js';
+import { Ballistics } from './core/ballistics.js';
 import { buildSkybox, loadSurfaceTextures } from './render/materials.js';
 import { createLightBudget } from './render/lighting.js';
 import { renderWithViewModel, shareViewModelLighting } from './render/viewmodel.js';
@@ -33,12 +35,41 @@ let contextLost = false;
 let previousTime = 0;
 let wasPlaying = false;
 let hudTimer = 0;
+const audioScene = {
+  zone: 'apartment', threat: 0, paused: true, dead: false,
+  listener: { position: camera.position, yaw: 0 },
+};
+
+function syncAudioSettings(settings = Settings.snapshot()) {
+  // Preferences never grant permission to unmute or start an audio device.
+  Audio.setMix(audioMixFromSettings(settings));
+  Audio.setVoiceEnabled(settings.checkpointVoice);
+}
+syncAudioSettings();
+document.addEventListener('settingschange', event => syncAudioSettings(event.detail));
 
 const renderWorld = () => worldPresentation ? worldPresentation.render() : renderer.render(scene, camera);
 
 function isPlaying() {
   return Input.active && !PlayerState.dead && !IntroCard.isOpen()
     && !Endings.isResolved() && !document.hidden && !contextLost;
+}
+
+function updateAudioScene(dt) {
+  audioScene.zone = currentZone;
+  audioScene.listener.yaw = Player.yaw;
+  audioScene.paused = !isPlaying();
+  audioScene.dead = PlayerState.dead;
+  // Nearby active contacts raise the pulse gently. No polling timer, scene
+  // traversal, or hidden-tab time can advance the score outside simulation.
+  let pressure = 0;
+  for (const enemy of Enemies.list) {
+    if (!enemy.alive || enemy.zone !== currentZone) continue;
+    const distance = Math.hypot(enemy.pos.x - Player.pos.x, enemy.pos.y - Player.pos.y, enemy.pos.z - Player.pos.z);
+    if (distance < 28) pressure += (1 - distance / 28) * (enemy.state === 'attack' ? 0.42 : 0.22);
+  }
+  audioScene.threat = Math.min(1, pressure);
+  Audio.tick(dt, audioScene);
 }
 
 /** All gameplay advances on one bounded clock. Paused time is discarded. */
@@ -78,6 +109,7 @@ function stepFrame(realDt) {
       hudTimer = 0.10;
     }
   }
+  updateAudioScene(progressed);
   return progressed;
 }
 
@@ -102,6 +134,7 @@ function frame(now) {
   const playing = isPlaying();
   if (!playing) {
     clock.advance(0, false);
+    if (wasPlaying) updateAudioScene(0);
     if (wasPlaying || inspecting) render();
     wasPlaying = false;
     return;
@@ -147,6 +180,9 @@ async function boot() {
   // The opening starts empty-handed. Weapons are earned from defeated foes.
   Weapons._equip('fists', 0);
   AmmoSupplies.init({ world: World, player: Player, canInteract: isPlaying });
+  // Build once from final world triangles, before NPC rigs and pickup halos.
+  // Generous movement barriers must never fill visible gaps between railings.
+  Ballistics.rebuild(World);
   initMission();
   initNavigation();
   WeaponDrops._initHaloPool();
