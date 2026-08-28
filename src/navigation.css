@@ -1,0 +1,12 @@
+#route-marker { position: absolute; transform: translate(-50%,-50%); display: flex; align-items: center; flex-direction: column; gap: 7px; color: #e5d8bc; text-shadow: 0 1px 5px #000; opacity: .82; pointer-events: none; transition: opacity .2s; }
+#route-marker[hidden] { display: none; }
+#route-marker i { width: 9px; height: 9px; border: 1px solid #e5d8bc; transform: rotate(45deg); box-shadow: 0 0 0 3px #15171980; }
+#route-marker span { font: 600 9px/1.4 Arial,sans-serif; letter-spacing: .15em; background: #1215168c; padding: 4px 7px; }
+#route-marker small { font: 10px/1.3 monospace; color: #dad6c9; }
+#route-marker.offscreen { opacity: .58; }
+#mission-caption { position: absolute; bottom: 118px; left: 50%; transform: translateX(-50%); max-width: 570px; width: 60vw; text-align: center; opacity: 0; transition: opacity .3s; padding: 12px 20px; background: linear-gradient(90deg,transparent,#101315d9 20%,#101315d9 80%,transparent); }
+#mission-caption.show { opacity: 1; }
+#mission-caption span { font: 600 9px/1.5 Arial,sans-serif; letter-spacing: .2em; color: #cfaa78; }
+#mission-caption p { margin: 5px 0 0; font: 14px/1.5 Arial,sans-serif; color: #e5e3db; text-shadow: 0 1px 3px #000; }
+@media(max-width:700px) { #mission-caption { width: 85vw; bottom: 130px; } #route-marker span { font-size: 8px; max-width: 180px; text-align: center; } }
+@media(prefers-reduced-motion:reduce) { #mission-caption, #route-marker { transition: none; } }

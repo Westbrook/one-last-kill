@@ -1,0 +1,37 @@
+Generated with the built-in image_gen__imagegen tool on 2026-08-27.
+Initial generation used one new image-generation call per texture, with no CLI or external image API. A later authorized built-in brick edit is documented below.
+These are original generated square base-color/albedo material textures. Exact generation prompts follow.
+
+Saved outputs: 1254 x 1254 RGB PNGs (the built-in tool selected the actual output size).
+plaster-aged.png: 3,005,249 bytes. Visually inspected; edge transitions are close to natural local surface variation.
+brick-weathered.png: 3,379,105 bytes. Visually inspected; horizontal running bond is aligned, but the original generated image has a top/bottom course mismatch and is not validated as vertically seamless. It was retained unchanged under the one-generation-per-texture constraint.
+
+=== plaster-aged.png ===
+Use case: photorealistic-natural
+Asset type: seamless square albedo texture for a Three.js cinematic urban FPS game, 1024 x 1024 pixels.
+Primary request: an original photorealistic tileable material scan of distressed dusty sage-gray plaster from the wall of an older New York apartment.
+Composition/framing: perfectly flat front-facing orthographic surface only, filling the entire square edge to edge; no environment, no border, no frame. The material must repeat seamlessly in both directions, with matching continuous detail at all four edges.
+Lighting/mood: completely uniform neutral flat diffuse light; albedo/base-color only, without baked directional lighting, ambient occlusion, highlights, or cast shadows.
+Color palette: muted dusty sage and warm neutral gray with a restrained cream topcoat and small exposed gray concrete areas.
+Materials/textures: fine plaster grain, subtle irregular flaking of a cream topcoat, delicate hairline cracks, small distributed scuffs, fine realistic surface wear. Believable aged apartment wall with restrained variation and consistent texture scale, not a dramatic distressed mural.
+Constraints: no large focal stain, no large cracks or chunks, no objects, no architecture, no perspective, no seams, no directional shadows, no text, no letters, no graffiti, no logos, no watermark.
+
+=== brick-weathered.png ===
+Use case: photorealistic-natural
+Asset type: seamless square albedo texture for a Three.js cinematic urban FPS game, 1024 x 1024 pixels.
+Primary request: an original photorealistic tileable material scan of weathered reddish umber New York brick masonry in horizontal running bond.
+Composition/framing: perfectly flat front-facing orthographic surface only, filling the entire square edge to edge; ten horizontal courses of brick, three full brick lengths across the square, alternating half-brick offset. The pattern and surface detail must repeat seamlessly across left, right, top and bottom edges with no border or frame.
+Lighting/mood: completely uniform neutral flat diffuse light; albedo/base-color only, without baked directional lighting, cast shadows, or specular highlights.
+Color palette: restrained earthy reddish umber and warm dark clay, subtle brown variation, pale gray mortar.
+Materials/textures: gritty realistic old masonry with irregular fine mineral details, tiny chips and weathered porous brick faces, pale gray slightly recessed mortar. Brick sizes and bond are consistent while surface details are naturally irregular; no single brick draws excessive attention.
+Constraints: no architecture beyond this surface, no wall edges, no perspective, no large cracks, no graffiti, no moss, no vines, no stains forming a focal point, no text, no letters, no logos, no watermark. Seamless tiling on all four edges.
+
+=== Authorized brick seamlessness edit, 2026-08-27 ===
+Mode: one built-in image_gen__imagegen edit, using the local brick-weathered.png as referenced_image_paths. No CLI or external image API was used. No further retries were made.
+Result: the edited image replaced brick-weathered.png after visual inspection and numerical edge QA showed improvement. Final output is 1254 x 1254 RGB PNG, 3,170,332 bytes. Mean absolute RGB transition across left/right edges improved from 13.61 to 9.34, and across top/bottom from 57.77 to 19.38 (0-255 channel scale). The image still has a narrow partial-course/mortar band at the vertical boundary, so perfect vertical seamlessness is not guaranteed. The original generated output remains in its built-in generation directory.
+Exact edit prompt:
+Use case: precise-object-edit
+Asset type: seamless square base-color/albedo brick texture for a Three.js game.
+Input image: the supplied brick-weathered.png is the edit target. Preserve its photorealistic weathered reddish umber New York brick, pale gray mortar, fine grain, mineral details, flat neutral lighting, front-facing orthographic view, and current brick scale.
+Primary request: fix only the tile boundaries so this image tiles continuously in BOTH directions, especially top-to-bottom. Its current bottom edge includes an extra thin partial brick course, while the top edge is mortar, creating a visible horizontal seam when repeated vertically. Remove that extra bottom sliver. Make both the top and bottom image boundaries cut through the center of the SAME continuous pale gray horizontal mortar joint, with matched width, tone, grain and irregularities, so a repeated copy has one normal mortar joint with no band, double joint, missing mortar, partial extra row, or step. Preserve exactly ten complete horizontal brick courses and three full brick lengths across the tile, with alternating half-brick running-bond offsets, so the first course joins correctly after the last when repeated. Ensure the left and right edges also join seamlessly with matching brick colors, mortar intersections and texture detail.
+Constraints: preserve the appearance and layout of the central brick faces and the existing material character. Make minimal edge repairs, not a new wall design. Square opaque raster texture, flat albedo only. No perspective, wall edges, baked shadows, specular light, borders, text, logos, watermark or graffiti. All four edges must wrap into an uninterrupted running-bond masonry surface.

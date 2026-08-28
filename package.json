@@ -1,0 +1,25 @@
+{
+  "name": "one-last-kill",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "An original fan-made cinematic urban FPS built with Three.js.",
+  "engines": {
+    "node": "^22.13.0 || >=24"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4173 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "test": "node --test tests/unit/*.test.js",
+    "lint": "eslint src tests/unit",
+    "check": "npm run lint && npm test && npm run build"
+  },
+  "dependencies": {
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "eslint": "10.9.1",
+    "vite": "8.2.2"
+  }
+}

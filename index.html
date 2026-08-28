@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#111210">
+    <meta name="description" content="One Last Kill — an unofficial, cinematic first-person action experience set in Little Sicily, New York.">
+    <title>The Punisher: One Last Kill — Fan Experience</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="/src/styles.css">
+    <link rel="preload" as="image" href="/assets/last-kill-keyart.png">
+  </head>
+  <body>
+    <canvas id="game" tabindex="-1" aria-label="First-person game. Use keyboard and mouse or a gamepad. Open Field Notes for controls."></canvas>
+
+    <div id="hud" aria-label="Game status">
+      <div id="vignette" aria-hidden="true"></div>
+      <div id="bloodvignette" aria-hidden="true"></div>
+      <div class="objective-group">
+        <div class="hud-eyebrow"><span class="objective-marker" aria-hidden="true"></span> <span>01 / LITTLE SICILY</span></div>
+        <div class="objective-meta"><span id="chapterlabel">APARTMENT</span><span id="missionprogress">01 / 08</span></div>
+        <div id="objective" role="status">Get out. The fire is spreading.</div>
+        <progress id="missionmeter" value="1" max="8" aria-label="Mission route progress"></progress>
+      </div>
+
+      <div id="compass" aria-label="Compass heading">
+        <span id="compassheading">270°</span>
+        <div class="compass-strip" aria-hidden="true"><span id="compassleft">SW</span><span id="compassdirection">W</span><span id="compassright">NW</span></div>
+        <div class="compass-ticks" aria-hidden="true"></div>
+      </div>
+
+      <div id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div id="hitmarker" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div id="damageindicator" aria-hidden="true"><span></span></div>
+      <div id="offscreenthreat" role="status" aria-live="assertive" aria-atomic="true" aria-hidden="true" hidden>
+        <span class="threat-bearing" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M16 25V7m-6 6 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="threat-copy"><span id="offscreenthreatlabel"></span><span id="offscreenthreatcount" hidden></span></span>
+      </div>
+      <div id="killmessage" aria-hidden="true"></div>
+      <div id="banner" role="status"><small></small><span></span></div>
+      <div id="message" role="status" aria-live="polite"></div>
+
+      <div id="vitals">
+        <div class="vital-readout"><span class="vital-cross" aria-hidden="true">+</span><span id="healthtext">100</span><span class="vital-label">HEALTH</span></div>
+        <div id="healthbar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div id="healthfill"></div></div>
+        <div id="playerstatus">STAY MOVING. FIND A WAY OUT.</div>
+      </div>
+
+      <div id="weaponbox">
+        <div id="combatsummary"><span id="killcount">00</span> HOSTILES DOWN <span id="combatstreak"></span></div>
+        <div id="reloadindicator" aria-hidden="true">RELOADING <span aria-hidden="true">···</span></div>
+        <div class="weapon-meta"><span id="weaponclass">CLOSE QUARTERS</span><span class="weapon-slot">01</span></div>
+        <div id="weaponname">FISTS</div>
+        <div id="ammo" aria-label="Unlimited melee attacks"><span id="ammocurrent">∞</span><span id="ammoseparator" hidden>/</span><span id="ammoreserve"></span></div>
+        <div class="weapon-hint"><kbd>R</kbd> RELOAD <span></span> <kbd>V</kbd> MELEE</div>
+      </div>
+
+      <div id="pickupprompt" role="status"></div>
+      <div id="fps" aria-label="Performance statistics">— FPS</div>
+
+      <section id="deathscreen" aria-labelledby="deathtitle" aria-hidden="true">
+        <div class="eyebrow">THE FIGHT ISN’T OVER</div>
+        <h2 id="deathtitle">GET BACK UP.</h2>
+        <p id="deathhint">Return to your last checkpoint. Make the next move count.</p>
+        <button id="restartbutton" class="button button-primary" type="button">RETRY CHECKPOINT <span aria-hidden="true">↗</span></button>
+      </section>
+    </div>
+
+    <div id="choice" role="region" aria-label="Choose your route">
+      <div class="opt" data-side="car">
+        <div class="choice-number">01 / VENGEANCE</div>
+        <div class="h">THE CAR</div>
+        <div class="b">Gnucci is getting away. Cut through the bodyguards and finish this.</div>
+        <div class="k">← APPROACH TO COMMIT</div>
+      </div>
+      <div class="opt" data-side="bakery">
+        <div class="choice-number">02 / PROTECTOR</div>
+        <div class="h">THE BAKERY</div>
+        <div class="b">Charli and the family are trapped inside. Get them out alive.</div>
+        <div class="k">APPROACH TO COMMIT →</div>
+      </div>
+    </div>
+
+    <section id="introcard" role="dialog" aria-modal="true" aria-labelledby="introtitle" aria-describedby="introbody" aria-hidden="true">
+      <div class="briefing-number" aria-hidden="true">01</div>
+      <div class="briefing-content">
+        <div class="eyebrow">NEW YORK CITY / LITTLE SICILY</div>
+        <div class="clock">6:47 <span>PM</span></div>
+        <div class="rule"></div>
+        <h2 id="introtitle">THEY CAME TO<br>FINISH THE JOB.</h2>
+        <div class="body" id="introbody">
+          <p>The first bottle came through the window. Then the gunfire.</p>
+          <p>Gnucci’s men have the building surrounded. The stairwell, the fire escape, the roof — every way out is a fight.</p>
+          <p>The family in the bakery downstairs never asked for any of this.</p>
+          <p class="briefing-order">You start with your fists. Take a weapon from the men sent to kill you. Get out, and decide who makes it through the night.</p>
+        </div>
+        <button id="introcontinue" class="button button-primary" type="button">ENTER LITTLE SICILY <span aria-hidden="true">↗</span></button>
+        <div class="skip">CHECKPOINTS AT EACH NEW AREA</div>
+      </div>
+    </section>
+
+    <section id="endcard" role="dialog" aria-modal="true" aria-labelledby="endtitle" aria-describedby="endbody" aria-hidden="true">
+      <div class="end-content">
+        <div class="tag eyebrow" id="endtag">MISSION DEBRIEF</div>
+        <h2 class="title" id="endtitle">ONE LAST KILL.</h2>
+        <div class="rule"></div>
+        <div class="body" id="endbody"></div>
+        <dl class="end-stats">
+          <div><dt>HOSTILES DOWN</dt><dd id="endkills">00</dd></div>
+          <div><dt>ACCURACY</dt><dd id="endaccuracy">—</dd></div>
+          <div><dt>BEST STREAK</dt><dd id="endstreak">00</dd></div>
+        </dl>
+        <button class="restart button button-primary" id="endrestart" type="button">PLAY AGAIN <span aria-hidden="true">↗</span></button>
+        <p class="end-note">A different choice. A different ending.</p>
+      </div>
+    </section>
+
+    <main id="overlay">
+      <img class="menu-art" src="/assets/last-kill-keyart.png" width="1672" height="941" alt="" fetchpriority="high" aria-hidden="true">
+      <div class="menu-shade" aria-hidden="true"></div>
+      <header class="menu-header"><span class="brand-mark" aria-hidden="true"></span><span>A FAN-MADE EXPERIENCE</span><span class="header-rule" aria-hidden="true"></span><span class="edition">SINGLE PLAYER</span></header>
+
+      <div class="menu-content" id="menucontent">
+        <div class="menu-kicker"><span class="status-dot" aria-hidden="true"></span><span id="menustatus">SOME WARS FOLLOW YOU HOME.</span></div>
+        <h1 id="title" aria-label="The Punisher: One Last Kill"><span class="title-eyebrow">THE PUNISHER</span><span class="title-line">ONE LAST</span><span class="title-line">KILL<span class="title-period">.</span></span></h1>
+        <p class="menu-description">They came for you.<br>The people downstairs didn’t ask to be part of it.</p>
+        <div id="start">
+          <button id="startbutton" class="button button-primary" type="button" disabled><span>PREPARING MISSION</span><span aria-hidden="true">↗</span></button>
+          <div class="menu-secondary">
+            <button id="fieldnotesbutton" class="button-text" type="button" aria-haspopup="dialog" aria-controls="fieldnotes"><span aria-hidden="true">01</span> FIELD NOTES</button>
+            <button id="settingsbutton" class="button-text" type="button" aria-haspopup="dialog" aria-controls="settingspanel"><span aria-hidden="true">02</span> SETTINGS</button>
+          </div>
+        </div>
+        <p class="input-note"><span class="input-note-dot" aria-hidden="true"></span> KEYBOARD + MOUSE / GAMEPAD</p>
+        <p class="mobile-notice" role="note">A keyboard and mouse or a gamepad is required to play. Touch controls are not supported.</p>
+        <p id="loadstatus" role="status"></p>
+      </div>
+
+      <div class="mission-location" aria-hidden="true"><span class="location-line"></span><span class="location-number">01</span><div><strong>LITTLE SICILY</strong><span>NEW YORK CITY / 6:47 PM</span></div></div>
+      <footer class="menu-footer"><p>Unofficial fan-made experience. Not affiliated with Marvel or Disney.</p><span>ORIGINAL SCENARIO <i aria-hidden="true"></i> WEBGL EXPERIENCE</span></footer>
+
+      <section id="fieldnotes" class="menu-panel" role="dialog" aria-modal="true" aria-labelledby="fieldnotestitle" tabindex="-1" hidden>
+        <div class="panel-top"><span class="eyebrow">01 / FIELD NOTES</span><button class="close-panel" type="button" data-close-panel aria-label="Close field notes">✕</button></div>
+        <h2 id="fieldnotestitle">STAY ALIVE.<br>KEEP MOVING.</h2>
+        <p class="panel-intro">Clear a path through the building. Recover weapons from fallen enemies, watch your ammunition, and use cover between shots.</p>
+        <div class="controls-heading">KEYBOARD &amp; MOUSE</div>
+        <dl class="controls-list">
+          <div><dt>Move / look</dt><dd><kbd>W A S D</kbd> <span>+ MOUSE</span></dd></div>
+          <div><dt>Fire / aim</dt><dd><kbd>LMB</kbd> <kbd>RMB</kbd></dd></div>
+          <div><dt>Sprint / jump</dt><dd><kbd>SHIFT</kbd> <kbd>SPACE</kbd></dd></div>
+          <div><dt>Crouch / melee</dt><dd><kbd>C</kbd> <kbd>V</kbd></dd></div>
+          <div><dt>Pick up / reload</dt><dd><kbd>E</kbd> <kbd>R</kbd></dd></div>
+          <div><dt>Drop weapon / pause</dt><dd><kbd>G</kbd> <kbd>P / ESC</kbd></dd></div>
+          <div><dt>Mute / frame rate</dt><dd><kbd>M</kbd> <kbd>F</kbd></dd></div>
+          <div><dt>Keyboard fire / toggle aim</dt><dd><kbd>J</kbd> <kbd>Q</kbd></dd></div>
+        </dl>
+        <p class="controller-note" id="controllerhelp">Gamepad: sticks move/look · RT fire · LT aim · A jump · B crouch · X reload · Y pick up · RB melee · L3 sprint · D-pad down drop · Start pause. Arrow keys also turn the camera.</p>
+        <div class="fieldnote-tip"><span>REMEMBER</span><p>The street gives you a choice. The consequences are yours.</p></div>
+        <button class="button button-outline" type="button" data-close-panel>BACK TO MISSION <span aria-hidden="true">↗</span></button>
+      </section>
+
+      <section id="settingspanel" class="menu-panel" role="dialog" aria-modal="true" aria-labelledby="settingstitle" tabindex="-1" hidden>
+        <div class="panel-top"><span class="eyebrow">02 / PREFERENCES</span><button class="close-panel" type="button" data-close-panel aria-label="Close settings">✕</button></div>
+        <h2 id="settingstitle">MAKE IT<br>YOUR FIGHT.</h2>
+        <p class="panel-intro">Changes apply immediately. Preferences save when device storage is available.</p>
+        <form id="settingsform">
+          <div class="setting-row">
+            <label for="settingquality">Render quality</label>
+            <select id="settingquality" name="quality"><option value="auto">Automatic</option><option value="high">High detail</option><option value="performance">Performance</option></select>
+            <p>Automatic balances resolution and frame rate for your display.</p>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><label for="settingsensitivity">Look sensitivity</label><output id="sensitivityvalue" for="settingsensitivity">1.00×</output></div>
+            <input id="settingsensitivity" name="sensitivity" type="range" min="0.35" max="2.5" step="0.05" value="1">
+            <div class="range-labels"><span>PRECISE</span><span>FAST</span></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><label for="settingfov">Field of view</label><output id="fovvalue" for="settingfov">82°</output></div>
+            <input id="settingfov" name="fov" type="range" min="70" max="100" step="1" value="82">
+            <div class="range-labels"><span>70°</span><span>100°</span></div>
+          </div>
+          <div class="setting-row setting-checkbox">
+            <div><label for="settingmotion">Reduced camera motion</label><p>Reduce camera movement and interface animation.</p></div>
+            <input id="settingmotion" name="reducedMotion" type="checkbox">
+          </div>
+          <div class="settings-actions"><button id="resetsettings" class="button-text" type="button">RESTORE DEFAULTS</button><span id="settingssaved" role="status">CURRENT PREFERENCES</span></div>
+        </form>
+        <p class="settings-audio-note">Audio starts muted. Use the audio control or press <kbd>M</kbd> to change it.</p>
+        <button class="button button-outline" type="button" data-close-panel>BACK TO MISSION <span aria-hidden="true">↗</span></button>
+      </section>
+    </main>
+
+    <button id="audiotoggle" class="audio-button" type="button" aria-label="Audio is muted. Enable audio." aria-pressed="false">
+      <svg class="audio-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 5 5 9H2v6h3l5 4V5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path class="audio-wave" d="M14 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" stroke="currentColor" stroke-width="1.5"/><path class="audio-slash" d="m15 9 6 6m0-6-6 6" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span id="audiostatus">AUDIO OFF</span><kbd>M</kbd>
+    </button>
+    <noscript><div class="fatal-notice">JavaScript and WebGL are required to play One Last Kill.</div></noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

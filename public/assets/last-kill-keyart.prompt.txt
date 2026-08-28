@@ -1,0 +1,15 @@
+Generated with the built-in image_gen__imagegen tool on 2026-08-27.
+Original generated menu art; no downloaded film still or actor photograph was used.
+Saved output: last-kill-keyart.png. Exact generation prompt follows.
+
+Use case: stylized-concept
+Asset type: cinematic 16:9 widescreen menu background for a grounded first-person action game.
+Primary request: Create one original photorealistic cinematic key-art image of a battered black-clad lone vigilante, seen from behind on the RIGHT THIRD of the frame, standing inside a dark New York tenement doorway that opens onto layered city rooftops at dusk. The LEFT HALF is mostly open dark shadow, quiet and low contrast, with room for large typographic game UI to be added later.
+Scene/backdrop: mundane and believable old New York tenement, distressed green-gray plaster, worn dark wood door trim and floor, practical amber doorway bulb, distant rooftop water tanks and brick buildings fading into neutral gray smoke and dusk haze. Strong foreground, doorway middle distance, and city background for layered depth.
+Subject: one adult male vigilante with broad but realistic proportions, short dark hair, scuffed black tactical vest and dark worn clothing, back facing camera and face unseen. A small simple distressed white skull motif can be faintly visible on the back, not a large graphic. Natural grounded stance. No visible graphic injuries.
+Style/medium: photorealistic cinematic film frame; believable human anatomy, tactile worn materials, restrained film grain, sharp detail around the figure and the lit doorway, rich but readable shadows, original composition rather than a recreation of a film still.
+Composition/framing: wide horizontal 16:9 image, eye-level camera; full figure or knees-up within the right third; the doorway and skyline stay predominantly to the right; protect the left 50 percent as near-black uninterrupted negative space with only faint tenement texture. Do not center the character.
+Lighting/mood: burning warm amber practical doorway light against a hard cool natural daylight shaft from outside, restrained gritty tension, atmospheric gray smoke, realistic falloff, subdued cinematic contrast.
+Color palette: charcoal black, distressed green-gray, muted neutral gray, warm amber, a little cool dusk blue. No saturated neon.
+Text: none.
+Constraints: exactly one person; no text, title, lettering, credits, watermarks, frames, UI, or brand logos; no extra characters; no weapons aimed at the viewer; no graphic gore; no sci-fi elements; no teal-magenta neon; no poster typography; no illustration or cartoon look. Generate background art only.

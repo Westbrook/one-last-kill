@@ -1,0 +1,21 @@
+// Weapon balance is data, independent of rendering and browser state.
+export const WEAPON_DEFS = {
+  fists:   { name: 'FISTS',   kind: 'melee',  dmg: 28, range: 2.0, rate: 0.34,
+             attackDuration: 0.28, contactPhase: 0.5, contactArc: 0.04, sound: 'meleeHit', vm: 'fists' },
+  bat:     { name: 'BAT',     kind: 'melee',  dmg: 55, range: 2.6, rate: 0.55,
+             attackDuration: 0.50, contactPhase: 0.5, contactArc: 0.13, sound: 'meleeHit', vm: 'bat' },
+  knife:   { name: 'KNIFE',   kind: 'melee',  dmg: 42, range: 1.9, rate: 0.28,
+             attackDuration: 0.26, contactPhase: 0.5, contactArc: 0, sound: 'meleeHit', vm: 'knife' },
+  pistol:  { name: 'PISTOL',  kind: 'ranged', dmg: 24, range: 80, rate: 0.18,
+             mag: 12, reloadTime: 1.2, spread: 0.012, pellets: 1, recoil: 0.06,
+             sound: 'pistolShot', vm: 'pistol' },
+  shotgun: { name: 'SHOTGUN', kind: 'ranged', dmg: 12, range: 35, rate: 0.85,
+             mag: 6,  reloadTime: 1.9, spread: 0.10,  pellets: 8, recoil: 0.18,
+             sound: 'shotgunShot', vm: 'shotgun' },
+  smg:     { name: 'SMG',     kind: 'ranged', dmg: 13, range: 60, rate: 0.075,
+             mag: 30, reloadTime: 1.5, spread: 0.040, pellets: 1, recoil: 0.035,
+             sound: 'smgShot', vm: 'smg', full: true },
+  machinegun: { name: 'MACHINE GUN', kind: 'ranged', dmg: 19, range: 110, rate: 0.095,
+             mag: 50, reloadTime: 2.6, spread: 0.022, pellets: 1, recoil: 0.055,
+             sound: 'machinegunShot', vm: 'machinegun', full: true },
+};
