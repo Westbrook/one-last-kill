@@ -150,7 +150,9 @@ function playerUpdate(dt) {
     _move.addScaledVector(_right, inp.moveX || 0);
   }
   if (_move.lengthSq() > 1) _move.normalize();
-  const moving = _move.lengthSq() > 0.001;
+  // Input already applies the stick dead zone. A second threshold here would
+  // move the body with fine stick input while disabling its ability to step.
+  const moving = _move.lengthSq() > 1e-12;
   Player.isSprinting = active && Boolean(inp.sprintDown || Input.keys.has('ShiftLeft'))
     && !Player.isCrouching && !Player.aiming && _move.dot(_forward) > 0.35;
   let speed = Player.isSprinting ? Player.speedSprint : Player.speedWalk;

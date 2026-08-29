@@ -170,6 +170,99 @@ test('floor-first contact does not climb a tall face or snap to an uncrossed flo
   assert.equal(falling.onGround, false);
 });
 
+test('a successful step retains toe support before the body centre reaches the tread', () => {
+  for (const rise of [2.4 / 14, 2.6 / 14, 0.3]) for (const dt of [1 / 30, 1 / 120, 1 / 240]) {
+    const geometry = [floor(), box(0, 0, -1, 1, rise, 1)];
+    const player = body(-0.27, 0, 0);
+    player.velocity.set(0.4, -22 * dt, 0);
+    moveCapsule(player, dt, geometry, true);
+    assert.ok(player.stepped >= rise);
+    assert.ok(player.position.x < 0, 'The toe reaches the step before the centre does');
+    assert.equal(player.onGround, true);
+    const x = player.position.x;
+    for (let tick = 0; tick < Math.ceil(1 / dt); tick++) {
+      player.velocity.set(0, player.velocity.y - 22 * dt, 0);
+      moveCapsule(player, dt, geometry, false);
+      near(player.position.x, x);
+      near(player.position.y, rise);
+      near(player.velocity.y, 0);
+      near(player.stepped, 0);
+      assert.equal(player.onGround, true, 'Releasing movement must not fall back off a completed step');
+      assert.ok(capsuleHasClearance(player.position, player.radius, player.height, geometry));
+    }
+  }
+});
+
+test('slow and fast ascent keep ground contact without converting walking into upward velocity', () => {
+  const rise = 2.6 / 14, depth = 0.3, count = 14;
+  for (const sign of [-1, 1]) for (const speed of [0.35, 0.84, 4.2, 7]) for (const dt of [1 / 30, 1 / 120, 1 / 240]) {
+    const geometry = [floor()];
+    for (let index = 0; index < count; index++) {
+      const a = sign * index * depth, b = sign * (index + 1) * depth;
+      geometry.push(box(Math.min(a, b), 0, -1, Math.max(a, b), (index + 1) * rise, 1));
+    }
+    const target = count * depth - 0.15;
+    const player = body(-sign * 0.7, 0, 0);
+    const ticks = Math.ceil(((target + 0.7) / speed + 1) / dt);
+    for (let tick = 0; tick < ticks && sign * player.position.x < target; tick++) {
+      const before = player.position.clone();
+      const blend = 1 - Math.exp(-(player.onGround ? 20 : 4) * dt);
+      player.velocity.x += (sign * speed - player.velocity.x) * blend;
+      player.velocity.y -= 22 * dt;
+      moveCapsule(player, dt, geometry, true);
+      assert.equal(player.onGround, true, `Lost support at ${player.position.toArray()}, speed=${speed}, dt=${dt}`);
+      assert.ok(sign * (player.position.x - before.x) >= -1e-9, 'A tread must not push the player backward');
+      assert.ok(player.position.y >= before.y - 0.00101, 'Only the 1 mm collision skin may settle downward');
+      near(player.velocity.y, 0);
+      assert.ok(capsuleHasClearance(player.position, player.radius, player.height, geometry, 1e-7));
+    }
+    assert.ok(sign * player.position.x >= target, `Complete the ascent at speed=${speed}, dt=${dt}`);
+    near(player.position.y, count * rise, 0.00101);
+  }
+});
+
+test('ground support uses a circle, not a padded rectangle or a tangent point', () => {
+  const platform = box(0, 0, 0, 1, 0.2, 1);
+  for (const [x, z] of [[-0.24, -0.24], [-0.32, 0.5], [0.5, 1.32]]) {
+    const player = body(x, 0.2, z);
+    player.velocity.y = -22 / 120;
+    moveCapsule(player, 1 / 120, [platform], true);
+    assert.equal(player.onGround, false, `No supported footprint at ${x}, ${z}`);
+    assert.ok(player.position.y < 0.2);
+    near(player.stepped, 0);
+  }
+});
+
+test('an airborne body beside a ledge cannot acquire the grounded footprint snap', () => {
+  const geometry = [box(0, 0, 0, 1, 0.2, 1)];
+  const falling = body(-0.28, 0.201, 0.5);
+  falling.onGround = false; falling.velocity.y = -1;
+  moveCapsule(falling, 1 / 120, geometry, true);
+  near(falling.position.y, 0.201 - 1 / 120);
+  near(falling.velocity.y, -1);
+  near(falling.stepped, 0);
+  assert.equal(falling.onGround, false);
+
+  const jumping = body(-0.28, 0.2, 0.5);
+  jumping.velocity.y = 5.6;
+  moveCapsule(jumping, 1 / 120, geometry, true);
+  near(jumping.position.y, 0.2 + 5.6 / 120);
+  near(jumping.velocity.y, 5.6);
+  assert.equal(jumping.onGround, false);
+});
+
+test('retained toe support releases as soon as the footprint leaves the ledge', () => {
+  const geometry = [box(0, 0, -1, 1, 0.2, 1)];
+  const player = body(-0.3, 0.2, 0);
+  player.velocity.set(-4.2, -22 / 120, 0);
+  moveCapsule(player, 1 / 120, geometry, true);
+  assert.ok(player.position.x < -player.radius);
+  assert.ok(player.position.y < 0.2);
+  assert.ok(player.velocity.y < 0);
+  assert.equal(player.onGround, false);
+  near(player.stepped, 0);
+});
+
 test('fast movement cannot tunnel through a thin torso obstacle', () => {
   const player = body(-0.6, 0, 0);
   player.velocity.set(100, -1, 0);

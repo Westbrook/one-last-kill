@@ -176,16 +176,19 @@ function hasGroundSupport(feet, radius, height, boxes) {
   return false;
 }
 
-// Resolve a crossed horizontal support plane before individual rounded-edge
-// contacts. Otherwise a neighboring slab's corner can turn horizontal travel
-// into upward velocity, even when another slab supports the same flat floor.
-// Only a surface directly under the feet and crossed while descending counts:
-// this cannot bridge gaps, raise the body onto a tall step, or cancel a jump.
-function crossedFloorHeight(feet, previousY, boxes) {
+// Resolve horizontal support before rounded-edge contacts can turn walking
+// into a bounce. A grounded body keeps support under its circular footprint:
+// auto-step can place the toes on a tread before the body centre crosses it.
+// Airborne bodies still need to cross a plane directly under their centre.
+// Neither case can raise the body onto an uncrossed or over-height surface.
+function crossedFloorHeight(feet, previousY, boxes, supportRadius = 0) {
   let floor = -Infinity;
   for (const box of boxes) {
-    if (box.max.y > previousY + EPSILON || box.max.y < feet.y - EPSILON) continue;
-    if (feet.x < box.min.x || feet.x > box.max.x || feet.z < box.min.z || feet.z > box.max.z) continue;
+    if (box.max.y > previousY + EPSILON
+      || box.max.y < feet.y - (supportRadius > 0 ? GROUND_PROBE : EPSILON)) continue;
+    const dx = Math.max(box.min.x - feet.x, 0, feet.x - box.max.x);
+    const dz = Math.max(box.min.z - feet.z, 0, feet.z - box.max.z);
+    if (supportRadius > 0 ? dx * dx + dz * dz >= supportRadius * supportRadius : dx > 0 || dz > 0) continue;
     floor = Math.max(floor, box.max.y);
   }
   return floor;
@@ -208,7 +211,8 @@ function moveCapsule(body, dt, boxes, allowStep = false, maxRise = 0.30) {
   const stepDt = elapsed / steps;
 
   for (let step = 0; step < steps; step++) {
-    const canStep = allowStep && body.onGround && velocity.y <= 0;
+    const wasGrounded = body.onGround && velocity.y <= 0;
+    const canStep = allowStep && wasGrounded;
     const previousY = position.y;
     position.addScaledVector(velocity, stepDt);
     let grounded = false;
@@ -224,7 +228,7 @@ function moveCapsule(body, dt, boxes, allowStep = false, maxRise = 0.30) {
     }
 
     if (velocity.y <= 0) {
-      const floor = crossedFloorHeight(position, previousY, boxes);
+      const floor = crossedFloorHeight(position, previousY, boxes, wasGrounded ? radius : 0);
       if (Number.isFinite(floor)) {
         position.y = floor;
         velocity.y = 0;
