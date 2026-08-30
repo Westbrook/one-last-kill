@@ -10,6 +10,7 @@ import { createBallisticHit } from '../../src/core/ballistics.js';
 import { lerp, clamp } from '../../src/core/math.js';
 import { createRageState } from '../../src/game/rage-rules.js';
 import { createCombatStats } from '../../src/game/combat-stats.js';
+import { WEAPON_DEFS } from '../../src/game/weapon-data.js';
 
 const mainSource = readFileSync(new URL('../../src/main.js', import.meta.url), 'utf8');
 const missionSource = readFileSync(new URL('../../src/game/mission.js', import.meta.url), 'utf8');
@@ -30,7 +31,8 @@ function fixture(options) {
   const Rage = createRageState(options), CombatStats = createCombatStats({ rage: Rage });
   const Input = createInputState(), clock = new FixedStepClock(), GameTime = { elapsed: 0 };
   Input.activate();
-  const calls = { health: [], rage: [], messages: [], attacks: 0, audioTime: [] };
+  const calls = { health: [], rage: [], messages: [], attacks: 0, audioTime: [], touchContexts: [] };
+  Input.setTouchContext = value => calls.touchContexts.push({ ...value });
   const noop = () => {}, hooks = { attack: noop, enemy: noop, input: noop };
   const conditions = { intro: false, ending: false };
   const checkpointSeed = { zone: 'apartment', branch: null, anchor: { yaw: 0 },
@@ -49,6 +51,7 @@ function fixture(options) {
     Settings: { get: key => key === 'reducedMotion' ? false : 1 }, currentZone: 'apartment',
     Audio: { footstep: noop, movement: noop, clearRadio: noop, reset: noop },
     Weapons: {
+      current: 'pistol', def() { return WEAPON_DEFS[this.current]; },
       tick(dt) { calls.attacks++; hooks.attack(dt); },
       handleInput(frame, dt) { hooks.input(frame, dt); },
       update: noop, cancelAttack: noop, restore: noop,
@@ -70,7 +73,7 @@ function fixture(options) {
     WeaponDrops: { clearAll: noop }, EndCard: { hide: noop },
     AmmoSupplies: { restore: noop, setZone: noop }, ZoneCull: { setHidden: noop }, zoneChanged: noop,
   };
-  const simulation = ['isPlaying', 'stepFrame'].map(name => actualFunction(mainSource, name)).join('\n');
+  const simulation = ['isPlaying', 'syncTouchContext', 'stepFrame'].map(name => actualFunction(mainSource, name)).join('\n');
   const lifecycle = ['applyPlayerDamage', 'playerDie', 'restartFromZone']
     .map(name => actualFunction(missionSource, name)).join('\n');
   const api = runInNewContext(`${playerSource}\nlet hudTimer = 0;\n`
@@ -87,6 +90,62 @@ function fixture(options) {
     pressRage() { Input.keyUp('KeyT'); Input.keyDown('KeyT'); api.stepFrame(clock.step); },
   };
 }
+
+test('the main loop exposes sights only for a held firearm and refreshes availability after a weapon change', () => {
+  const h = fixture();
+  h.steps();
+  assert.deepEqual(h.calls.touchContexts.at(-1), { canAim: true, canRage: false });
+  h.hooks.input = frame => { if (frame.gPressed) h.bindings.Weapons.current = 'fists'; };
+  h.Input.touchButton('drop', true);
+  h.steps();
+  assert.deepEqual(h.calls.touchContexts.at(-1), { canAim: false, canRage: false });
+  h.bindings.Weapons.current = 'bat';
+  h.steps();
+  assert.equal(h.calls.touchContexts.at(-1).canAim, false);
+  h.bindings.Weapons.current = 'shotgun';
+  h.steps();
+  assert.equal(h.calls.touchContexts.at(-1).canAim, true);
+  h.PlayerState.dead = true;
+  h.stepFrame(0);
+  assert.deepEqual(h.calls.touchContexts.at(-1), { canAim: false, canRage: false });
+});
+
+test('touch rage availability follows the real controller through entry, healing, expiry, and death', () => {
+  // Non-default limits demonstrate that the UI consumes Rage.available;
+  // it cannot quietly reproduce the normal health or kill thresholds.
+  const h = fixture({ healthThreshold: 0.8, minimumKills: 1, durationSeconds: 0.1, killWindowSeconds: 0.5 });
+  h.Player.health = 70;
+  h.steps();
+  assert.equal(h.calls.touchContexts.at(-1).canRage, false);
+  h.kills(1);
+  h.steps();
+  assert.equal(h.calls.touchContexts.at(-1).canRage, true);
+  h.Input.touchButton('rage', true);
+  h.steps();
+  assert.equal(h.Rage.snapshot(h.Player).active, true);
+  assert.equal(h.calls.touchContexts.at(-1).canRage, false);
+  h.applyPlayerDamage(60);
+  h.steps();
+  assert.equal(h.calls.touchContexts.at(-1).canRage, false, 'low health cannot expose rage while already active');
+  h.steps(12);
+  assert.equal(h.Rage.snapshot(h.Player).active, false);
+  assert.equal(h.calls.touchContexts.at(-1).canRage, true, 'expiration restores current eligibility');
+  h.Player.health = 90;
+  h.steps();
+  assert.equal(h.calls.touchContexts.at(-1).canRage, false, 'healing removes eligibility');
+  h.Player.health = 70;
+  h.steps(60);
+  assert.equal(h.calls.touchContexts.at(-1).canRage, false, 'old kills stop offering rage');
+  h.kills(1);
+  h.steps();
+  assert.equal(h.calls.touchContexts.at(-1).canRage, true);
+  h.applyPlayerDamage(100);
+  h.stepFrame(0);
+  assert.deepEqual(h.calls.touchContexts.at(-1), { canAim: false, canRage: false });
+  h.restartFromZone();
+  h.stepFrame(0);
+  assert.equal(h.calls.touchContexts.at(-1).canRage, false, 'checkpoint restoration cannot retain prior eligibility');
+});
 
 test('the real T input and Player controller require a fresh eligible press and cannot stack held rage', () => {
   const h = fixture(); h.Player.health = 10; h.kills(3);

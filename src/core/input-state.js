@@ -114,6 +114,13 @@ export function createInputState() {
       if (TOUCH_ACTIONS[action]) this._touchEdges.add(TOUCH_ACTIONS[action]);
       return true;
     },
+    cancelTouchButton(action) {
+      if (!Object.hasOwn(TOUCH_ACTIONS, action)) return false;
+      const held = this._touchButtons.delete(action);
+      const edge = TOUCH_ACTIONS[action];
+      const pending = edge ? this._touchEdges.delete(edge) : false;
+      return held || pending;
+    },
     keyDown(code, repeat = false) {
       if (!this.active || repeat || this.keys.has(code) || !GAMEPLAY_KEYS.has(code)) return false;
       this.keys.add(code);

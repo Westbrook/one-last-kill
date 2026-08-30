@@ -7,6 +7,8 @@ import { HUD, IntroCard, FPSMeter } from '../ui/hud.js';
 
 const Input = createInputState();
 const touchControls = createTouchControls({ input: Input });
+// Main supplies gameplay availability without importing game systems here.
+Input.setTouchContext = context => touchControls.setContext(context);
 const resetState = Input.reset.bind(Input);
 Input.reset = () => { resetState(); touchControls.reset(); };
 let touchEnabled = Settings.get('touchControls');

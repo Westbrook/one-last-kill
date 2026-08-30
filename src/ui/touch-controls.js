@@ -32,13 +32,14 @@ export function createTouchControls({ input, document: doc = document, window: v
     <div class="touch-stick" data-touch="move" role="group" aria-label="Move: drag thumbstick">
       <span class="touch-stick-ring" aria-hidden="true"></span><span class="touch-stick-thumb" aria-hidden="true"></span><span class="touch-stick-label" aria-hidden="true">MOVE</span>
     </div>
-    <div class="touch-actions">${button('aim', 'AIM', 'Toggle aim')}${button('fire', 'FIRE', 'Fire or attack: hold and drag to aim')}${button('use', 'USE', 'Interact or pick up')}${button('reload', 'RELOAD', 'Reload weapon')}${button('melee', 'MELEE', 'Melee attack')}${button('jump', 'JUMP', 'Jump')}</div>`;
+    <div class="touch-actions">${button('aim', 'SIGHTS', 'Toggle weapon sights')}${button('fire', 'FIRE', 'Fire or attack: hold and drag to aim')}${button('use', 'USE', 'Interact or pick up')}${button('reload', 'RELOAD', 'Reload weapon')}${button('melee', 'MELEE', 'Melee attack')}${button('jump', 'JUMP', 'Jump')}</div>`;
   doc.body.append(root);
 
   const thumb = root.querySelector('.touch-stick-thumb');
   const controls = new Map(Array.from(root.querySelectorAll('[data-touch]'), element => [element.dataset.touch, element]));
   const pointers = new Map();
   const toggled = new Set();
+  const available = new Map();
   const listeners = [];
   let enabled = false, active = false, lookPointer = null;
 
@@ -68,6 +69,29 @@ export function createTouchControls({ input, document: doc = document, window: v
     try {
       if (record.element.hasPointerCapture?.(pointerId)) record.element.releasePointerCapture(pointerId);
     } catch { /* A canceled or disconnected pointer has already lost capture. */ }
+  }
+  function setAvailable(action, value) {
+    const next = Boolean(value);
+    if (available.get(action) === next) return;
+    available.set(action, next);
+    const element = controls.get(action);
+    element.hidden = !next;
+    element.disabled = !next;
+    if (next) return;
+    // Losing eligibility cancels this action alone, including a tap queued
+    // between simulation steps. Other fingers keep moving, looking or firing.
+    for (const [pointerId, record] of pointers) {
+      if (record.action !== action) continue;
+      pointers.delete(pointerId);
+      releaseCapture(record, pointerId);
+    }
+    toggled.delete(action);
+    input.cancelTouchButton(action);
+    paint(action, false);
+  }
+  function setContext({ canAim = false, canRage = false } = {}) {
+    setAvailable('aim', canAim);
+    setAvailable('rage', canRage);
   }
   function reset() {
     const held = Array.from(pointers);
@@ -99,6 +123,7 @@ export function createTouchControls({ input, document: doc = document, window: v
     event.preventDefault();
     event.stopPropagation();
     const action = element.dataset.touch;
+    if (available.get(action) === false) return;
     // Never transfer an already-held stick or button to a second finger.
     if (pointers.has(event.pointerId) || Array.from(pointers.values()).some(record => record.action === action)) return;
     const record = { action, element, x: event.clientX, y: event.clientY };
@@ -162,18 +187,21 @@ export function createTouchControls({ input, document: doc = document, window: v
     // Pointer actions run on contact. Native keyboard/assistive clicks need
     // their own pulse, without replaying the compatibility click after touch.
     if (event.detail !== 0 || root.hidden || !input.active) return;
-    const action = event.target.closest?.('button[data-touch]')?.dataset.touch;
-    if (!action) return;
+    const element = event.target.closest?.('button[data-touch]');
+    const action = element?.dataset.touch;
+    if (!action || !root.contains(element) || available.get(action) === false) return;
     if (action === 'pause') input.pause();
     else if (TOGGLES.has(action)) toggle(action);
     else { input.touchButton(action, true); input.touchButton(action, false); }
   });
   listen(viewport, 'resize', reset);
   listen(viewport, 'orientationchange', reset);
+  setContext();
 
   return {
     element: root,
     reset,
+    setContext,
     setEnabled(value) { enabled = Boolean(value); syncVisibility(); },
     setActive(value) { active = Boolean(value); syncVisibility(); },
     destroy() {

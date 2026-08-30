@@ -7,7 +7,8 @@ import { createFirstPersonHands } from '../../src/render/first-person-hands.js';
 import { createFirstPersonBat, poseFirstPersonBat, FIRST_PERSON_BAT_SECONDS, BAT_CONTACT_PHASE } from '../../src/render/first-person-bat.js';
 
 function visitVertices(root, visitor) {
-  root.updateWorldMatrix(true, true);
+  // Match the render traversal, including SkinnedMesh's inverse bind update.
+  root.updateMatrixWorld(true);
   const point = new THREE.Vector3(), matrix = new THREE.Matrix4(), instance = new THREE.Matrix4();
   root.traverse(object => {
     if (!object.isMesh || !object.visible) return;
@@ -36,7 +37,10 @@ test('first-person bat keeps the canonical dimensions and shares both weapon and
   assert.equal(rig.asset.getObjectByName('bat-grip').material, worldBat.getObjectByName('bat-grip').material);
   const grip = rig.hands.userData.firstPersonGripHands;
   assert.equal(grip.left.surface.material, fists.userData.firstPersonHands.left.surface.material);
-  assert.equal(grip.left.sleeve.geometry, fists.userData.firstPersonHands.left.sleeve.geometry);
+  assert.notEqual(grip.left.sleeve.geometry, fists.userData.firstPersonHands.left.sleeve.geometry);
+  assert.equal(fists.userData.firstPersonHands.left.sleeve.geometry.attributes.skinWeight, undefined,
+    'bat elbow skinning cannot modify the shared fist/firearm sleeve');
+  assert.equal(grip.left.sleeve.geometry, other.userData.firstPersonBat.hands.userData.firstPersonGripHands.right.sleeve.geometry);
   assert.equal(grip.right.surface.geometry, other.userData.firstPersonBat.hands.userData.firstPersonGripHands.right.surface.geometry);
   let meshes = 0, triangles = 0;
   model.traverse(object => {
@@ -106,10 +110,44 @@ test('each articulated finger wraps the handle and both hands stay fixed to thei
         const distance = Math.hypot(point.y - hand.gripCenter.y, point.z - hand.gripCenter.z);
         assert.ok(distance > BAT_DIMENSIONS.gripRadius - 0.002, 'deformed hand surface cannot pass through the handle');
       }
-      const top = new THREE.Vector3(0, 0.5, 0).applyMatrix4(hand.sleeve.matrixWorld);
-      const bottom = new THREE.Vector3(0, -0.5, 0).applyMatrix4(hand.sleeve.matrixWorld);
+      const positions = hand.sleeve.geometry.attributes.position;
+      const capCenters = [];
+      for (let i = 0; i < positions.count; i++) {
+        if (Math.hypot(positions.getX(i), positions.getZ(i)) < 1e-9) {
+          capCenters.push(hand.sleeve.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(hand.sleeve.matrixWorld));
+        }
+      }
+      const [bottom, top] = capCenters;
+      assert.equal(capCenters.length, 2);
       assert.ok(top.distanceTo(hand.wrist) < 1e-9);
       assert.ok(bottom.distanceTo(hand.anchor) < 1e-9);
+    }
+  }
+});
+
+test('bat wrists, cuffs and the rendered distal sleeves remain aligned through the complete swing', () => {
+  const model = createFirstPersonBat(), rig = model.userData.firstPersonBat;
+  for (let step = 0; step <= 120; step++) {
+    poseFirstPersonBat(model, 1 - step / 120, step / 8, 1); model.updateMatrixWorld(true);
+    for (const hand of rig.hands.userData.firstPersonGripHands.order) {
+      const wristAxis = new THREE.Vector3(0, 0, 1).applyQuaternion(hand.hand.quaternion);
+      const cuffAxis = new THREE.Vector3(0, -1, 0).applyQuaternion(hand.cuff.quaternion);
+      assert.ok(wristAxis.angleTo(cuffAxis) < 1e-7, 'the cuff continues the palm without a wrist hinge');
+      const acrossFingers = new THREE.Vector3(-hand.side, 0, 0).applyQuaternion(hand.hand.quaternion);
+      assert.ok(acrossFingers.angleTo(rig.direction) < 1e-7, 'both thumbs still point along the barrel');
+      const sleeve = hand.sleeve, positions = sleeve.geometry.attributes.position, uv = sleeve.geometry.attributes.uv;
+      const ringY = Array.from(new Set(Array.from({ length: positions.count }, (_, i) => positions.getY(i))))
+        .find(y => y < -0.09 && y > -0.12);
+      assert.ok(Number.isFinite(ringY), 'sample the rendered forearm well beyond its cuff');
+      const center = new THREE.Vector3(), vertex = new THREE.Vector3(); let count = 0;
+      for (let i = 0; i < positions.count; i++) {
+        if (positions.getY(i) !== ringY || uv.getX(i) > 0.999) continue;
+        center.add(sleeve.getVertexPosition(i, vertex).applyMatrix4(sleeve.matrixWorld)); count++;
+      }
+      center.divideScalar(count);
+      assert.ok(center.sub(hand.wrist).angleTo(wristAxis) < Math.PI / 180,
+        'the visible forearm, not just the cuff, extends the hand axis');
+      assert.ok(hand.wrist.distanceTo(hand.elbow) > 0.15, 'any arm bend belongs at the elbow away from the wrist');
     }
   }
 });
@@ -180,10 +218,16 @@ test('bat pose is stateless and repeated poses do not allocate geometry or uploa
     const array = first.surface.geometry.attributes.position.array, version = first.surface.geometry.attributes.position.version;
     const matrix = first.poseMatrix, geometry = first.surface.geometry, morph = geometry.morphAttributes.position[0];
     const morphVersion = morph.version;
+    const sleeveGeometry = first.sleeve.geometry, sleeveBuffer = sleeveGeometry.attributes.position;
+    const sleeveVersion = sleeveBuffer.version, skinWeights = sleeveGeometry.attributes.skinWeight;
+    assert.deepEqual(first.elbowBone.quaternion.toArray(), second.elbowBone.quaternion.toArray());
+    assert.deepEqual(first.elbowBone.scale.toArray(), second.elbowBone.scale.toArray());
     poseFirstPersonBat(stepped, 0.33, 2, 0.5);
     assert.equal(first.surface.geometry.attributes.position.array, array); assert.equal(first.surface.geometry.attributes.position.version, version);
     assert.equal(first.poseMatrix, matrix); assert.equal(first.surface.geometry, geometry);
     assert.equal(geometry.morphAttributes.position[0], morph); assert.equal(morph.version, morphVersion);
+    assert.equal(first.sleeve.geometry, sleeveGeometry); assert.equal(sleeveGeometry.attributes.position, sleeveBuffer);
+    assert.equal(sleeveBuffer.version, sleeveVersion); assert.equal(sleeveGeometry.attributes.skinWeight, skinWeights);
   }
 });
 

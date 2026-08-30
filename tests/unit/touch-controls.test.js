@@ -83,7 +83,7 @@ class Element extends EventTarget {
   }
 }
 
-function fixture(t, { enabled = true, active = true } = {}) {
+function fixture(t, { enabled = true, active = true, context } = {}) {
   const viewport = new EventTarget();
   const doc = { body: new Element('body'), createElement: name => new Element(name) };
   doc.body.parentNode = viewport;
@@ -94,6 +94,7 @@ function fixture(t, { enabled = true, active = true } = {}) {
   input.pause = () => { pauses++; pause(); };
   const controls = createTouchControls({ input, document: doc, window: viewport });
   const elements = new Map(controls.element.querySelectorAll('[data-touch]').map(element => [element.dataset.touch, element]));
+  if (context) controls.setContext(context);
   controls.setEnabled(enabled);
   controls.setActive(active);
   let destroyed = false;
@@ -135,6 +136,84 @@ test('touch controls require opt-in, a visible play session, and active input', 
   f.controls.setActive(false);
   assert.equal(f.controls.element.hidden, true);
   assert.equal(f.doc.body.dataset.touchControls, 'false');
+});
+
+test('sights and rage start hidden and reject pointer and assistive actions until available', t => {
+  const f = fixture(t);
+  assert.equal(f.elements.get('aim').getAttribute('aria-label'), 'Toggle weapon sights');
+  for (const action of ['aim', 'rage']) {
+    const element = f.elements.get(action);
+    assert.equal(element.hidden, true, action);
+    assert.equal(element.disabled, true, action);
+    f.down(action);
+    f.end(1);
+    f.click(action);
+    assert.equal(element.captures.size, 0, action);
+    assertReleased(f.input);
+  }
+  f.controls.setContext({ canAim: true, canRage: true });
+  for (const action of ['aim', 'rage']) {
+    assert.equal(f.elements.get(action).hidden, false, action);
+    assert.equal(f.elements.get(action).disabled, false, action);
+  }
+});
+
+test('losing firearm sights cancels their held pointer and toggle while other fingers keep playing', t => {
+  const f = fixture(t, { context: { canAim: true } });
+  f.down('aim', 1);
+  f.down('move', 2);
+  f.move(2, 228, 180);
+  f.down('fire', 3, { clientX: 500, clientY: 200 });
+  assert.equal(f.input.isAiming(), true);
+  f.controls.setContext({ canAim: false });
+  assert.equal(f.input.isAiming(), false);
+  assert.equal(f.elements.get('aim').hidden, true);
+  assert.equal(f.elements.get('aim').disabled, true);
+  assert.equal(f.elements.get('aim').getAttribute('aria-pressed'), 'false');
+  assert.equal(f.elements.get('aim').hasPointerCapture(1), false);
+  f.end(1);
+  f.click('aim');
+  f.move(3, 508, 196);
+  let frame = f.input.consumeFrame();
+  assert.equal(frame.aimDown, false);
+  assert.equal(frame.moveX, 1);
+  assert.equal(frame.leftDown, true);
+  assert.equal(frame.leftPressed, true);
+  assert.equal(frame.dx, 20);
+  assert.equal(frame.dy, -10);
+  f.controls.setContext({ canAim: true });
+  assert.equal(f.input.isAiming(), false, 'equipping another firearm cannot revive the old toggle');
+  f.click('aim');
+  assert.equal(f.input.isAiming(), true);
+  f.controls.setContext({ canAim: false });
+  frame = f.input.consumeFrame();
+  assert.equal(frame.aimDown, false, 'context loss also clears a toggle whose pointer was already released');
+  assert.equal(frame.leftDown, true);
+});
+
+test('losing rage eligibility discards a pending press without allowing stale pointers to replay it', t => {
+  for (const released of [false, true]) {
+    const f = fixture(t, { context: { canRage: true } });
+    f.down('rage', 1);
+    if (released) f.end(1);
+    f.down('fire', 2);
+    f.controls.setContext({ canRage: false });
+    assert.equal(f.elements.get('rage').hidden, true);
+    assert.equal(f.elements.get('rage').disabled, true);
+    assert.equal(f.elements.get('rage').hasPointerCapture(1), false);
+    f.click('rage');
+    const frame = f.input.consumeFrame();
+    assert.equal(frame.tPressed, false, `pending ${released ? 'tap' : 'hold'} was canceled`);
+    assert.equal(frame.leftPressed, true, 'other pending touch actions survive');
+    assert.equal(frame.leftDown, true);
+    f.controls.setContext({ canRage: true });
+    f.end(1);
+    f.click('rage', 1);
+    assert.equal(f.input.consumeFrame().tPressed, false, 'stale release and compatibility click cannot reactivate rage');
+    f.down('rage', 1);
+    assert.equal(f.input.consumeFrame().tPressed, true, 'a fresh available press is accepted');
+    assert.equal(f.input.consumeFrame().tPressed, false);
+  }
 });
 
 test('movement, look, and fire pointers stay independent while held and released', t => {
@@ -269,7 +348,7 @@ test('pointer release, cancellation, and lost capture clear held controls and ig
 });
 
 test('aim and stance toggles survive release, ignore compatibility clicks, and cancel safely', t => {
-  const f = fixture(t);
+  const f = fixture(t, { context: { canAim: true } });
   f.down('aim');
   f.end(1);
   f.click('aim', 1);
@@ -302,7 +381,7 @@ test('aim and stance toggles survive release, ignore compatibility clicks, and c
 });
 
 test('native keyboard or assistive clicks pulse actions once and support toggles', t => {
-  const f = fixture(t);
+  const f = fixture(t, { context: { canAim: true, canRage: true } });
   for (const [action, edge] of [['fire', 'leftPressed'], ['jump', 'jumpPressed'], ['use', 'ePressed'], ['reload', 'rPressed'], ['melee', 'vPressed'], ['drop', 'gPressed'], ['rage', 'tPressed']]) {
     f.click(action);
     const frame = f.input.consumeFrame();
@@ -356,7 +435,7 @@ test('reset, visibility changes, resize, rotation, and destruction clear touch s
     destroy: f => f.destroy(),
   };
   for (const [reason, reset] of Object.entries(resets)) {
-    const f = fixture(t);
+    const f = fixture(t, { context: { canAim: true } });
     f.down('move', 1);
     f.move(1, 228, 132);
     f.down('look', 2);

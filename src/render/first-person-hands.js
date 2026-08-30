@@ -6,9 +6,43 @@ import { getHandMaterials } from './hand-materials.js';
 export const FIRST_PERSON_PUNCH_SECONDS = WEAPON_DEFS.fists.attackDuration;
 export const FIRST_PERSON_PUNCH_CONTACT_PHASE = WEAPON_DEFS.fists.contactPhase;
 const UP = new THREE.Vector3(0, 1, 0);
+const DOWN = new THREE.Vector3(0, -1, 0);
 const WRIST = new THREE.Vector3(0, -0.004, 0.092);
+const GRIP_ARM_LENGTH = 0.5;
+const GRIP_FOREARM_LENGTH = 0.16;
 const saturate = value => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 const ease = value => value * value * (3 - 2 * value);
+let gripSleeveGeometry;
+
+function makeGripSleeve(root, rig) {
+  if (!gripSleeveGeometry) {
+    // A bat's elbows must follow the two-handed grip. Keep the wrist end rigid
+    // with the palm, and let the sleeve bend at the elbow farther down the arm.
+    // These pooled skin weights leave the fist/firearm geometry untouched.
+    gripSleeveGeometry = getHandArmGeometry().sleeve.clone();
+    gripSleeveGeometry.scale(1, GRIP_ARM_LENGTH, 1).translate(0, -GRIP_ARM_LENGTH * 0.5, 0);
+    const positions = gripSleeveGeometry.attributes.position;
+    const indices = [], weights = [];
+    for (let i = 0; i < positions.count; i++) {
+      const distance = -positions.getY(i);
+      const blend = ease(saturate((distance - GRIP_FOREARM_LENGTH + 0.04) / 0.08));
+      indices.push(0, 1, 0, 0); weights.push(1 - blend, blend, 0, 0);
+    }
+    gripSleeveGeometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(indices, 4));
+    gripSleeveGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weights, 4));
+    gripSleeveGeometry.computeBoundingBox(); gripSleeveGeometry.computeBoundingSphere();
+  }
+  const sleeve = new THREE.SkinnedMesh(gripSleeveGeometry, rig.sleeve.material);
+  sleeve.name = rig.sleeve.name; sleeve.frustumCulled = false;
+  const wristBone = new THREE.Bone(), elbowBone = new THREE.Bone();
+  elbowBone.position.y = -GRIP_FOREARM_LENGTH;
+  wristBone.add(elbowBone); sleeve.add(wristBone);
+  sleeve.bind(new THREE.Skeleton([wristBone, elbowBone]));
+  root.remove(rig.sleeve); root.add(sleeve); rig.sleeve = sleeve;
+  rig.elbowBone = elbowBone;
+  rig.elbow = new THREE.Vector3(); rig.upperArmDirection = new THREE.Vector3();
+  rig.armBasis = new THREE.Matrix4(); rig.inverseArm = new THREE.Quaternion();
+}
 function makeHand(root, side, radius = null) {
   const materials = getHandMaterials(), geometry = getHandArmGeometry(), label = side < 0 ? 'left' : 'right';
   const hand = new THREE.Group(); hand.name = `${label}-hand`;
@@ -111,16 +145,16 @@ export function createFirstPersonGripHands({ radius = 0.015, lowerGripZ = -0.050
   const hands = { left, right, order: [left, right] };
   root.userData.firstPersonGripHands = hands;
   for (const rig of hands.order) {
+    // A two-handed stance tucks the arms closer to the torso than the fists'
+    // wide guard, keeping the windup's wrists visible at narrow tablet FOVs.
+    rig.anchor.x = rig.side * 0.20;
     rig.gripCenter = new THREE.Vector3(0, -0.010, -0.060);
     rig.gripZ = rig.side < 0 ? lowerGripZ : upperGripZ;
     rig.gripRadius = radius;
-    // Fingers span the shaft; a small wrist roll brings both forearms below it.
-    const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), rig.side * 0.65)
-      .multiply(new THREE.Quaternion().setFromAxisAngle(UP, rig.side * Math.PI / 2));
-    const position = rig.gripCenter.clone().applyQuaternion(rotation).negate();
-    position.z += rig.gripZ;
-    rig.gripLocalMatrix = new THREE.Matrix4().compose(position, rotation, new THREE.Vector3(1, 1, 1));
+    rig.gripAnchor = new THREE.Vector3(); rig.shaft = new THREE.Vector3();
+    rig.xAxis = new THREE.Vector3(); rig.yAxis = new THREE.Vector3(); rig.zAxis = new THREE.Vector3();
     rig.poseMatrix = new THREE.Matrix4();
+    makeGripSleeve(root, rig);
     rig.lastClench = -1; poseDigits(rig, 0);
   }
   root.traverse(object => {
@@ -137,10 +171,39 @@ export function poseFirstPersonGripHands(model, batTransform = null, tension = 0
   if (!hands) return;
   if (batTransform) batTransform.updateMatrix();
   for (const rig of hands.order) {
-    if (batTransform) rig.poseMatrix.multiplyMatrices(batTransform.matrix, rig.gripLocalMatrix);
-    else rig.poseMatrix.copy(rig.gripLocalMatrix);
-    rig.poseMatrix.decompose(rig.hand.position, rig.hand.quaternion, rig.hand.scale);
+    rig.gripAnchor.set(0, 0, rig.gripZ); rig.shaft.set(0, 0, 1);
+    if (batTransform) {
+      rig.gripAnchor.applyMatrix4(batTransform.matrix);
+      rig.shaft.transformDirection(batTransform.matrix);
+    }
+    // Local X spans the shaft, so both thumbs point toward the barrel. Local
+    // +Z runs from knuckles through wrist into the forearm. Roll the grip about
+    // the shaft toward its arm instead of hinging the sleeve at a fixed palm.
+    rig.xAxis.copy(rig.shaft).multiplyScalar(-rig.side);
+    rig.zAxis.subVectors(rig.anchor, rig.gripAnchor);
+    rig.zAxis.addScaledVector(rig.shaft, -rig.zAxis.dot(rig.shaft));
+    if (rig.zAxis.lengthSq() < 1e-8) {
+      rig.zAxis.set(0, -1, 0);
+      if (Math.abs(rig.shaft.y) > 0.9) rig.zAxis.set(0, 0, 1);
+      rig.zAxis.addScaledVector(rig.shaft, -rig.zAxis.dot(rig.shaft));
+    }
+    rig.zAxis.normalize(); rig.yAxis.crossVectors(rig.zAxis, rig.xAxis).normalize();
+    rig.poseMatrix.makeBasis(rig.xAxis, rig.yAxis, rig.zAxis);
+    rig.hand.quaternion.setFromRotationMatrix(rig.poseMatrix);
+    rig.hand.position.copy(rig.gripCenter).applyQuaternion(rig.hand.quaternion).negate().add(rig.gripAnchor);
     poseDigits(rig, saturate(tension) * 0.08);
-    poseForearm(rig);
+    rig.hand.updateMatrix(); rig.wrist.copy(WRIST).applyMatrix4(rig.hand.matrix);
+    rig.elbow.copy(rig.wrist).addScaledVector(rig.zAxis, GRIP_FOREARM_LENGTH);
+    rig.direction.copy(rig.zAxis).negate();
+    rig.armBasis.makeBasis(rig.xAxis, rig.direction, rig.yAxis);
+    rig.sleeve.position.copy(rig.wrist); rig.sleeve.quaternion.setFromRotationMatrix(rig.armBasis);
+    rig.upperArmDirection.subVectors(rig.anchor, rig.elbow);
+    const upperLength = rig.upperArmDirection.length();
+    rig.inverseArm.copy(rig.sleeve.quaternion).invert();
+    rig.upperArmDirection.multiplyScalar(1 / upperLength).applyQuaternion(rig.inverseArm);
+    rig.elbowBone.quaternion.setFromUnitVectors(DOWN, rig.upperArmDirection);
+    rig.elbowBone.scale.y = upperLength / (GRIP_ARM_LENGTH - GRIP_FOREARM_LENGTH);
+    rig.cuff.position.copy(rig.wrist).addScaledVector(rig.zAxis, 0.006);
+    rig.cuff.quaternion.copy(rig.sleeve.quaternion); rig.cuff.scale.set(0.032, 0.022, 0.031);
   }
 }

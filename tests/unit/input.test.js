@@ -323,6 +323,56 @@ test('touch fire and aim release independently of mouse, keyboard, and controlle
   }
 });
 
+test('cancelTouchButton clears only the selected touch action', () => {
+  const input = createInputState();
+  input.activate();
+  input.setTouchMove(0, 1);
+  input.touchLook(12, -8);
+  for (const action of ['rage', 'aim', 'fire', 'jump', 'sprint']) input.touchButton(action, true);
+  assert.equal(input.cancelTouchButton('rage'), true);
+  assert.equal(input.cancelTouchButton('rage'), false);
+  assert.equal(input.cancelTouchButton('aim'), true);
+  assert.equal(input.cancelTouchButton('unknown'), false);
+  assert.equal(input.cancelTouchButton('toString'), false);
+  const frame = input.consumeFrame();
+  assert.equal(frame.tPressed, false);
+  assert.equal(frame.aimDown, false);
+  for (const key of ['leftDown', 'leftPressed', 'jumpDown', 'jumpPressed', 'sprintDown']) assert.equal(frame[key], true, key);
+  assert.equal(frame.moveY, 1);
+  assert.equal(frame.dx, 12);
+  assert.equal(frame.dy, -8);
+});
+
+test('cancelTouchButton removes released touch edges and held actions while inactive', () => {
+  const input = createInputState();
+  input.activate();
+  input.touchButton('rage', true);
+  input.touchButton('rage', false);
+  input.touchButton('aim', true);
+  input.active = false;
+  assert.equal(input.cancelTouchButton('rage'), true);
+  assert.equal(input.cancelTouchButton('aim'), true);
+  input.active = true;
+  const frame = input.consumeFrame();
+  assert.equal(frame.tPressed, false);
+  assert.equal(frame.aimDown, false);
+});
+
+test('cancelTouchButton preserves other devices pending edges for the same actions', () => {
+  const input = createInputState();
+  input.activate();
+  input.keyDown('KeyT');
+  input.keyDown('KeyE');
+  input.mouseButton(0, true);
+  input.setGamepad(controller({ pressed: [2] }));
+  for (const action of ['rage', 'use', 'fire', 'reload']) {
+    input.touchButton(action, true);
+    input.cancelTouchButton(action);
+  }
+  const frame = input.consumeFrame();
+  for (const key of ['tPressed', 'ePressed', 'leftPressed', 'rPressed', 'leftDown']) assert.equal(frame[key], true, key);
+});
+
 test('touch jump, sprint, and crouch remain held across frames and release independently', () => {
   const input = createInputState();
   input.activate();

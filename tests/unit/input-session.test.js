@@ -64,9 +64,10 @@ function session({ touchEnabled = false } = {}) {
     set(key, value) { settings.set(key, value); document.emit('settingschange'); },
   };
   const controls = {
-    enabled: false, active: false, resets: 0, enabledChanges: [],
+    enabled: false, active: false, resets: 0, enabledChanges: [], context: null,
     setEnabled(value) { this.enabled = value; this.enabledChanges.push(value); },
     setActive(value) { this.active = value; },
+    setContext(value) { this.context = value; },
     reset() { this.resets++; },
     get visible() { return this.enabled && this.active; },
   };
@@ -121,6 +122,15 @@ function assertReleased(input) {
   for (const key of ['dx', 'dy', 'moveX', 'moveY']) assert.equal(frame[key], 0, key);
   for (const key of ['leftDown', 'leftPressed', 'aimDown', 'jumpDown', 'jumpPressed', 'sprintDown', 'crouchDown', 'ePressed']) assert.equal(frame[key], false, key);
 }
+
+test('the input adapter forwards authoritative gameplay availability to the touch controller', () => {
+  const h = session({ touchEnabled: true });
+  const context = { canAim: true, canRage: false };
+  h.Input.setTouchContext(context);
+  assert.equal(h.controls.context, context);
+  h.Input.setTouchContext({ canAim: false, canRage: true });
+  assert.deepEqual(h.controls.context, { canAim: false, canRage: true });
+});
 
 test('opted-in touch play passes through the briefing and never requests pointer capture', () => {
   const h = session({ touchEnabled: true });

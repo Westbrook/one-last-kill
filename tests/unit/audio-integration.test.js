@@ -177,7 +177,7 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
   const Settings = createSettingsStore({ onChange: detail => document.dispatchEvent({ type: 'settingschange', detail }) });
   const record = name => dt => simulated.push({ name, dt });
   const gates = { intro: false, ending: false };
-  const Input = { active: true, pollGamepad: noOp };
+  const Input = { active: true, pollGamepad: noOp, setTouchContext: noOp };
   const Player = { pos: new THREE.Vector3(0, 5.72, 0), yaw: 0.3, health: 100 };
   const PlayerState = { dead: false }, camera = new THREE.PerspectiveCamera();
   camera.position.copy(Player.pos);
@@ -190,7 +190,7 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
     } },
     IntroCard: { isOpen: () => gates.intro }, Endings: { isResolved: () => gates.ending, update: record('ending') },
     Enemies: { list: [] }, currentZone: 'roof', GameTime: { elapsed: 0 },
-    Weapons: { tick: record('weapon'), update: record('viewmodel') },
+    Weapons: { tick: record('weapon'), update: record('viewmodel'), def: () => ({ kind: 'ranged' }) },
     playerUpdate: record('player'), enemiesUpdate: record('enemy'), triggersUpdate: record('triggers'),
     WaveDirector: { update: record('wave') }, HealPickups: { update: record('heal') },
     StreetChoice: { update: record('choice') }, CombatStats: { update: record('stats'), snapshot: () => ({}) },
@@ -207,7 +207,7 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
     + 'let previousTime = 0, wasPlaying = false, controlledTest = false, inspecting = false;'
     + 'const audioScene = {zone:"apartment",threat:0,paused:true,dead:false,listener:{position:camera.position,yaw:0}};\n';
   const api = runInNewContext(prelude
-    + ['syncAudioSettings', 'isPlaying', 'updateAudioScene', 'stepFrame', 'frame'].map(actualMain).join('\n')
+    + ['syncAudioSettings', 'isPlaying', 'syncTouchContext', 'updateAudioScene', 'stepFrame', 'frame'].map(actualMain).join('\n')
     + '\n' + settingsHook
     + '\n;({stepFrame,frame,updateAudioScene,isPlaying,setContextLost(value){contextLost=value;}});',
   bindings, { filename: 'src/main.js:audio-hooks' });

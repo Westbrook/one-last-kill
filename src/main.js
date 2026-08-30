@@ -73,6 +73,13 @@ function isPlaying() {
     && !Endings.isResolved() && !document.hidden && !contextLost;
 }
 
+function syncTouchContext() {
+  Input.setTouchContext({
+    canAim: !PlayerState.dead && Weapons.def().kind === 'ranged',
+    canRage: !PlayerState.dead && Rage.available(Player),
+  });
+}
+
 function updateAudioScene(dt) {
   audioScene.zone = currentZone;
   audioScene.listener.yaw = Player.yaw;
@@ -101,6 +108,7 @@ function stepFrame(realDt) {
     Rage.update(clock.step, Player);
     if (Player.health !== healthBeforeRage) HUD.setHealth(Player.health);
     Weapons.tick(clock.step);
+    syncTouchContext();
     playerUpdate(clock.step);
     enemiesUpdate(clock.step);
     WaveDirector.update(clock.step);
@@ -135,6 +143,7 @@ function stepFrame(realDt) {
       hudTimer = 0.10;
     }
   }
+  syncTouchContext();
   updateAudioScene(progressed);
   return progressed;
 }
@@ -157,6 +166,7 @@ function frame(now) {
   const realDt = previousTime ? (now - previousTime) / 1000 : 0;
   previousTime = now;
   Input.pollGamepad();
+  syncTouchContext();
   if (controlledTest) return;
   const playing = isPlaying();
   if (!playing) {
