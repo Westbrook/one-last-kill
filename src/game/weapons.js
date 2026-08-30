@@ -479,7 +479,7 @@ const Weapons = {
     if (drop?.kind === 'ammoSupply') {
       const accepted = AmmoSupplies.pickup(drop, this, (amount, cap) => this.acceptReserveAmmo(amount, cap));
       if (!accepted) return false;
-      Audio.pickupChime();
+      Audio.pickupChime({ kind: 'ammo', weapon: this.current, environment: currentZone });
       HUD.message(`+${accepted} ${this.def().name} RESERVE`, 1.5);
       return true;
     }
@@ -494,7 +494,7 @@ const Weapons = {
         this.reserve = Math.min(999, this.reserve + newAmmo);
       }
       WeaponDrops.remove(drop);
-      Audio.pickupChime();
+      Audio.pickupChime({ kind: 'ammo', weapon: newType, environment: currentZone });
       HUD.message('+ ' + d.name + ' AMMO', 1.2);
       this._syncHUD();
       return true;
@@ -509,10 +509,9 @@ const Weapons = {
     // Consume the picked-up drop and equip it.
     WeaponDrops.remove(drop);
     this._equip(newType, newAmmo);
-    if (WEAPON_DEFS[newType].kind === 'ranged') {
-      Audio.weaponMechanical({ weapon: newType, action: 'equip', intensity: 0.6, environment: currentZone });
-    }
-    Audio.pickupChime();
+    // One contextual cue owns the lift and handling: a second equip event
+    // would double the same mechanism, and melee pickups need their own foley.
+    Audio.pickupChime({ kind: 'weapon', weapon: newType, environment: currentZone });
     HUD.message('PICKED UP ' + WEAPON_DEFS[newType].name, 1.4);
     return true;
   },

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Game audio review</title>
+    <style>
+      :root { color-scheme: dark; font: 16px/1.55 system-ui, sans-serif; color: #e8edf1; background: #11171c; }
+      body { max-width: 900px; margin: 0 auto; padding: 40px 24px 64px; }
+      h1 { margin-bottom: 8px; font-size: 2rem; }
+      p { color: #b9c5cd; }
+      button, select { font: inherit; padding: 10px 14px; border: 1px solid #607784; border-radius: 6px; background: #23333e; color: inherit; }
+      button { cursor: pointer; background: #2b5661; }
+      button:disabled { cursor: wait; opacity: .55; }
+      a { color: #9cdeea; }
+      .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 24px 0; }
+      audio { width: 100%; margin: 16px 0; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #192229; padding: 16px; border-radius: 6px; font-size: 13px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid #32404a; }
+      th:first-child, td:first-child { width: 80px; font-variant-numeric: tabular-nums; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <h1>Game audio review</h1>
+    <p>Render the game's actual audio graph into a stereo WAV without opening an audio device.
+      Music and ambience stay off; local recordings and radio stay on. Rendering is silent.</p>
+    <div class="actions">
+      <label for="version">Graph</label>
+      <select id="version"><option value="current">Current</option></select>
+      <button id="render" type="button" disabled>Render audio review</button>
+      <a id="download" hidden>Download WAV</a>
+    </div>
+    <p id="status" role="status" aria-live="polite">Loading the audio graph…</p>
+    <p id="baseline-status">Checking for an optional local baseline…</p>
+    <audio id="player" controls muted preload="none" hidden></audio>
+    <p>Playback never starts automatically and starts muted. Unmute the player manually and use a low listening volume.</p>
+    <details open>
+      <summary>Reel timeline</summary>
+      <table><thead><tr><th>Seconds</th><th>Sound</th></tr></thead><tbody id="timeline"></tbody></table>
+    </details>
+    <details>
+      <summary>PCM measurements and render status</summary>
+      <pre id="report">{"state":"loading"}</pre>
+    </details>
+    <script type="module" src="/tools/audio-review.js"></script>
+  </body>
+</html>

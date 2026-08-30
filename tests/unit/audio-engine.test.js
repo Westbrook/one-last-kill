@@ -241,16 +241,24 @@ test('listener yaw pans to the correct ear and distant attenuation cannot silenc
   assert.equal(describeAudioEvent({ pos: { x: NaN, y: 0, z: 0 } }, eye).pan, 0);
 });
 
-test('actual event graph supports positional balance and a short interior reflection without changing own-shot origin', async () => {
+test('weapon reports keep local origin, lose brightness with distance, and reflect only indoors', async () => {
   const { audio, fake } = await makeActive();
   audio.setListener({ position: { x: 10, y: 2, z: 10 }, yaw: 0 });
   audio.pistolShot();
   assert.equal(fake.sources.length, 2);
+  assert.ok(fake.sources.every(source => source.kind === 'source'), 'No pitched oscillator under gunfire');
+  const localReport = fake.sources[0];
+  assert.equal(localReport.connections[0].frequency.value, 16000);
   assert.equal(fake.nodes.filter(node => node.kind === 'panner').length, 0);
   audio.pistolShot({ pos: { x: 20, y: 2, z: 9 }, environment: 'neighbor' });
-  assert.equal(fake.sources.length, 5);
+  assert.equal(fake.sources.length, 6);
+  const distantReport = fake.sources[2];
+  assert.ok(distantReport.connections[0].frequency.value < localReport.connections[0].frequency.value);
+  assert.ok(Math.abs(distantReport.starts[0][0] - Math.hypot(10, 1) / 343) < 1e-9,
+    'Remote reports arrive after the sound travel time');
   assert.ok(fake.nodes.some(node => node.kind === 'panner' && node.pan.value > 0));
-  assert.ok(fake.sources.at(-1).starts[0][0] > fake.context.currentTime);
+  assert.ok(fake.sources.at(-2).starts[0][0] > distantReport.starts[0][0]);
+  assert.ok(fake.sources.at(-1).starts[0][0] > fake.sources.at(-2).starts[0][0]);
   const nodes = fake.nodes.length;
   audio.pistolShot({ pos: { x: 400, y: 0, z: 0 } });
   assert.equal(fake.nodes.length, nodes);
@@ -261,7 +269,7 @@ test('mechanical phase contacts and jump/landing are immediate, bounded events, 
   for (const action of ['reload-start', 'reload-insert', 'reload-end']) audio.weaponMechanical({ action, weapon: 'pistol' });
   assert.equal(fake.sources.length, 3);
   assert.ok(fake.sources.every(source => source.starts[0][0] === fake.context.currentTime));
-  const cutoffs = fake.nodes.filter(node => node.kind === 'filter').map(node => node.frequency.value);
+  const cutoffs = fake.nodes.filter(node => node.kind === 'filter' && node.type === 'bandpass').map(node => node.frequency.value);
   assert.equal(new Set(cutoffs).size, 3);
   audio.movement({ action: 'jump' }); audio.movement({ action: 'land', surface: 'wood' });
   assert.equal(fake.sources.length, 6);
@@ -306,7 +314,7 @@ test('score progresses only on positive active simulation time, skips walltime c
   assert.equal(audio.getStatus().active, false);
 });
 
-test('radio tones duck only music, queues remain bounded, and duplicate checkpoint IDs do not replay', async () => {
+test('radio transmissions duck only music, queues remain bounded, and duplicate checkpoint IDs do not replay', async () => {
   const { audio, fake } = await makeActive();
   audio.tick(0.01);
   const effects = fake.gains[2].gain.value, ambience = fake.gains[3].gain.value;
@@ -366,9 +374,9 @@ test('speech completion callbacks cannot start queued cues during dt zero or aft
   }
 });
 
-test('a voice-end callback marks completion but the next cue waits for a positive simulation step', async () => {
+test('a voice-end callback waits for positive simulation time and closing squelch before the next cue', async () => {
   const speech = mockSpeech();
-  const { audio } = await makeActive({ speechAdapter: speech });
+  const { audio, fake } = await makeActive({ speechAdapter: speech });
   audio.setVoiceEnabled(true);
   audio.announceCheckpoint({ id: 'first', text: 'Hold.' });
   audio.announceCheckpoint({ id: 'next', text: 'Go.' });
@@ -376,6 +384,8 @@ test('a voice-end callback marks completion but the next cue waits for a positiv
   for (let i = 0; i < 10; i++) audio.tick(0);
   assert.equal(speech.requests.length, 1);
   audio.tick(0.01);
+  assert.equal(speech.requests.length, 1, 'Let the receiver close before another transmission');
+  advance(audio, fake, 0.09);
   assert.equal(speech.requests.length, 2);
 });
 
@@ -440,7 +450,7 @@ test('mute or bus-zero during an asynchronous sample load blocks decode and disc
   }
 });
 
-test('recorded radio retains its complete level with short edge fades and replaces native speech when ready', async () => {
+test('recorded radio preserves syllables through a band-limited compressed receiver and replaces native speech', async () => {
   const speech = mockSpeech();
   const { audio, fake } = await makeActive({ speechAdapter: speech, sampleLoader: async () => new ArrayBuffer(8) });
   audio.setSampleManifest({ 'radio:ready': { url: '/assets/audio/ready.wav', bus: 'radio' } });
@@ -449,12 +459,98 @@ test('recorded radio retains its complete level with short edge fades and replac
   audio.announceCheckpoint({ id: 'ready', text: 'Ready to move.', sampleId: 'radio:ready' });
   assert.equal(speech.requests.length, 0);
   assert.equal(fake.sources.length, before + 4);
-  const clip = fake.sources.at(-1), filter = clip.connections[0], clipGain = filter.connections[0];
+  const newSources = fake.sources.slice(before);
+  assert.ok(newSources.every(source => source.kind === 'source'), 'Receiver contacts contain no pure-tone beeps');
+  const clip = newSources.find(source => source.buffer?.duration === 1.6);
+  const filter = clip.connections[0], highpass = filter.connections[0];
+  const compressor = highpass.connections[0], clipGain = compressor.connections[0];
   assert.equal(clip.buffer.duration, 1.6);
+  assert.equal(filter.type, 'lowpass'); assert.equal(filter.frequency.value, 3300);
+  assert.equal(highpass.type, 'highpass'); assert.equal(highpass.frequency.value, 350);
+  assert.equal(compressor.kind, 'compressor'); assert.equal(compressor.ratio.value, 4);
+  assert.equal(clip.starts[0][0], fake.context.currentTime + 0.065);
   assert.equal(clipGain.gain.events.some(event => event[0] === 'exponential'), false);
   const holds = clipGain.gain.events.filter(event => event[0] === 'set' && event[1] === 0.7);
   assert.ok(holds.some(event => event[2] > fake.context.currentTime + 1.5));
   assert.equal(audio.getStatus().radioWaiting, false);
+});
+
+test('pickup foley distinguishes objects without musical tones or firearm handling on melee weapons', async () => {
+  for (const options of [
+    { kind: 'weapon', weapon: 'pistol' }, { kind: 'weapon', weapon: 'shotgun' },
+    { kind: 'weapon', weapon: 'bat' }, { kind: 'weapon', weapon: 'knife' },
+    { kind: 'ammo' }, { kind: 'health' },
+  ]) {
+    const { audio, fake } = await makeActive();
+    audio.pickupChime(options);
+    assert.ok(fake.sources.length >= 2 && fake.sources.length <= 3, JSON.stringify(options));
+    assert.ok(fake.sources.every(source => source.kind === 'source'));
+    assert.ok(fake.sources.every(source => source.starts[0][0] <= 0.15));
+    if (options.weapon === 'bat' || options.weapon === 'knife') {
+      assert.equal(fake.sources.length, 2, 'No reload/cocking proxy for a melee pickup');
+    }
+    fake.advance(1);
+    assert.equal(audio.getStatus().resources.voices, 0);
+  }
+});
+
+test('receiver carrier and closing squelch are bounded and mute cannot emit a delayed tail', async () => {
+  const { audio, fake } = await makeActive();
+  audio.setMix({ music: 0 });
+  audio.announceCheckpoint({ id: 'receiver' });
+  const carrier = fake.sources.find(source => source.starts[0][0] === 0.065);
+  assert.ok(carrier);
+  assert.ok(Number.isFinite(carrier.endsAt), 'Even an unresponsive game cannot leave an endless carrier');
+  advance(audio, fake, 0.9);
+  assert.equal(carrier.finished, true);
+  assert.equal(audio.getStatus().radioActive, true, 'Closing squelch owns its short release');
+  const count = fake.sources.length;
+  audio.setMuted(true);
+  advance(audio, fake, 2);
+  assert.equal(fake.sources.length, count);
+  assert.equal(audio.getStatus().resources.voices, 0);
+  assert.equal(audio.getStatus().radioActive, false);
+});
+
+test('slow frames cannot prolong a finished recording, carrier or music ducking', async () => {
+  const { audio, fake } = await makeActive({ sampleLoader: async () => new ArrayBuffer(8) });
+  audio.setSampleManifest({ 'radio:ready': { url: '/assets/audio/ready.wav', bus: 'radio' } });
+  audio.setVoiceEnabled(true); audio.tick(0.01); await settle();
+  audio.announceCheckpoint({ id: 'slow', sampleId: 'radio:ready' });
+  // Five FPS: the audio clock advances 200 ms, but the fixed-step simulation
+  // accepts at most 8 × 1/120 s. Speech must still finish on its real deadline.
+  for (let i = 0; i < 10; i++) { fake.advance(0.2); audio.tick(8 / 120); }
+  assert.equal(audio.getStatus().radioActive, false);
+  assert.equal(fake.gains[4].gain.value, DEFAULT_AUDIO_MIX.music);
+  assert.ok(fake.sources.filter(source => source.buffer?.duration === 4).every(source => source.finished));
+});
+
+test('recorded gunshot reflections retain the selected sample calibration gain', async () => {
+  const { audio, fake } = await makeActive({ sampleLoader: async () => new ArrayBuffer(8) });
+  audio.setSampleManifest({ 'shot:pistol': { url: '/assets/audio/pistol.wav', bus: 'effects', gain: 0.1 } });
+  audio.tick(0.01); await settle();
+  const start = fake.sources.length;
+  audio.pistolShot({ environment: 'interior' });
+  const reports = fake.sources.slice(start).filter(source => source.buffer.duration === 1.6);
+  assert.equal(reports.length, 3);
+  const gains = reports.map(source => source.connections[0].connections[0].connections[0].gain.events
+    .find(event => event[0] === 'linear')[1]);
+  assert.ok(Math.abs(gains[0] - 0.058) < 1e-9);
+  assert.ok(Math.abs(gains[1] / gains[0] - 0.13) < 1e-9);
+  assert.ok(Math.abs(gains[2] / gains[0] - 0.065) < 1e-9);
+});
+
+test('automatic fire rotates finite report buffers and never reuses the immediately previous waveform', async () => {
+  const { audio, fake } = await makeActive();
+  const reports = [];
+  for (let i = 0; i < 24; i++) {
+    const before = fake.sources.length;
+    audio.smgShot(); reports.push(fake.sources[before].buffer);
+  }
+  assert.equal(new Set(reports).size, 4);
+  assert.equal(audio.getStatus().resources.weaponBuffers, 4);
+  for (let i = 1; i < reports.length; i++) assert.notEqual(reports[i], reports[i - 1]);
+  assert.equal(reports[0], reports[4]);
 });
 
 test('recorded footstep rate changes adjust clip end time and preserve the complete source duration', async () => {

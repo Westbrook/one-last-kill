@@ -553,7 +553,7 @@ const HealPickups = (() => {
         Player.health += gained;
         HUD.setHealth(Player.health);
         HUD.message('+' + gained + ' HP', 1.2);
-        Audio.pickupChime();
+        Audio.pickupChime({ kind: 'health', environment: pickup.zone ?? activeZone });
         pickup.active = false;
         syncVisibility(pickup);
       }

@@ -3,6 +3,7 @@ import { AUDIO_BUSES, DEFAULT_AUDIO_MIX, normalizeAudioMix, audioSurface, surfac
 import { createScoreScheduler } from './audio-score.js';
 import { createSampleBank } from './audio-samples.js';
 import { createLocalSpeechAdapter } from './local-speech.js';
+import { WEAPON_TIMBRES, renderWeaponReport } from './weapon-timbres.js';
 import sampleCatalog from './audio-catalog.json' with { type: 'json' };
 
 const MAX_VOICES = 64;
@@ -13,13 +14,9 @@ const FLOOR_GAIN = 0.0001;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const finite = (value, fallback) => Number.isFinite(value) ? value : fallback;
 
-const WEAPON_SOUNDS = Object.freeze({
-  rifle: { duration: 0.22, cutoff: 1750, body: 125, low: 46, gain: 0.72 },
-  pistol: { duration: 0.16, cutoff: 2350, body: 175, low: 65, gain: 0.58 },
-  shotgun: { duration: 0.38, cutoff: 1250, body: 95, low: 32, gain: 0.86 },
-  smg: { duration: 0.105, cutoff: 2850, body: 205, low: 90, gain: 0.43 },
-  machinegun: { duration: 0.18, cutoff: 1950, body: 145, low: 52, gain: 0.7 },
-});
+const SHOT_VARIANTS = 4;
+const RADIO_OPEN = 0.065;
+const RADIO_CLOSE = 0.085;
 
 // These windows were selected from the local PCM energy measurements, not from
 // a claim that the object/airsoft recordings depict a specific firearm action.
@@ -41,6 +38,7 @@ export function createAudioController({
   const score = createScoreScheduler();
   const voices = new Set();
   const noiseCache = new Map();
+  const weaponCache = new Map();
   const checkpointHistory = new Set();
   const radioQueue = [];
   let ctx = null, master = null, muteGain = null, buses = null;
@@ -72,7 +70,8 @@ export function createAudioController({
       initialized: Boolean(ctx), active, running: ready && ctx?.state === 'running' && active && !isMuted(), blocked,
       mix: { ...mix }, voiceEnabled, voiceAvailable,
       radioActive: Boolean(currentRadio), radioWaiting: Boolean(currentRadio?.waiting), radioQueued: radioQueue.length,
-      resources: { voices: voices.size, maxVoices: MAX_VOICES, noiseBuffers: noiseCache.size, samples: samples.snapshot() },
+      resources: { voices: voices.size, maxVoices: MAX_VOICES, noiseBuffers: noiseCache.size,
+        weaponBuffers: weaponCache.size * SHOT_VARIANTS, samples: samples.snapshot() },
       elapsed, score: score.snapshot(),
     };
   }
@@ -146,30 +145,43 @@ export function createAudioController({
   function noise(bus, {
     duration = 0.1, gain = 0.2, cutoff = 1200, type = 'lowpass', q = 0.7,
     delay = 0, pan = 0, attack = 0.003, loop = false, buffer = null, playbackRate = 1, offset = 0,
+    highpass = 0, compress = false, sustain = false,
   } = {}) {
     if (!canPlay(bus) || gain <= FLOOR_GAIN) return null;
     const voice = makeVoice(bus, false, loop);
     if (!voice) return null;
     const source = voice.source, now = ctx.currentTime + Math.max(0, delay);
     source.buffer = buffer ?? noiseBuffer(loop ? 4 : duration);
-    source.loop = loop;
+    source.loop = loop || (!buffer && duration > source.buffer.duration);
     if (source.playbackRate) source.playbackRate.value = clamp(playbackRate, 0.7, 1.35);
     const filter = own(voice, ctx.createBiquadFilter());
     filter.type = type; filter.frequency.value = cutoff; filter.Q.value = q;
     const gainNode = own(voice, ctx.createGain());
     if (loop) gainNode.gain.value = gain;
-    else if (buffer) {
+    else if (buffer || sustain) {
       // Preserve a recorded voice/foley's body; a noise-burst decay would erase
       // its later syllables. Only the clip boundaries receive a short fade.
       gainNode.gain.setValueAtTime(FLOOR_GAIN, now);
-      gainNode.gain.linearRampToValueAtTime(gain, now + Math.min(0.005, duration * 0.2));
+      gainNode.gain.linearRampToValueAtTime(gain, now + Math.min(attack, duration * 0.2));
       gainNode.gain.setValueAtTime(gain, now + Math.max(duration * 0.5, duration - 0.012));
       gainNode.gain.linearRampToValueAtTime(FLOOR_GAIN, now + duration);
     } else envelope(gainNode.gain, now, duration, gain, attack);
-    source.connect(filter).connect(gainNode); route(voice, gainNode, pan);
-    voice.gain = gainNode; voice.filter = filter;
+    let output = source.connect(filter);
+    if (highpass > 0) {
+      const lowCut = own(voice, ctx.createBiquadFilter());
+      lowCut.type = 'highpass'; lowCut.frequency.value = highpass; lowCut.Q.value = 0.7;
+      output = output.connect(lowCut);
+    }
+    if (compress && typeof ctx.createDynamicsCompressor === 'function') {
+      const compressor = own(voice, ctx.createDynamicsCompressor());
+      compressor.threshold.value = -24; compressor.knee.value = 8; compressor.ratio.value = 4;
+      compressor.attack.value = 0.003; compressor.release.value = 0.08;
+      output = output.connect(compressor);
+    }
+    output.connect(gainNode); route(voice, gainNode, pan);
+    voice.gain = gainNode; voice.filter = filter; voice.level = gain;
     if (buffer) source.start(now, offset, duration * clamp(playbackRate, 0.7, 1.35));
-    else source.start(now);
+    else source.start(now, loop ? 0 : random() * Math.max(0, finite(source.buffer.duration, duration) - duration * playbackRate));
     if (!loop) { voice.endsAt = now + duration + 0.02; source.stop(voice.endsAt); }
     return voice;
   }
@@ -214,7 +226,8 @@ export function createAudioController({
       buffer: entry.buffer, duration, offset: start,
       gain: scene.gain * entry.gain * finite(options.gain, 0.55),
       cutoff: finite(options.cutoff, 17000), pan: scene.pan,
-      playbackRate, attack: 0.001,
+      playbackRate, attack: finite(options.attack, 0.003), delay: finite(options.delay, 0),
+      highpass: finite(options.highpass, 0), compress: options.compress === true,
     });
   }
   function suspendContext() {
@@ -240,7 +253,7 @@ export function createAudioController({
         master.connect(limiter).connect(muteGain);
       } else master.connect(muteGain);
       muteGain.connect(ctx.destination);
-      noiseCache.clear(); applyMix(); blocked = false;
+      noiseCache.clear(); weaponCache.clear(); applyMix(); blocked = false;
       return true;
     } catch {
       try { Promise.resolve(ctx?.close()).catch(() => {}); } catch { /* Device unavailable. */ }
@@ -345,17 +358,46 @@ export function createAudioController({
 
   function fireWeapon(kind, options = {}) {
     if (!canPlay('effects')) return;
-    const profile = WEAPON_SOUNDS[kind], scene = describeAudioEvent(options, listener);
+    const profile = WEAPON_TIMBRES[kind], scene = describeAudioEvent(options, listener);
     if (scene.gain <= FLOOR_GAIN) return;
-    const variation = 0.97 + random() * 0.06;
-    if (!sample('shot:' + kind, 'effects', scene)) {
-      noise('effects', { duration: profile.duration, gain: profile.gain * scene.gain,
-        cutoff: profile.cutoff * variation, type: 'bandpass', q: 0.65, pan: scene.pan, attack: 0.0015 });
+    const playbackRate = 0.985 + random() * 0.03;
+    const delay = scene.distance / 343;
+    const cutoff = Math.max(1800, 16000 / (1 + scene.distance * 0.055));
+    const recorded = sample('shot:' + kind, 'effects', scene, {
+      gain: profile.gain, playbackRate, cutoff, highpass: 35, delay, attack: 0.00008,
+    });
+    let buffer = recorded?.source.buffer;
+    const duration = buffer ? buffer.duration / playbackRate : profile.duration / playbackRate;
+    const reportGain = recorded?.level ?? profile.gain * scene.gain;
+    if (!recorded) {
+      let bank = weaponCache.get(kind);
+      if (!bank) {
+        const buffers = Array.from({ length: SHOT_VARIANTS }, (_, variant) => {
+          const pcm = renderWeaponReport(kind, ctx.sampleRate, variant);
+          const value = ctx.createBuffer(1, pcm.length, ctx.sampleRate);
+          value.getChannelData(0).set(pcm);
+          return value;
+        });
+        bank = { buffers, cursor: 0 }; weaponCache.set(kind, bank);
+      }
+      buffer = bank.buffers[bank.cursor++ % SHOT_VARIANTS];
+      noise('effects', { buffer, duration, playbackRate, delay, cutoff, highpass: 35,
+        gain: profile.gain * scene.gain, pan: scene.pan, attack: 0.00008 });
     }
-    tone('effects', { frequency: profile.body * variation, endFrequency: profile.low,
-      duration: profile.duration * 0.8, gain: profile.gain * 0.38 * scene.gain, pan: scene.pan });
-    if (scene.interior) noise('effects', { duration: 0.15, delay: 0.065, cutoff: 1200,
-      gain: profile.gain * 0.11 * scene.gain, pan: -scene.pan * 0.5, attack: 0.015 });
+    // A nearby action returns after the pressure transient. It is a tiny metal
+    // contact, never the old descending pitched body underneath every report.
+    if (scene.distance < 18) noise('effects', { duration: 0.025, delay: delay + profile.mechanicalDelay,
+      cutoff: 2700, type: 'bandpass', highpass: 850, q: 0.65,
+      gain: 0.038 * scene.gain, pan: scene.pan, attack: 0.0008 });
+    if (scene.interior) {
+      // Short, darker copies retain the report's timbre. These are authored
+      // early room reflections, not an acoustic raycast or a second discharge.
+      for (const [time, gain, pan] of [[0.032, 0.13, -0.45], [0.087, 0.065, 0.35]]) {
+        noise('effects', { buffer, duration, playbackRate, delay: delay + time,
+          cutoff: 2100, highpass: 120, gain: reportGain * gain,
+          pan: clamp(scene.pan * 0.3 + pan, -0.85, 0.85), attack: 0.004 });
+      }
+    }
   }
   function footstep(options = {}) {
     if (!canPlay('effects')) return;
@@ -413,8 +455,15 @@ export function createAudioController({
     if (!canPlay('effects')) return;
     options ??= {};
     const scene = describeAudioEvent(options, listener);
+    if (scene.gain <= FLOOR_GAIN) return;
     const action = ['reload', 'reload-start', 'reload-insert', 'reload-end', 'cock', 'equip', 'dry'].includes(options.action)
       ? options.action : 'reload';
+    if (['bat', 'knife', 'fists'].includes(options.weapon)) {
+      if (action === 'equip' && options.weapon !== 'fists') noise('effects', {
+        duration: 0.12, cutoff: 750, highpass: 180, gain: 0.055 * scene.gain, pan: scene.pan, attack: 0.025,
+      });
+      return;
+    }
     const weapon = options.weapon === 'pistol' ? 'pistol' : options.weapon === 'shotgun' ? 'shotgun' : 'rifle';
     const id = weapon === 'shotgun' ? 'mechanical:cock-shotgun' : 'mechanical:reload-' + weapon;
     const phase = action === 'reload-insert' ? 1 : action === 'reload-end' ? 2 : 0;
@@ -422,23 +471,54 @@ export function createAudioController({
     // than a complete reload recording playing ahead of the animation.
     const [offset, duration] = MECHANICAL_WINDOWS[weapon][phase];
     const hasRecordedPhase = weapon !== 'shotgun' || action === 'reload-end';
+    const playbackRate = 0.975 + random() * 0.05;
     if (action.startsWith('reload-') && hasRecordedPhase
-      && sample(id, 'effects', scene, { gain: 0.33, offset, duration })) return;
-    if (['reload', 'cock', 'equip'].includes(action) && sample(id, 'effects', scene, {
-      gain: action === 'equip' ? 0.25 : 0.36, maxDuration: action === 'equip' ? 0.25 : 8,
+      && sample(id, 'effects', scene, { gain: 0.3, offset, duration, highpass: 110, cutoff: 8500, playbackRate })) return;
+    // Equip is a short grip/latch contact, not the start of an unrelated full
+    // reload. The source windows avoid the leading silence in these recordings.
+    const handlingWindow = action === 'equip' ? MECHANICAL_WINDOWS[weapon][1] : MECHANICAL_WINDOWS[weapon][2];
+    if (['cock', 'equip'].includes(action) && sample(id, 'effects', scene, {
+      gain: action === 'equip' ? 0.16 : 0.3, offset: handlingWindow[0],
+      duration: action === 'equip' ? Math.min(0.12, handlingWindow[1]) : handlingWindow[1],
+      highpass: 140, cutoff: 7800, playbackRate,
     })) return;
     const clicks = action === 'reload' ? 3 : action === 'cock' || action === 'equip' ? 2 : 1;
     for (let i = 0; i < clicks; i++) noise('effects', {
       duration: 0.045 + (i + phase) * 0.008, delay: i * 0.14, cutoff: action === 'dry' ? 2600 : 1800 - (i + phase) * 220,
-      type: 'bandpass', q: 1.5, gain: (i + phase === 1 ? 0.23 : 0.14) * scene.gain, pan: scene.pan,
+      type: 'bandpass', q: 0.8, highpass: 420,
+      gain: (action === 'equip' ? 0.055 : i + phase === 1 ? 0.18 : 0.11) * scene.gain, pan: scene.pan,
     });
   }
   function dryClick(options = {}) { weaponMechanical({ ...options, action: 'dry' }); }
   function reloadClack(options = {}) { weaponMechanical({ ...options, action: 'reload' }); }
   function pickupChime(options = {}) {
+    if (!canPlay('effects')) return;
+    options ??= {};
     const scene = describeAudioEvent(options, listener);
-    tone('effects', { frequency: 660, endFrequency: 990, duration: 0.18,
-      gain: 0.1 * scene.gain, waveform: 'triangle', pan: scene.pan });
+    if (scene.gain <= FLOOR_GAIN) return;
+    // Kept under the existing public method name for callers. Inventory is
+    // heard as a hand, fabric and an object settling, without a musical reward.
+    noise('effects', { duration: 0.17, cutoff: 1050, highpass: 220,
+      gain: 0.085 * scene.gain, attack: 0.022, pan: scene.pan });
+    if (options.kind === 'health') {
+      noise('effects', { duration: 0.11, delay: 0.06, cutoff: 2400, highpass: 900,
+        gain: 0.043 * scene.gain, attack: 0.02, pan: scene.pan });
+    } else if (options.kind === 'ammo') {
+      for (const delay of [0.025, 0.075]) noise('effects', {
+        duration: 0.032, delay, cutoff: 3100, highpass: 1200, type: 'bandpass', q: 0.75,
+        gain: 0.065 * scene.gain, pan: scene.pan, attack: 0.001,
+      });
+    } else if (options.weapon === 'bat') {
+      // Quiet recorded wood contact beneath the cloth, not a bat strike.
+      if (!sample('impact:wood', 'effects', scene, { gain: 0.09, maxDuration: 0.14, cutoff: 1600, delay: 0.045 })) {
+        noise('effects', { duration: 0.075, delay: 0.045, cutoff: 650,
+          gain: 0.075 * scene.gain, pan: scene.pan });
+      }
+    } else if (options.weapon === 'knife') {
+      noise('effects', { duration: 0.065, delay: 0.04, cutoff: 4200, highpass: 1600,
+        gain: 0.045 * scene.gain, pan: scene.pan, attack: 0.012 });
+    } else if (options.kind === 'weapon') weaponMechanical({ ...options, action: 'equip' });
+    else noise('effects', { duration: 0.055, delay: 0.04, cutoff: 700, gain: 0.07 * scene.gain, pan: scene.pan });
   }
   function startAmbient() {
     ambientWanted = true;
@@ -465,12 +545,40 @@ export function createAudioController({
     fire = null;
   }
 
+  function openRadioReceiver() {
+    if (!currentRadio || currentRadio.opened) return;
+    currentRadio.opened = true;
+    noise('radio', { duration: 0.055, cutoff: 4200, highpass: 550,
+      gain: 0.045, attack: 0.002 });
+    noise('radio', { duration: 0.008, cutoff: 1900, gain: 0.028, attack: 0.0005 });
+    // The quiet carrier exists only while a current transmission owns it.
+    // Pause/mute/zone changes dispose it alongside the voice, never in a timer.
+    currentRadio.endsAt = ctx.currentTime + currentRadio.remaining;
+    currentRadio.carrier = noise('radio', { cutoff: 3100, highpass: 700,
+      gain: 0.007, duration: Math.max(0.05, currentRadio.remaining - RADIO_OPEN),
+      sustain: true, delay: RADIO_OPEN, attack: 0.012 });
+  }
+  function closeRadioReceiver() {
+    if (!currentRadio || currentRadio.closing) return;
+    if (currentRadio.carrier) disposeVoice(currentRadio.carrier, true);
+    cancelSpeech();
+    currentRadio.closing = true; currentRadio.finished = false;
+    currentRadio.remaining = RADIO_CLOSE;
+    currentRadio.endsAt = ctx.currentTime + RADIO_CLOSE;
+    noise('radio', { duration: RADIO_CLOSE - 0.012, cutoff: 2900, highpass: 600,
+      gain: 0.04, attack: 0.001 });
+    noise('radio', { duration: 0.009, delay: 0.058, cutoff: 1700,
+      gain: 0.023, attack: 0.0005 });
+  }
   function tryRecordedRadio() {
     if (!currentRadio || !voiceEnabled || !currentRadio.cue.sampleId) return false;
-    const recorded = sample(currentRadio.cue.sampleId, 'radio', { gain: 1, pan: 0 }, { gain: 0.7, cutoff: 6800 });
+    const recorded = sample(currentRadio.cue.sampleId, 'radio', { gain: 1, pan: 0 }, {
+      gain: 0.7, highpass: 350, cutoff: 3300, compress: true, delay: RADIO_OPEN,
+    });
     if (!recorded) return false;
     currentRadio.waiting = false;
-    currentRadio.remaining = Math.min(8.1, recorded.source.buffer.duration + 0.15);
+    currentRadio.remaining = Math.min(8, recorded.source.buffer.duration) + RADIO_OPEN + 0.02;
+    openRadioReceiver();
     return true;
   }
   function startRadioFallback() {
@@ -484,12 +592,12 @@ export function createAudioController({
         radio.speech = true;
         speechOwned = true;
         const finish = () => {
-          if (currentRadio?.token === token) { currentRadio.finished = true; speechOwned = false; }
+          if (currentRadio?.token === token && !currentRadio.closing) { currentRadio.finished = true; speechOwned = false; }
         };
         const fail = () => {
           // A speech provider can report an error after accepting work, with
           // cancellation still pending. Error is not confirmation of silence.
-          if (currentRadio?.token === token) currentRadio.finished = true;
+          if (currentRadio?.token === token && !currentRadio.closing) currentRadio.finished = true;
         };
         try {
           const accepted = speechAdapter.speak({ text: cue.text, volume: mix.master * mix.radio * 0.85,
@@ -500,16 +608,14 @@ export function createAudioController({
         } catch { radio.speech = false; cancelSpeech(); }
       }
     }
+    if (currentRadio === radio) openRadioReceiver();
   }
   function startRadio(cue) {
     if (!canPlay('radio')) return false;
     const token = ++radioGeneration;
     currentRadio = { cue, token, remaining: 0.85, speech: false, finished: false,
-      waiting: false, waitRemaining: RADIO_SAMPLE_WAIT };
+      waiting: false, waitRemaining: RADIO_SAMPLE_WAIT, opened: false, closing: false, carrier: null, endsAt: Infinity };
     applyMix();
-    noise('radio', { duration: 0.11, cutoff: 1850, type: 'bandpass', gain: 0.038 });
-    tone('radio', { frequency: 880, duration: 0.09, gain: 0.047, waveform: 'sine' });
-    tone('radio', { frequency: 660, duration: 0.1, delay: 0.11, gain: 0.034, waveform: 'sine' });
     const requested = voiceEnabled && cue.sampleId && samples.request(cue.sampleId, { priority: true });
     if (!tryRecordedRadio()) {
       if (requested) currentRadio.waiting = true;
@@ -560,7 +666,12 @@ export function createAudioController({
       if (!tryRecordedRadio() && currentRadio.waitRemaining <= 0) startRadioFallback();
     } else if (currentRadio) {
       currentRadio.remaining -= step;
-      if (currentRadio.remaining <= 0 || currentRadio.finished) finishRadio();
+      // Recordings progress on the audio clock even when the fixed-step game
+      // discards stalled frame time. The receiver must not hiss/duck for several
+      // more seconds; only this positive simulation tick may advance its queue.
+      if (currentRadio.remaining <= 0 || currentRadio.finished || currentRadio.endsAt <= ctx.currentTime) {
+        if (currentRadio.closing) finishRadio(); else closeRadioReceiver();
+      }
     }
     if (!currentRadio && radioQueue.length && canPlay('radio')) startRadio(radioQueue.shift());
     for (const note of score.advance(step, { zone, threat: state?.threat, enabled: canPlay('music') })) {

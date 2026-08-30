@@ -138,16 +138,27 @@ function quietWeapons(type, loaded = 0, reserve = 0) {
   };
 }
 
-test('real pickups reserve firearm handling cues for guns instead of playing a rifle mechanism for a bat', () => {
-  for (const type of ['bat', 'pistol']) {
+test('real pickups distinguish weapon handling from reserve ammo without doubling equip or replaying consumed drops', () => {
+  for (const type of ['bat', 'knife', 'pistol', 'shotgun', 'smg', 'machinegun']) {
     const h = quietWeapons('fists');
     try {
-      const drop = h.WeaponDrops.spawn(0, 0, 0, type, type === 'pistol' ? 12 : 0);
+      const ranged = WEAPON_DEFS[type].kind === 'ranged';
+      const drop = h.WeaponDrops.spawn(0, 0, 0, type, ranged ? 12 : 0);
       assert.equal(h.Weapons.pickup(drop), true);
       assert.equal(h.Weapons.current, type);
-      const handling = h.events.filter(event => event.name === 'weaponMechanical');
-      assert.equal(handling.length, type === 'pistol' ? 1 : 0);
-      assert.equal(h.events.filter(event => event.name === 'pickupChime').length, 1);
+      assert.deepEqual(h.events.map(event => event.name), ['pickupChime']);
+      assert.deepEqual(h.events[0].options, { kind: 'weapon', weapon: type, environment: 'balcony' });
+      assert.equal(h.Weapons.pickup(drop), false);
+      assert.equal(h.events.length, 1, 'A consumed pickup has no second handling sound');
+      const same = h.WeaponDrops.spawn(0, 0, 0, type, ranged ? 6 : 0);
+      const loaded = h.Weapons.loaded;
+      assert.equal(h.Weapons.pickup(same), ranged);
+      assert.equal(h.events.length, ranged ? 2 : 1, 'An identical melee weapon is not collected');
+      if (ranged) {
+        assert.equal(h.Weapons.loaded, loaded, 'Ammo scavenging cannot sound or behave like a reload');
+        assert.equal(h.events[1].name, 'pickupChime');
+        assert.deepEqual(h.events[1].options, { kind: 'ammo', weapon: type, environment: 'balcony' });
+      }
       assertLocked(h.audio, h.lockedCalls);
     } finally { h.dispose(); }
   }
