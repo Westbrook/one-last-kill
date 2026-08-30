@@ -1,5 +1,5 @@
 import { clamp } from '../core/math.js';
-import { engageLock } from '../core/input.js';
+import { Input, engageLock } from '../core/input.js';
 import { Audio } from '../core/audio.js';
 import { AUDIO_MIX_SETTINGS, Settings } from '../core/settings.js';
 import { CombatStats } from '../game/combat-stats.js';
@@ -379,7 +379,7 @@ const EndCard = (() => {
       write(byId('endstreak'), padded(Math.max(nonNegative(stats.bestStreak), nonNegative(stats.streak), HUD.snapshot().bestStreak)));
       element.classList.add('show');
       element.setAttribute('aria-hidden', 'false');
-      if (document.pointerLockElement) document.exitPointerLock();
+      Input.pause({ showOverlay: false });
       restart.focus({ preventScroll: true });
     },
     hide() {
