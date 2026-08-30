@@ -4,14 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#111210">
+    <meta name="application-name" content="One Last Kill">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="One Last Kill">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="One Last Kill — an unofficial, cinematic first-person action experience set in Little Sicily, New York.">
     <title>The Punisher: One Last Kill — Fan Experience</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/apple-touch-icon-167.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/apple-touch-icon-152.png">
     <link rel="stylesheet" href="/src/styles.css">
     <link rel="preload" as="image" href="/assets/last-kill-keyart.png">
   </head>
   <body>
-    <canvas id="game" tabindex="-1" aria-label="First-person game. Use keyboard and mouse or a gamepad. Open Field Notes for controls."></canvas>
+    <canvas id="game" tabindex="-1" aria-label="First-person game. Use keyboard and mouse, a gamepad, or enable on-screen touch controls in Settings. Open Field Notes for controls."></canvas>
 
     <div id="hud" aria-label="Game status">
       <div id="vignette" aria-hidden="true"></div>
@@ -137,8 +146,8 @@
             <button id="settingsbutton" class="button-text" type="button" aria-haspopup="dialog" aria-controls="settingspanel"><span aria-hidden="true">02</span> SETTINGS</button>
           </div>
         </div>
-        <p class="input-note"><span class="input-note-dot" aria-hidden="true"></span> KEYBOARD + MOUSE / GAMEPAD</p>
-        <p class="mobile-notice" role="note">A keyboard and mouse or a gamepad is required to play. Touch controls are not supported.</p>
+        <p class="input-note"><span class="input-note-dot" aria-hidden="true"></span> KEYBOARD + MOUSE / GAMEPAD / TOUCH</p>
+        <p class="mobile-notice" role="note">Playing on a phone or tablet? Enable on-screen touch controls in Settings.</p>
         <p id="loadstatus" role="status"></p>
       </div>
 
@@ -162,7 +171,9 @@
           <div><dt>Keyboard fire / toggle aim</dt><dd><kbd>J</kbd> <kbd>Q</kbd></dd></div>
         </dl>
         <p class="controller-note" id="controllerhelp">Gamepad: sticks move/look · RT fire · LT aim · A jump · B crouch · X reload · Y pick up · RB / R3 melee · L3 sprint · D-pad up rage · D-pad down drop · Start pause. Arrow keys also turn the camera.</p>
-        <p class="controller-note">Melee keeps your firearm and ammunition. Rage unlocks below 30% health after 4 kills in the last 60 seconds. Press T or D-pad up to double current health. Kill within 10 seconds to keep the remaining boost; otherwise health returns to its starting value. Pausing freezes both clocks.</p>
+        <div class="controls-heading">TOUCH CONTROLS</div>
+        <p class="controller-note">Enable on-screen touch controls in Settings. Drag the left stick to move and swipe the right side to look. Tap FIRE to attack; hold for automatic fire. Drag FIRE to keep looking while firing. Tap AIM, RUN, or CROUCH to toggle them. JUMP, USE, RELOAD, MELEE, DROP, RAGE, and PAUSE handle the other actions. USE picks up weapons and ammunition. Look sensitivity also adjusts touch look.</p>
+        <p class="controller-note">Melee keeps your firearm and ammunition. Rage unlocks below 30% health after 4 kills in the last 60 seconds. Press T, D-pad up, or the touch RAGE button to double current health. Kill within 10 seconds to keep the remaining boost; otherwise health returns to its starting value. Pausing freezes both clocks.</p>
         <div class="fieldnote-tip"><span>REMEMBER</span><p>The street gives you a choice. The consequences are yours.</p></div>
         <button class="button button-outline" type="button" data-close-panel>BACK TO MISSION <span aria-hidden="true">↗</span></button>
       </section>
@@ -172,6 +183,14 @@
         <h2 id="settingstitle">MAKE IT<br>YOUR FIGHT.</h2>
         <p class="panel-intro">Changes apply immediately. Preferences save when device storage is available.</p>
         <form id="settingsform">
+          <fieldset class="settings-group">
+            <legend>TOUCH CONTROLS</legend>
+            <div class="setting-row setting-checkbox">
+              <div><label for="settingtouchcontrols">On-screen touch controls</label><p id="touchcontrolshelp">For tablets and phones. Show a movement stick, a swipe-to-look area, and combat buttons during play. Off by default.</p></div>
+              <input id="settingtouchcontrols" name="touchControls" type="checkbox" aria-describedby="touchcontrolshelp">
+            </div>
+            <p class="controller-note home-screen-help">For more screen space, add the game to your Home Screen. On iPhone or iPad, use Safari’s Share menu → Add to Home Screen, with Open as Web App enabled if shown. On Android, use your browser’s Install app or Add to Home screen option.</p>
+          </fieldset>
           <fieldset class="settings-group audio-mix">
             <legend>AUDIO MIX</legend>
             <p id="settingsaudionote" class="settings-audio-note">Audio starts muted. Changing levels or voice preferences does not enable sound. Use the audio control or press <kbd>M</kbd> to unmute.</p>

@@ -1,9 +1,16 @@
 import { Audio } from './audio.js';
 import { canvas } from './renderer.js';
 import { createInputState, GAMEPLAY_KEYS } from './input-state.js';
+import { Settings } from './settings.js';
+import { createTouchControls } from '../ui/touch-controls.js';
 import { HUD, IntroCard, FPSMeter } from '../ui/hud.js';
 
 const Input = createInputState();
+const touchControls = createTouchControls({ input: Input });
+const resetState = Input.reset.bind(Input);
+Input.reset = () => { resetState(); touchControls.reset(); };
+let touchEnabled = Settings.get('touchControls');
+touchControls.setEnabled(touchEnabled);
 const overlayEl = document.getElementById('overlay');
 const startButton = document.getElementById('startbutton');
 const pauseState = Input.pause.bind(Input);
@@ -15,15 +22,16 @@ let previousPadMenu = false, previousPadConfirm = false;
 function cardOpen(id) { return document.getElementById(id)?.classList.contains('show') ?? false; }
 function modalOpen() { return IntroCard.isOpen() || cardOpen('endcard') || cardOpen('deathscreen'); }
 function editableTarget(target) {
-  return Boolean(target?.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]'));
+  return Boolean(target?.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"], #touch-controls button'));
 }
 function readGamepad() {
   try { return Array.from(navigator.getGamepads?.() ?? []).find((value) => value?.connected && value.mapping === 'standard') ?? null; }
   catch { return null; /* Some embed permissions disable the Gamepad API. */ }
 }
 function notifySession() {
+  touchControls.setActive(Input.active && !modalOpen());
   document.dispatchEvent(new CustomEvent('playstatechange', {
-    detail: { active: Input.active, locked: Input.locked, mode: Input.locked ? 'mouse' : Input.gamepadConnected ? 'gamepad' : 'keyboard' },
+    detail: { active: Input.active, locked: Input.locked, mode: touchEnabled ? 'touch' : Input.locked ? 'mouse' : Input.gamepadConnected ? 'gamepad' : 'keyboard' },
   }));
 }
 function showPauseOverlay() {
@@ -44,13 +52,14 @@ function pauseSession({ showOverlay = true, releaseLock = true } = {}) {
 Input.pause = pauseSession;
 
 function pointerFallback(attempt) {
-  if (attempt !== lockAttempt || !Input.active || Input.locked) return;
+  if (attempt !== lockAttempt || !Input.active || Input.locked || touchEnabled) return;
   // A failed capture is a playable keyboard/controller session, not a dead end.
   if (!fallbackNotified) HUD.message(Input.gamepadConnected ? 'CONTROLLER MODE · START TO PAUSE' : 'KEYBOARD MODE · ARROWS LOOK · J FIRE · P PAUSE', 5);
   fallbackNotified = true;
   notifySession();
 }
 function requestPointer() {
+  if (touchEnabled) return;
   const attempt = ++lockAttempt;
   if (typeof canvas.requestPointerLock !== 'function') { pointerFallback(attempt); return; }
   try {
@@ -77,7 +86,7 @@ function engageLock({ pointerLock = true } = {}) {
   void Audio.resume();
   Audio.startAmbient();
   notifySession();
-  if (pointerLock && !Input.locked) requestPointer();
+  if (pointerLock && !touchEnabled && !Input.locked) requestPointer();
   return true;
 }
 function engageFromMenu({ gamepad = false } = {}) {
@@ -139,7 +148,7 @@ addEventListener('mousemove', (event) => {
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 canvas.addEventListener('click', () => {
   if (!Input.active && !modalOpen()) engageLock();
-  else if (Input.active && !Input.locked) requestPointer();
+  else if (Input.active && !Input.locked && !touchEnabled) requestPointer();
 });
 startButton?.addEventListener('click', engageLock);
 document.getElementById('audiotoggle')?.addEventListener('click', (event) => {
@@ -150,7 +159,7 @@ document.getElementById('audiotoggle')?.addEventListener('click', (event) => {
 document.addEventListener('pointerlockchange', () => {
   const locked = document.pointerLockElement === canvas;
   if (locked) {
-    if (!Input.active || document.hidden || modalOpen()) { releasePointer(); return; }
+    if (!Input.active || document.hidden || modalOpen() || touchEnabled) { releasePointer(); return; }
     Input.locked = true;
     Input.reset();
     fallbackNotified = false;
@@ -168,6 +177,14 @@ document.addEventListener('visibilitychange', () => {
   else Input.reset();
 });
 addEventListener('pagehide', () => pauseSession({ showOverlay: false }));
+document.addEventListener('settingschange', () => {
+  const enabled = Settings.get('touchControls');
+  if (enabled === touchEnabled) return;
+  touchEnabled = enabled;
+  touchControls.setEnabled(enabled);
+  // Changing input modes is a fresh engagement, including releasing capture.
+  if (Input.active) pauseSession();
+});
 
 /** Poll once per rendered frame, including menus; safe in restricted iframes. */
 Input.pollGamepad = function () {

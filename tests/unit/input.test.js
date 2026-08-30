@@ -224,3 +224,207 @@ test('a controller button held through focus loss stays released until a fresh p
   assert.equal(pressedAgain.leftPressed, true);
   assert.equal(pressedAgain.tPressed, true);
 });
+
+test('touch controls are ignored before activation and cleared through pause or reset', () => {
+  const input = createInputState();
+  const pressTouchControls = () => {
+    input.setTouchMove(1, 1);
+    input.touchLook(120, -80);
+    for (const action of ['fire', 'aim', 'jump', 'crouch', 'sprint', 'use', 'reload', 'melee', 'drop', 'rage']) input.touchButton(action, true);
+  };
+  const assertReleased = () => {
+    const frame = input.consumeFrame();
+    for (const key of ['leftDown', 'leftPressed', 'aimDown', 'jumpDown', 'jumpPressed', 'crouchDown', 'sprintDown', 'ePressed', 'rPressed', 'vPressed', 'gPressed', 'tPressed']) assert.equal(frame[key], false, key);
+    for (const key of ['dx', 'dy', 'moveX', 'moveY']) assert.equal(frame[key], 0, key);
+  };
+  pressTouchControls();
+  assertReleased();
+  input.activate();
+  assertReleased();
+  pressTouchControls();
+  input.pause();
+  pressTouchControls();
+  input.activate();
+  assertReleased();
+  pressTouchControls();
+  input.reset();
+  assert.equal(input.active, true);
+  assertReleased();
+  pressTouchControls();
+  input.activate();
+  assertReleased();
+});
+
+test('touch action edges fire once per press, including taps released between frames', () => {
+  const input = createInputState();
+  input.activate();
+  const actions = {
+    fire: 'leftPressed', jump: 'jumpPressed', use: 'ePressed', reload: 'rPressed',
+    melee: 'vPressed', drop: 'gPressed', rage: 'tPressed',
+  };
+  for (const action of Object.keys(actions)) input.touchButton(action, true);
+  const first = input.consumeFrame();
+  for (const edge of Object.values(actions)) assert.equal(first[edge], true, edge);
+  assert.equal(first.leftDown, true);
+  assert.equal(first.jumpDown, true);
+  for (const action of Object.keys(actions)) input.touchButton(action, true);
+  const held = input.consumeFrame();
+  for (const edge of Object.values(actions)) assert.equal(held[edge], false, edge);
+  assert.equal(held.leftDown, true);
+  assert.equal(held.jumpDown, true);
+  for (const action of Object.keys(actions)) {
+    input.touchButton(action, false);
+    input.touchButton(action, true);
+    input.touchButton(action, false);
+  }
+  const tapped = input.consumeFrame();
+  for (const edge of Object.values(actions)) assert.equal(tapped[edge], true, edge);
+  assert.equal(tapped.leftDown, false);
+  assert.equal(tapped.jumpDown, false);
+  const next = input.consumeFrame();
+  for (const edge of Object.values(actions)) assert.equal(next[edge], false, edge);
+  assert.equal(input.touchButton('unknown', true), false);
+});
+
+test('touch fire and aim release independently of mouse, keyboard, and controller', () => {
+  const sources = [
+    (input, down) => {
+      input[down ? 'keyDown' : 'keyUp']('KeyJ');
+      input.keyDown('KeyQ');
+      input.keyUp('KeyQ');
+    },
+    (input, down) => { input.mouseButton(0, down); input.mouseButton(2, down); },
+    (input, down) => input.setGamepad(controller({ pressed: down ? [6, 7] : [] })),
+  ];
+  for (const setPhysicalButtons of sources) {
+    const input = createInputState();
+    input.activate();
+    setPhysicalButtons(input, true);
+    input.touchButton('fire', true);
+    input.touchButton('aim', true);
+    setPhysicalButtons(input, false);
+    assert.equal(input.leftDown, true);
+    assert.equal(input.isAiming(), true);
+    input.touchButton('fire', false);
+    input.touchButton('aim', false);
+    assert.equal(input.leftDown, false);
+    assert.equal(input.isAiming(), false);
+
+    setPhysicalButtons(input, true);
+    input.touchButton('fire', true);
+    input.touchButton('aim', true);
+    input.touchButton('fire', false);
+    input.touchButton('aim', false);
+    assert.equal(input.leftDown, true);
+    assert.equal(input.isAiming(), true);
+    setPhysicalButtons(input, false);
+    assert.equal(input.leftDown, false);
+    assert.equal(input.isAiming(), false);
+  }
+});
+
+test('touch jump, sprint, and crouch remain held across frames and release independently', () => {
+  const input = createInputState();
+  input.activate();
+  const actions = [
+    ['jump', 'Space', 'jumpDown'],
+    ['sprint', 'ShiftLeft', 'sprintDown'],
+    ['crouch', 'KeyC', 'crouchDown'],
+  ];
+  for (const [action, code] of actions) {
+    input.touchButton(action, true);
+    input.keyDown(code);
+    input.keyUp(code);
+  }
+  for (let frameIndex = 0; frameIndex < 2; frameIndex++) {
+    const frame = input.consumeFrame();
+    for (const [, , held] of actions) assert.equal(frame[held], true, held);
+  }
+  for (const [action, code] of actions) {
+    input.keyDown(code);
+    input.touchButton(action, false);
+  }
+  const keyboardHeld = input.consumeFrame();
+  for (const [, code, held] of actions) {
+    assert.equal(keyboardHeld[held], true, held);
+    input.keyUp(code);
+  }
+  const released = input.consumeFrame();
+  for (const [, , held] of actions) assert.equal(released[held], false, held);
+});
+
+test('touch movement has a radial deadzone, forward Y, and bounded combined movement', () => {
+  const input = createInputState();
+  input.activate();
+  input.setTouchMove(0.08, 0.08);
+  let frame = input.consumeFrame();
+  assert.equal(frame.moveX, 0);
+  assert.equal(frame.moveY, 0);
+  input.setTouchMove(Number.NaN, Number.POSITIVE_INFINITY);
+  frame = input.consumeFrame();
+  assert.equal(frame.moveX, 0);
+  assert.equal(frame.moveY, 0);
+  input.setTouchMove(0, 0.56);
+  frame = input.consumeFrame();
+  assert.ok(Math.abs(frame.moveY - 0.5) < 1e-10);
+  assert.equal(input.consumeFrame().moveY, frame.moveY);
+  input.setTouchMove(2, 2);
+  frame = input.consumeFrame();
+  assert.ok(Math.abs(Math.hypot(frame.moveX, frame.moveY) - 1) < 1e-10);
+  assert.ok(frame.moveX > 0 && frame.moveY > 0);
+  input.setTouchMove(1, 0);
+  input.setGamepad(controller({ axes: [0, -1, 0, 0] }));
+  frame = input.consumeFrame();
+  assert.ok(Math.abs(Math.hypot(frame.moveX, frame.moveY) - 1) < 1e-10);
+  assert.ok(frame.moveX > 0 && frame.moveY > 0);
+  input.setTouchMove(0, -1);
+  frame = input.consumeFrame();
+  assert.equal(frame.moveX, 0);
+  assert.equal(frame.moveY, 0);
+  input.setGamepad(null);
+  assert.equal(input.consumeFrame().moveY, -1);
+});
+
+test('touch look combines with mouse deltas once and rejects non-finite values', () => {
+  const input = createInputState();
+  input.activate();
+  input.mouseMove(8, -6);
+  input.touchLook(10, -3);
+  input.touchLook(-2, 4);
+  input.touchLook(Number.NaN, Number.NEGATIVE_INFINITY);
+  const frame = input.consumeFrame();
+  assert.equal(frame.dx, 16);
+  assert.equal(frame.dy, -5);
+  const next = input.consumeFrame();
+  assert.equal(next.dx, 0);
+  assert.equal(next.dy, 0);
+});
+
+test('resetTouch clears only touch controls and preserves other devices pending edges', () => {
+  const input = createInputState();
+  input.activate();
+  input.keyDown('KeyW');
+  input.keyDown('KeyE');
+  input.keyDown('Space');
+  input.mouseButton(0, true);
+  input.mouseMove(9, -4);
+  input.setGamepad(controller({ pressed: [2, 6, 10], axes: [0, -1, 0, 0] }));
+  input.setTouchMove(1, 0);
+  input.touchLook(100, 100);
+  for (const action of ['fire', 'jump', 'aim', 'crouch', 'sprint', 'use', 'reload', 'melee', 'drop', 'rage']) input.touchButton(action, true);
+  input.resetTouch();
+  assert.equal(input.active, true);
+  assert.equal(input.keys.has('KeyW'), true);
+  const frame = input.consumeFrame();
+  assert.equal(frame.dx, 9);
+  assert.equal(frame.dy, -4);
+  assert.equal(frame.moveX, 0);
+  assert.equal(frame.moveY, 1);
+  for (const key of ['leftDown', 'leftPressed', 'aimDown', 'jumpDown', 'jumpPressed', 'sprintDown', 'ePressed', 'rPressed']) assert.equal(frame[key], true, key);
+  for (const key of ['crouchDown', 'vPressed', 'gPressed', 'tPressed']) assert.equal(frame[key], false, key);
+  input.keyUp('Space');
+  input.mouseButton(0, false);
+  input.setGamepad(null);
+  const released = input.consumeFrame();
+  for (const key of ['leftDown', 'aimDown', 'jumpDown', 'sprintDown']) assert.equal(released[key], false, key);
+});

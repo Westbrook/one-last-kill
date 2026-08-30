@@ -1,0 +1,30 @@
+/* Installed windows can extend behind system bars and camera cutouts. */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  :root { --safe-x: max(32px, env(safe-area-inset-left), env(safe-area-inset-right)); }
+  .home-screen-help { display: none; }
+  .menu-header { top: max(34px, calc(env(safe-area-inset-top) + 12px)); left: max(5.7vw, calc(env(safe-area-inset-left) + 16px)); }
+  .menu-footer { bottom: max(27px, calc(env(safe-area-inset-bottom) + 12px)); left: max(5.7vw, calc(env(safe-area-inset-left) + 16px)); right: max(5.7vw, calc(env(safe-area-inset-right) + 16px)); }
+  .audio-button { top: max(27px, calc(env(safe-area-inset-top) + 8px)); }
+  .objective-group { top: max(29px, calc(env(safe-area-inset-top) + 12px)); }
+  #compass { top: max(25px, calc(env(safe-area-inset-top) + 12px)); }
+  #vitals, #weaponbox { bottom: max(35px, calc(env(safe-area-inset-bottom) + 12px)); }
+  #introcard, #endcard {
+    padding-top: max(7vh, calc(env(safe-area-inset-top) + 24px));
+    padding-bottom: max(7vh, calc(env(safe-area-inset-bottom) + 24px));
+    padding-left: max(10vw, calc(env(safe-area-inset-left) + 20px));
+    padding-right: max(10vw, calc(env(safe-area-inset-right) + 20px));
+  }
+  #deathscreen {
+    padding-top: max(30px, calc(env(safe-area-inset-top) + 20px));
+    padding-bottom: max(30px, calc(env(safe-area-inset-bottom) + 20px));
+    padding-left: max(30px, calc(env(safe-area-inset-left) + 20px));
+    padding-right: max(30px, calc(env(safe-area-inset-right) + 20px));
+  }
+  @media (max-width: 760px) {
+    :root { --safe-x: max(20px, env(safe-area-inset-left), env(safe-area-inset-right)); }
+    .menu-header { top: max(26px, calc(env(safe-area-inset-top) + 12px)); left: max(25px, calc(env(safe-area-inset-left) + 16px)); }
+    .menu-footer { bottom: max(21px, calc(env(safe-area-inset-bottom) + 12px)); left: max(25px, calc(env(safe-area-inset-left) + 16px)); right: max(25px, calc(env(safe-area-inset-right) + 16px)); }
+    .audio-button { top: max(21px, calc(env(safe-area-inset-top) + 8px)); }
+    .objective-group { top: max(24px, calc(env(safe-area-inset-top) + 12px)); }
+  }
+}

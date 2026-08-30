@@ -620,10 +620,10 @@ const Weapons = {
         this._swingMelee();
       }
     }
-    // Primary attack: LMB. Ranged fires, melee swings, full-auto weapons
-    // repeat on leftDown.
+    // A quick tap can be released before the next simulation step. Preserve
+    // its press edge for every weapon; automatic weapons also repeat on hold.
     const d = this.def();
-    const wantsFire = d.full ? inp.leftDown : inp.leftPressed;
+    const wantsFire = inp.leftPressed || (d.full && inp.leftDown);
     if (wantsFire && this.cooldown <= 0 && this.reloading <= 0 && !this.melee.active) {
       if (d.kind === 'ranged') {
         if (this.loaded > 0) {

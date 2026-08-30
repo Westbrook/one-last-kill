@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import './touch-controls.css';
+import './installed-app.css';
 import { scene, camera, renderer, GameTime, recordRenderTime } from './core/renderer.js';
 import { FixedStepClock } from './core/frame-budget.js';
 import { Settings, audioMixFromSettings } from './core/settings.js';

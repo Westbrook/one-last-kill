@@ -85,6 +85,31 @@ function changeLevel(ui, channel, percent) {
   return field;
 }
 
+test('touch controls opt-in is labeled, follows saved preferences and resets to off', () => {
+  const ui = fixture();
+  const field = ui.element('settingtouchcontrols');
+  assert.equal(field.type, 'checkbox');
+  assert.equal(field.getAttribute('name'), 'touchControls');
+  assert.equal(field.getAttribute('aria-describedby'), 'touchcontrolshelp');
+  assert.match(markup, /<label for="settingtouchcontrols">On-screen touch controls<\/label>/);
+  assert.equal(field.checked, false);
+  assert.equal(field.handlers.get('change').length, 1);
+  const before = ui.settings.snapshot();
+  field.checked = true;
+  field.dispatch('change');
+  assert.equal(ui.settings.get('touchControls'), true);
+  for (const key of Object.keys(DEFAULT_SETTINGS)) if (key !== 'touchControls') assert.equal(ui.settings.get(key), before[key]);
+  assert.equal(ui.element('settingssaved').textContent, 'PREFERENCES APPLIED');
+  assert.equal(ui.element('audiostatus').textContent, 'AUDIO OFF');
+  ui.settings.set('touchControls', false);
+  assert.equal(field.checked, false);
+  const restored = fixture({ initial: { touchControls: true } });
+  assert.equal(restored.element('settingtouchcontrols').checked, true);
+  restored.element('resetsettings').dispatch('click');
+  assert.equal(restored.settings.get('touchControls'), false);
+  assert.equal(restored.element('settingtouchcontrols').checked, false);
+});
+
 test('all five mix channels use labeled native percentage sliders with live accessible readouts', () => {
   const ui = fixture();
   assert.match(markup, /<fieldset class="settings-group audio-mix">\s*<legend>AUDIO MIX<\/legend>/);

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <title>One Last Kill maskable game icon</title>
+  <rect width="32" height="32" fill="#171916"/>
+  <g transform="translate(3.2 3.2) scale(.8)">
+    <path d="M10 7h4v19h-4zm8-2h4v19h-4z" fill="#e9e5d9"/>
+    <path d="M10 25h4v2h-4z" fill="#a34b3c"/>
+  </g>
+</svg>

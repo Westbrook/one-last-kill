@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Open [the silent local game](http://127.0.0.1:4173/?mute=1). The server binds to the loopback interface on port **4173**; `localhost:4173` addresses the same local service. A current desktop browser with WebGL 2 and hardware acceleration is required. There is no account, backend, or API key to configure.
+Open [the silent local game](http://127.0.0.1:4173/?mute=1). The server binds to the loopback interface on port **4173**; `localhost:4173` addresses the same local service. A current browser with WebGL 2 and hardware acceleration is required. There is no account, backend, or API key to configure.
 
 Dependencies are pinned in `package.json` and `package-lock.json`: **Three.js 0.185.1**, **Vite 8.2.2**, and ESLint 10.9.1. Use `npm ci` to preserve that dependency graph. All runtime assets are served locally: no CDN imports, remote fonts, streaming video, or live image-generation service is required. Dependency installation may need registry access.
 
@@ -23,11 +23,24 @@ npm run check
 
 This runs ESLint, the Node unit tests, and the production build. It does not launch a browser or play sound. To inspect the production bundle locally, run `npm run preview` after building; it uses the same port, so stop the development server first. Production output is written to `dist/`.
 
+## Install on a phone or tablet
+
+Serve the contents of `dist/` at the root of an **HTTPS** site. The build includes `manifest.webmanifest`, Android icons at 192 and 512 pixels, a separate maskable icon, and Apple touch icons at 180, 167, and 152 pixels. Keep these public files reachable alongside `index.html`; the manifest should be served as `application/manifest+json` and the icons as `image/png`. The manifest uses a stable root identity and launch URL, so development query flags are not included in the installed launch.
+
+- **iPhone / iPad:** Open the game in Safari, choose **Share → Add to Home Screen**, and leave **Open as Web App** enabled if that option appears. Launch the new icon to play without Safari’s browser toolbar. See [Apple’s iPhone instructions](https://support.apple.com/en-ca/guide/iphone/iphea86e5236/ios).
+- **Android:** Open the HTTPS game in Chrome and choose **Install app** or **Add to Home screen** from its menu. The browser controls whether and when an install suggestion appears; see [Chrome’s installation criteria](https://web.dev/articles/install-criteria).
+
+The manifest requests `fullscreen`, with the browser’s supported fallback. Apple’s home-screen web-app tags configure the app title, icons, and translucent status bar; installed layouts respect safe-area insets around camera cutouts and the home indicator. System bars can still vary by OS version. See [WebKit’s home-screen app support](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/). Touch controls remain an opt-in under **Settings → On-screen touch controls** inside the installed app.
+
+Installation does not add offline caching: the game still needs a connection to load its files. Editable icon sources are in `public/icons/icon.svg` and `public/icons/icon-maskable.svg`, derived from the existing favicon; their PNG exports have opaque backgrounds so each OS can apply its own icon shape.
+
 ## Play
 
-Choose **Begin Mission**, then continue past the briefing. Mouse capture is requested from the play action. If the browser denies pointer lock, the game remains playable with the keyboard or a standard gamepad. Losing focus, hiding the page, or releasing an established pointer lock pauses play and clears held inputs.
+Choose **Begin Mission**, then continue past the briefing. Mouse capture is requested from the play action unless touch controls are enabled. If the browser denies pointer lock, the game remains playable with the keyboard or a standard gamepad. Losing focus, hiding the page, or releasing an established pointer lock pauses play and clears held inputs.
 
-You begin with **fists and no ammunition**. Defeat a bat carrier or gunman and use E to take their weapon. New missions never grant a starter gun; checkpoint retries preserve only the weapon and ammunition you actually reached that checkpoint with.
+For a phone or tablet, enable **Settings → On-screen touch controls** before starting or from the pause menu. The option is off by default and saves locally. Drag the left stick to move and swipe the right side to look. Tap **FIRE** to attack; hold for automatic fire. Drag **FIRE** to keep looking while firing. **AIM**, **RUN**, and **CROUCH** toggle on each tap. Tap **JUMP**, **USE** (pick up weapons or ammunition), **RELOAD**, **MELEE**, **DROP**, **RAGE**, or **PAUSE** for those actions. Pausing clears held controls and toggles. **Look sensitivity** also adjusts touch look.
+
+You begin with **fists and no ammunition**. Defeat a bat carrier or gunman and use E, gamepad Y, or touch **USE** to take their weapon. New missions never grant a starter gun; checkpoint retries preserve only the weapon and ammunition you actually reached that checkpoint with.
 
 | Action | Keyboard / mouse | Standard gamepad |
 | --- | --- | --- |
@@ -51,9 +64,9 @@ Gamepads must expose the browser's `standard` mapping. Stick dead zones and held
 
 **Melee keeps your firearm.** Press V (or RB / R1 / R3) for a close attack without dropping your gun or losing loaded or reserve ammunition. Your firearm remains ready after the melee attack finishes.
 
-**Rage** becomes available while alive and below 30% health after at least four credited enemy kills in the preceding 60 seconds. The prompt appears above your health display: press T or D-pad up to double your **current** HP, without changing maximum HP. Kill an enemy within the next 10 gameplay seconds to keep the remaining boosted health; otherwise health returns to the HP you had when you entered rage. Taking damage still costs health, and rage cannot revive a dead player. Pausing freezes the kill window and the countdown. The eligibility window is configurable through `RAGE_CONFIG.killWindowSeconds` in `src/game/rage-rules.js`.
+**Rage** becomes available while alive and below 30% health after at least four credited enemy kills in the preceding 60 seconds. The prompt appears above your health display: press T, D-pad up, or touch **RAGE** to double your **current** HP, without changing maximum HP. Kill an enemy within the next 10 gameplay seconds to keep the remaining boosted health; otherwise health returns to the HP you had when you entered rage. Taking damage still costs health, and rage cannot revive a dead player. Pausing freezes the kill window and the countdown. The eligibility window is configurable through `RAGE_CONFIG.killWindowSeconds` in `src/game/rage-rules.js`.
 
-The menu includes quality, sensitivity, field-of-view, reduced-motion, and audio settings. **Master, Effects, Ambience, Music, and Radio / Voice** each have a volume control; checkpoint voice can also be disabled separately. Preferences are stored locally when browser storage is available. Changing a level never unmutes the game. Checkpoints are held in memory for the current session, not saved across page reloads. F toggles the frame display; B starts the in-game benchmark display. Neither is a substitute for a recorded performance test.
+The menu includes touch controls, quality, sensitivity, field-of-view, reduced-motion, and audio settings. **Master, Effects, Ambience, Music, and Radio / Voice** each have a volume control; checkpoint voice can also be disabled separately. Preferences are stored locally when browser storage is available. Changing a level never unmutes the game. Checkpoints are held in memory for the current session, not saved across page reloads. F toggles the frame display; B starts the in-game benchmark display. Neither is a substitute for a recorded performance test.
 
 The balcony has **three pairs of melee enemies in front**, plus two additional rear contacts: eight enemies total, with at most three alive and one designated rear pursuer. Each forward pair arrives together at positions checked for lateral and angular separation. A rear attacker does not replace the second forward enemy or prevent the next pair from staging after its predecessors fall. The stairs also allow a pursuer from the lower landing. Rear arrivals use fists against melee weapons or an empty gun, and at most a bat against a firearm with ammunition. They appear outside your view or fully behind solid cover, at least five metres away, with a brief delay before attacking. If no safe position is available, the contact waits. Watch the distinct punch/bat windups, recover between groups, and use E to take a fallen carrier's bat. Duplicate melee weapons do not offer ammunition.
 

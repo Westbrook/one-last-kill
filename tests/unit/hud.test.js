@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { clamp } from '../../src/core/math.js';
+import { createSettingsStore } from '../../src/core/settings.js';
 
 const markup = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
 const source = readFileSync(new URL('../../src/ui/hud.js', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('../../src/styles.css', import.meta.url), 'utf8');
 
-function fixture() {
+function fixture(initial = {}) {
   const elements = new Map();
   const document = {
     getElementById(id) {
@@ -53,9 +54,10 @@ function fixture() {
   // audio or the independent menu controllers that follow it in the module.
   const boundary = source.indexOf('const ObjectiveBanner =');
   assert.ok(boundary > 0, 'the HUD closure must precede the menu controllers');
-  const context = vm.createContext({ document, clamp });
+  const settings = createSettingsStore({ initial });
+  const context = vm.createContext({ document, clamp, Settings: settings });
   vm.runInContext(source.slice(0, boundary).replace(/^import .*;\n/gm, '') + '\nglobalThis.hud = HUD;', context);
-  return { hud: context.hud, element: id => document.getElementById(id) };
+  return { hud: context.hud, settings, element: id => document.getElementById(id) };
 }
 
 test('initial HUD describes fists and hides an inactive reload from accessibility', () => {
@@ -92,6 +94,21 @@ test('rage availability shows the current control and repeated frames do not rew
   const writes = ids.map(id => ({ ...element(id).writes }));
   hud.setRage();
   assert.deepEqual(ids.map(id => ({ ...element(id).writes })), writes);
+});
+
+test('touch mode shows on-screen rage and pickup actions and follows settings changes', () => {
+  const { hud, settings, element } = fixture({ touchControls: true });
+  hud.setRage({ available: true, gamepad: true });
+  assert.equal(element('ragekey').textContent, 'TAP RAGE');
+  hud.setPickupPrompt('[E] PICK UP BAT');
+  assert.equal(element('pickupprompt').textContent, '[USE] PICK UP BAT');
+  hud.setPickupPrompt('[E] +24 PISTOL AMMO · AMMO BOX');
+  assert.equal(element('pickupprompt').textContent, '[USE] +24 PISTOL AMMO · AMMO BOX');
+  settings.set('touchControls', false);
+  hud.setRage({ available: true, gamepad: false });
+  assert.equal(element('ragekey').textContent, 'T');
+  hud.setPickupPrompt('[E] PICK UP BAT');
+  assert.equal(element('pickupprompt').textContent, '[E] PICK UP BAT');
 });
 
 test('active rage renders whole seconds without advancing or repeatedly announcing its clock', () => {

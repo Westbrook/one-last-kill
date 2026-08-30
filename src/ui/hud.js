@@ -148,7 +148,7 @@ const HUD = (() => {
     rageState.gamepad = Boolean(gamepad);
     const mode = rageState.active ? 'active' : rageState.available ? 'available' : 'inactive';
     const hidden = mode === 'inactive';
-    const key = gamepad ? 'D-PAD UP' : 'T';
+    const key = Settings.get('touchControls') ? 'TAP RAGE' : gamepad ? 'D-PAD UP' : 'T';
     const seconds = Math.ceil(rageState.remaining);
     if (rageCue.dataset.state !== mode) rageCue.dataset.state = mode;
     if (rageCue.hidden !== hidden) rageCue.hidden = hidden;
@@ -226,7 +226,8 @@ const HUD = (() => {
       }
     },
     setPickupPrompt(text) {
-      write(pickupEl, text || '');
+      const prompt = text && Settings.get('touchControls') ? String(text).replace(/^\[E\]/, '[USE]') : text;
+      write(pickupEl, prompt || '');
       pickupEl.classList.toggle('show', Boolean(text));
       pickupEl.setAttribute('aria-hidden', String(!text));
     },
@@ -517,6 +518,7 @@ const settingFields = {
   sensitivity: byId('settingsensitivity'),
   fov: byId('settingfov'),
   reducedMotion: byId('settingmotion'),
+  touchControls: byId('settingtouchcontrols'),
   ...Object.fromEntries([...audioSettingKeys].map((key) => [key, byId('setting' + key.toLowerCase())])),
   checkpointVoice: byId('settingcheckpointvoice'),
 };
@@ -612,7 +614,7 @@ document.addEventListener('playstatechange', (event) => {
     write(byId('menustatus'), 'MISSION PAUSED / LITTLE SICILY');
   }
   if (missionStarted) primaryLabel('RESUME MISSION');
-  if (active && mode !== 'mouse') HUD.setStatus(mode === 'gamepad' ? 'CONTROLLER / START TO PAUSE' : 'ARROWS LOOK / J FIRE / P PAUSE');
+  if (active && mode !== 'mouse') HUD.setStatus(mode === 'touch' ? 'TOUCH CONTROLS / TAP PAUSE FOR MENU' : mode === 'gamepad' ? 'CONTROLLER / START TO PAUSE' : 'ARROWS LOOK / J FIRE / P PAUSE');
 });
 
 export { HUD, ObjectiveBanner, IntroCard, EndCard, FPSMeter };

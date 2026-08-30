@@ -1,0 +1,131 @@
+/* These controls only take over gestures during an opted-in play session. */
+#touch-controls {
+  --touch-left: max(16px, env(safe-area-inset-left));
+  --touch-right: max(16px, env(safe-area-inset-right));
+  --touch-bottom: max(16px, env(safe-area-inset-bottom));
+  --touch-top: max(16px, env(safe-area-inset-top));
+  --touch-size: 56px;
+  --touch-gap: 8px;
+  --stick-size: 144px;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+body:has(#overlay:not(.hidden)) #touch-controls,
+body:has(#introcard.show) #touch-controls,
+body:has(#endcard.show) #touch-controls,
+body:has(#deathscreen.show) #touch-controls { display: none; }
+body[data-touch-controls="true"] #game { touch-action: none; }
+#touch-controls [data-touch] { touch-action: none; pointer-events: auto; }
+.touch-look { position: absolute; inset: 76px 0 0 40%; }
+.touch-look-hint { position: absolute; top: 28%; right: 20%; font: 8px var(--mono); letter-spacing: .18em; color: rgb(235 231 220 / 48%); text-shadow: 0 1px 6px #000; pointer-events: none; }
+.touch-look[data-pressed="true"] .touch-look-hint { opacity: 0; }
+.touch-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 48px;
+  min-height: 48px;
+  width: var(--touch-size);
+  height: var(--touch-size);
+  padding: 6px 3px;
+  border: 1px solid rgb(235 231 220 / 38%);
+  border-radius: 12px;
+  background: rgb(14 18 14 / 58%);
+  color: #edeade;
+  font: 8px/1 var(--mono);
+  letter-spacing: .05em;
+  text-shadow: 0 1px 3px #000;
+}
+.touch-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.touch-button[data-pressed="true"] { color: #fff5d8; background: rgb(148 78 47 / 82%); border-color: #e3b28a; }
+.touch-button[aria-pressed="true"] { box-shadow: inset 0 -3px 0 #e3b28a; }
+.touch-utility, .touch-stance, .touch-actions { position: absolute; display: flex; gap: var(--touch-gap); }
+.touch-utility { top: var(--touch-top); right: var(--touch-right); }
+.touch-utility .touch-button { height: 48px; min-height: 48px; }
+.touch-pause { width: 66px; flex-direction: row; }
+.touch-pause svg { width: 16px; height: 16px; }
+.touch-stance { bottom: calc(var(--touch-bottom) + var(--stick-size) + 14px); left: var(--touch-left); }
+.touch-stick { position: absolute; left: var(--touch-left); bottom: var(--touch-bottom); width: var(--stick-size); height: var(--stick-size); border: 1px solid rgb(235 231 220 / 35%); border-radius: 50%; background: rgb(14 18 14 / 32%); }
+.touch-stick-ring { position: absolute; inset: 16%; border: 1px solid rgb(235 231 220 / 12%); border-radius: 50%; pointer-events: none; }
+.touch-stick-thumb { position: absolute; top: 50%; left: 50%; width: 36%; height: 36%; border: 1px solid rgb(235 231 220 / 60%); border-radius: 50%; background: rgb(235 231 220 / 16%); transform: translate(-50%, -50%); pointer-events: none; }
+.touch-stick[data-pressed="true"] .touch-stick-thumb { background: rgb(235 231 220 / 34%); border-color: #eee8d6; }
+.touch-stick-label { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font: 8px var(--mono); letter-spacing: .15em; color: rgb(235 231 220 / 65%); pointer-events: none; }
+.touch-actions { bottom: var(--touch-bottom); right: var(--touch-right); display: grid; grid-template-columns: repeat(3, var(--touch-size)); grid-template-rows: repeat(3, var(--touch-size)); }
+.touch-fire { grid-column: 2 / 4; grid-row: 1 / 3; width: 100%; height: 100%; border-radius: 50%; background: rgb(78 39 28 / 55%); border-color: rgb(226 176 148 / 65%); font-size: 10px; letter-spacing: .16em; gap: 10px; }
+.touch-fire svg { width: 34px; height: 34px; }
+
+/* Keep health, ammunition, and prompts clear of the thumb areas. */
+body[data-touch-controls="true"] #vitals { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 232px); width: 144px; }
+body[data-touch-controls="true"] #weaponbox { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 204px); min-width: 144px; }
+body[data-touch-controls="true"] #playerstatus,
+body[data-touch-controls="true"] .weapon-hint,
+body[data-touch-controls="true"] #combatsummary { display: none; }
+body[data-touch-controls="true"] .audio-button { top: max(16px, env(safe-area-inset-top)); right: calc(max(16px, env(safe-area-inset-right)) + 208px); width: 44px; height: 48px; justify-content: center; }
+body[data-touch-controls="true"] .audio-button kbd,
+body[data-touch-controls="true"] #audiostatus { display: none; }
+body[data-touch-controls="true"] #mission-caption { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 230px); width: 50vw; }
+body[data-touch-controls="true"] #message { top: 43%; }
+body[data-touch-controls="true"] #banner { top: 14%; }
+body[data-touch-controls="true"] #pickupprompt { top: 56%; max-width: 60vw; }
+body[data-touch-controls="true"] #offscreenthreat[data-direction="BEHIND"] { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 205px); }
+body[data-touch-controls="true"] #ragecue { position: fixed; top: max(85px, calc(env(safe-area-inset-top) + 72px)); bottom: auto; left: 50%; width: min(230px, 48vw); transform: translateX(-50%); }
+
+@media (max-width: 760px), (max-height: 500px) {
+  #touch-controls { --touch-size: 52px; --stick-size: 120px; --touch-left: max(12px, env(safe-area-inset-left)); --touch-right: max(12px, env(safe-area-inset-right)); --touch-bottom: max(12px, env(safe-area-inset-bottom)); --touch-top: max(12px, env(safe-area-inset-top)); }
+  body[data-touch-controls="true"] #vitals { left: max(12px, env(safe-area-inset-left)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 202px); width: 120px; }
+  body[data-touch-controls="true"] #weaponbox { right: max(12px, env(safe-area-inset-right)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 194px); min-width: 120px; }
+  body[data-touch-controls="true"] #weaponname { font-size: 19px; }
+  body[data-touch-controls="true"] #ammo { font-size: 28px; }
+  body[data-touch-controls="true"] #healthtext { font-size: 27px; }
+  body[data-touch-controls="true"] #healthbar { margin: 8px 0 0; }
+  body[data-touch-controls="true"] .vital-label { font-size: 7px; }
+  body[data-touch-controls="true"] .objective-group { top: max(16px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); width: calc(100vw - 220px); max-width: 310px; }
+  body[data-touch-controls="true"] .objective-group .hud-eyebrow { font-size: 7px; letter-spacing: .08em; }
+  body[data-touch-controls="true"] #objective { font-size: 10px; }
+  body[data-touch-controls="true"] #compass { display: none; }
+  body[data-touch-controls="true"] .audio-button { top: max(12px, env(safe-area-inset-top)); right: calc(max(12px, env(safe-area-inset-right)) + 194px); }
+  body[data-touch-controls="true"] #mission-caption { bottom: auto; top: 24%; width: 60vw; padding: 8px; }
+  body[data-touch-controls="true"] #mission-caption p { font-size: 11px; }
+}
+@media (max-width: 760px) {
+  body[data-touch-controls="true"] .audio-button { top: max(68px, calc(env(safe-area-inset-top) + 64px)); right: max(12px, env(safe-area-inset-right)); }
+  .close-panel { min-width: 44px; min-height: 44px; }
+}
+.setting-row:has(#settingtouchcontrols) { position: relative; }
+label[for="settingtouchcontrols"]::after { content: ""; position: absolute; inset: 0; cursor: pointer; }
+#settingtouchcontrols { position: relative; }
+@media (max-width: 380px) {
+  #touch-controls { --stick-size: 108px; --touch-size: 48px; --touch-gap: 6px; }
+  .touch-button { font-size: 7px; }
+  .touch-pause { width: 60px; }
+  body[data-touch-controls="true"] .objective-group { width: calc(100vw - 190px); }
+  body[data-touch-controls="true"] .audio-button { top: max(68px, calc(env(safe-area-inset-top) + 64px)); right: max(12px, env(safe-area-inset-right)); }
+  body[data-touch-controls="true"] #vitals { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 184px); }
+  body[data-touch-controls="true"] #weaponbox { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 176px); }
+}
+
+/* Landscape phones need a scrollable menu and briefing before play. */
+@media (max-height: 500px) {
+  #overlay { overflow-y: auto; }
+  .menu-content { position: relative; top: auto; left: auto; transform: none; margin: 68px 8vw 80px; width: 84vw; }
+  .menu-kicker { margin-bottom: 14px; }
+  .title-line { font-size: 70px; }
+  .menu-description { margin: 16px 0; }
+  .menu-footer, .mission-location { display: none; }
+  .menu-panel { position: fixed; top: max(12px, env(safe-area-inset-top)); bottom: max(12px, env(safe-area-inset-bottom)); left: max(20px, env(safe-area-inset-left)); right: max(20px, env(safe-area-inset-right)); width: auto; max-height: none; transform: none; }
+  .is-panel-open .menu-content { visibility: hidden; }
+  #introcard.show, #endcard.show { align-items: flex-start; }
+  #introcard, #endcard { padding-top: max(24px, env(safe-area-inset-top)); padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+  body[data-touch-controls="true"] #banner { top: 22%; max-width: 38vw; }
+  body[data-touch-controls="true"] #banner small { margin-bottom: 4px; }
+  body[data-touch-controls="true"] #banner > span { font-size: 19px; }
+  body[data-touch-controls="true"] #mission-caption { top: 44%; width: 42vw; }
+  body[data-touch-controls="true"] #pickupprompt { top: 58%; max-width: 40vw; font-size: 9px; }
+}

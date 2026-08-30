@@ -2,6 +2,11 @@ const KEY_ACTIONS = Object.freeze({
   KeyE: 'ePressed', KeyR: 'rPressed', KeyV: 'vPressed', KeyG: 'gPressed', KeyT: 'tPressed',
 });
 const EDGE_ACTIONS = ['leftPressed', 'jumpPressed', ...Object.values(KEY_ACTIONS)];
+const TOUCH_ACTIONS = Object.freeze({
+  fire: 'leftPressed', jump: 'jumpPressed', use: 'ePressed', reload: 'rPressed',
+  melee: 'vPressed', drop: 'gPressed', rage: 'tPressed',
+  aim: null, sprint: null, crouch: null,
+});
 
 export const GAMEPLAY_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyQ', 'KeyJ',
@@ -44,13 +49,18 @@ export function createInputState() {
     _suppressedPadButtons: new Set(),
     _padMove: { x: 0, y: 0 },
     _padLook: { x: 0, y: 0 },
+    _touchMove: { x: 0, y: 0 },
+    _touchButtons: new Set(),
+    _touchEdges: new Set(),
+    _touchDX: 0,
+    _touchDY: 0,
 
     get leftDown() {
-      return this.active && (this._mouseLeft || this.keys.has('KeyJ') || this._padButtons.has(7));
+      return this.active && (this._mouseLeft || this.keys.has('KeyJ') || this._padButtons.has(7) || this._touchButtons.has('fire'));
     },
     get rightDown() { return this.isAiming(); },
     isAiming() {
-      return this.active && (this._mouseRight || this._aimToggle || this._padButtons.has(6));
+      return this.active && (this._mouseRight || this._aimToggle || this._padButtons.has(6) || this._touchButtons.has('aim'));
     },
     activate() {
       this.reset();
@@ -77,6 +87,32 @@ export function createInputState() {
       this._padLook.x = 0;
       this._padLook.y = 0;
       for (const action of EDGE_ACTIONS) this[action] = false;
+      this.resetTouch();
+    },
+    resetTouch() {
+      this._touchMove.x = this._touchMove.y = 0;
+      this._touchDX = this._touchDY = 0;
+      this._touchButtons.clear();
+      // Touch cancellation must not discard another device's pending actions.
+      this._touchEdges.clear();
+    },
+    setTouchMove(x, y) {
+      if (!this.active) return;
+      // Touch movement uses positive Y for forward, unlike gamepad stick axes.
+      this._touchMove = normalizeStick(x, y, 0.12);
+    },
+    touchLook(dx, dy) {
+      if (!this.active) return;
+      if (Number.isFinite(dx)) this._touchDX += dx;
+      if (Number.isFinite(dy)) this._touchDY += dy;
+    },
+    touchButton(action, down) {
+      if (!this.active || !Object.hasOwn(TOUCH_ACTIONS, action)) return false;
+      if (!down) return this._touchButtons.delete(action);
+      if (this._touchButtons.has(action)) return false;
+      this._touchButtons.add(action);
+      if (TOUCH_ACTIONS[action]) this._touchEdges.add(TOUCH_ACTIONS[action]);
+      return true;
     },
     keyDown(code, repeat = false) {
       if (!this.active || repeat || this.keys.has(code) || !GAMEPLAY_KEYS.has(code)) return false;
@@ -142,28 +178,34 @@ export function createInputState() {
       // A quadratic right-stick response preserves small aiming adjustments.
       const lookX = this._padLook.x * Math.abs(this._padLook.x);
       const lookY = this._padLook.y * Math.abs(this._padLook.y);
+      const moveX = this._padMove.x + this._touchMove.x;
+      const moveY = this._touchMove.y - this._padMove.y;
+      const moveLength = Math.max(1, Math.hypot(moveX, moveY));
+      const pressed = (action) => this.active && (this[action] || this._touchEdges.has(action));
       const frame = {
-        dx: this.active ? this.mouseDX + (arrowX * 700 + lookX * 1100) * seconds : 0,
-        dy: this.active ? this.mouseDY + (arrowY * 700 + lookY * 900) * seconds : 0,
+        dx: this.active ? this.mouseDX + this._touchDX + (arrowX * 700 + lookX * 1100) * seconds : 0,
+        dy: this.active ? this.mouseDY + this._touchDY + (arrowY * 700 + lookY * 900) * seconds : 0,
         leftDown: this.leftDown,
-        leftPressed: this.active && this.leftPressed,
+        leftPressed: pressed('leftPressed'),
         rightDown: this.isAiming(),
         aimDown: this.isAiming(),
-        ePressed: this.active && this.ePressed,
-        rPressed: this.active && this.rPressed,
-        vPressed: this.active && this.vPressed,
-        gPressed: this.active && this.gPressed,
-        tPressed: this.active && this.tPressed,
-        jumpPressed: this.active && this.jumpPressed,
-        jumpDown: this.active && (this.keys.has('Space') || this._padButtons.has(0)),
-        crouchDown: this.active && (this.keys.has('KeyC') || this.keys.has('ControlLeft') || this.keys.has('ControlRight') || this._padButtons.has(1)),
-        sprintDown: this.active && (this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || this._padButtons.has(10)),
-        moveX: this.active ? this._padMove.x : 0,
-        moveY: this.active && this._padMove.y ? -this._padMove.y : 0,
+        ePressed: pressed('ePressed'),
+        rPressed: pressed('rPressed'),
+        vPressed: pressed('vPressed'),
+        gPressed: pressed('gPressed'),
+        tPressed: pressed('tPressed'),
+        jumpPressed: pressed('jumpPressed'),
+        jumpDown: this.active && (this.keys.has('Space') || this._padButtons.has(0) || this._touchButtons.has('jump')),
+        crouchDown: this.active && (this.keys.has('KeyC') || this.keys.has('ControlLeft') || this.keys.has('ControlRight') || this._padButtons.has(1) || this._touchButtons.has('crouch')),
+        sprintDown: this.active && (this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || this._padButtons.has(10) || this._touchButtons.has('sprint')),
+        moveX: this.active ? moveX / moveLength : 0,
+        moveY: this.active ? moveY / moveLength : 0,
       };
       this.mouseDX = 0;
       this.mouseDY = 0;
       for (const action of EDGE_ACTIONS) this[action] = false;
+      this._touchDX = this._touchDY = 0;
+      this._touchEdges.clear();
       return frame;
     },
   };

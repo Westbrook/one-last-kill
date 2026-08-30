@@ -49,6 +49,33 @@ test('blocked or malformed storage does not prevent preference changes', () => {
   assert.deepEqual(corrupt.snapshot(), DEFAULT_SETTINGS);
 });
 
+test('touch controls require an explicit boolean opt-in and persist across sessions and reset', () => {
+  for (const value of [undefined, null, 'true', 'false', 0, 1, {}, []]) {
+    assert.equal(normalizeSettings({ touchControls: value }).touchControls, false);
+  }
+  assert.equal(normalizeSettings({ touchControls: true }).touchControls, true);
+  assert.equal(normalizeSettings({ touchControls: false }).touchControls, false);
+
+  let saved = JSON.stringify({ quality: 'performance', sensitivity: 1.45 });
+  let writes = 0;
+  const storage = { getItem: () => saved, setItem: (_, value) => { saved = value; writes++; } };
+  const settings = createSettingsStore({ storage });
+  assert.equal(settings.get('touchControls'), false, 'older saves keep touch controls off');
+  settings.set('touchControls', true);
+  assert.equal(writes, 1);
+  settings.set('touchControls', true);
+  assert.equal(writes, 1, 'unchanged opt-in does not rewrite storage');
+  const restored = createSettingsStore({ storage });
+  assert.equal(restored.get('touchControls'), true);
+  assert.equal(restored.get('quality'), 'performance');
+  assert.equal(restored.get('sensitivity'), 1.45);
+  restored.set('touchControls', false);
+  assert.equal(createSettingsStore({ storage }).get('touchControls'), false);
+  restored.set('touchControls', true);
+  restored.reset();
+  assert.equal(createSettingsStore({ storage }).get('touchControls'), false);
+});
+
 test('audio preferences normalize each independent channel without storing mute authority', () => {
   for (const key of Object.values(AUDIO_MIX_SETTINGS)) {
     for (const [value, expected] of [[-1, 0], [2, 1], ['0.37', 0.37], [0, 0], [1, 1]]) {
