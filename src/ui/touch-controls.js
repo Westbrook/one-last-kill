@@ -1,5 +1,7 @@
 const TOGGLES = new Set(['aim', 'sprint', 'crouch']);
 const LOOK_SCALE = 2.5;
+const FIRE_TAP_MAX_DURATION = 300;
+const FIRE_TAP_MAX_DISTANCE = 10;
 
 const icons = {
   fire: '<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',
@@ -18,6 +20,13 @@ function button(action, label, description = label) {
   return `<button type="button" class="touch-button touch-${action}" data-touch="${action}" aria-label="${description}"${TOGGLES.has(action) ? ' aria-pressed="false"' : ''}>${icon}<span>${label}</span></button>`;
 }
 
+function isFireTap(tap, event) {
+  if (!tap) return false;
+  const duration = event.timeStamp - tap.startedAt;
+  return duration >= 0 && duration <= FIRE_TAP_MAX_DURATION
+    && Math.hypot(event.clientX - tap.x, event.clientY - tap.y) <= FIRE_TAP_MAX_DISTANCE;
+}
+
 /** Pointer ownership lets both thumbs move, aim, and attack independently. */
 export function createTouchControls({ input, document: doc = document, window: viewport = window } = {}) {
   const root = doc.createElement('div');
@@ -32,7 +41,7 @@ export function createTouchControls({ input, document: doc = document, window: v
     <div class="touch-stick" data-touch="move" role="group" aria-label="Move: drag thumbstick">
       <span class="touch-stick-ring" aria-hidden="true"></span><span class="touch-stick-thumb" aria-hidden="true"></span><span class="touch-stick-label" aria-hidden="true">MOVE</span>
     </div>
-    <div class="touch-actions">${button('aim', 'SIGHTS', 'Toggle weapon sights')}${button('fire', 'FIRE', 'Fire or attack: hold and drag to aim')}${button('use', 'USE', 'Interact or pick up')}${button('reload', 'RELOAD', 'Reload weapon')}${button('melee', 'MELEE', 'Melee attack')}${button('jump', 'JUMP', 'Jump')}</div>`;
+    <div class="touch-actions">${button('aim', 'SIGHTS', 'Toggle weapon sights')}${button('fire', 'FIRE', 'Tap to fire or attack; drag to aim')}${button('use', 'USE', 'Interact or pick up')}${button('reload', 'RELOAD', 'Reload weapon')}${button('melee', 'MELEE', 'Melee attack')}${button('jump', 'JUMP', 'Jump')}</div>`;
   doc.body.append(root);
 
   const thumb = root.querySelector('.touch-stick-thumb');
@@ -127,6 +136,7 @@ export function createTouchControls({ input, document: doc = document, window: v
     // Never transfer an already-held stick or button to a second finger.
     if (pointers.has(event.pointerId) || Array.from(pointers.values()).some(record => record.action === action)) return;
     const record = { action, element, x: event.clientX, y: event.clientY };
+    if (action === 'fire') record.tap = { x: event.clientX, y: event.clientY, startedAt: event.timeStamp };
     pointers.set(event.pointerId, record);
     try { element.setPointerCapture(event.pointerId); } catch { /* Window listeners still release the pointer. */ }
     if (action === 'move') {
@@ -137,7 +147,7 @@ export function createTouchControls({ input, document: doc = document, window: v
       moveStick(record, event);
     } else if (TOGGLES.has(action)) {
       toggle(action);
-    } else if (action !== 'look' && action !== 'pause') {
+    } else if (action !== 'look' && action !== 'pause' && action !== 'fire') {
       input.touchButton(action, true);
     }
     if ((action === 'look' || action === 'fire') && lookPointer === null) lookPointer = event.pointerId;
@@ -147,6 +157,8 @@ export function createTouchControls({ input, document: doc = document, window: v
     const record = pointers.get(event.pointerId);
     if (!record || root.hidden || !input.active) return;
     event.preventDefault();
+    // Once a gesture becomes a drag or hold, returning to its start cannot fire.
+    if (record.tap && !isFireTap(record.tap, event)) record.tap = null;
     if (record.action === 'move') moveStick(record, event);
     else {
       if (lookPointer === event.pointerId) input.touchLook((event.clientX - record.x) * LOOK_SCALE, (event.clientY - record.y) * LOOK_SCALE);
@@ -168,6 +180,9 @@ export function createTouchControls({ input, document: doc = document, window: v
     } else if (TOGGLES.has(record.action)) {
       if (canceled) setToggle(record.action, false);
     } else {
+      if (record.action === 'fire' && !canceled && !root.hidden && input.active && isFireTap(record.tap, event)) {
+        input.touchButton('fire', true);
+      }
       input.touchButton(record.action, false);
     }
     if (!TOGGLES.has(record.action)) paint(record.action, false);
@@ -184,7 +199,7 @@ export function createTouchControls({ input, document: doc = document, window: v
   listen(root, 'click', event => {
     event.preventDefault();
     event.stopPropagation();
-    // Pointer actions run on contact. Native keyboard/assistive clicks need
+    // Pointer actions are handled above. Native keyboard/assistive clicks need
     // their own pulse, without replaying the compatibility click after touch.
     if (event.detail !== 0 || root.hidden || !input.active) return;
     const element = event.target.closest?.('button[data-touch]');

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createInputState } from '../../src/core/input-state.js';
 import { createTouchControls } from '../../src/ui/touch-controls.js';
+import { weaponHarness } from './helpers/weapon-harness.js';
 
 class EventTarget {
   listeners = new Map();
@@ -21,7 +22,7 @@ class EventTarget {
 function emit(target, type, properties = {}) {
   const event = {
     type, pointerId: 1, pointerType: 'touch', button: 0, clientX: 180, clientY: 180,
-    detail: 1, defaultPrevented: false, stopped: false,
+    detail: 1, timeStamp: 0, defaultPrevented: false, stopped: false,
     preventDefault() { this.defaultPrevented = true; },
     stopPropagation() { this.stopped = true; },
     ...properties,
@@ -97,14 +98,22 @@ function fixture(t, { enabled = true, active = true, context } = {}) {
   if (context) controls.setContext(context);
   controls.setEnabled(enabled);
   controls.setActive(active);
+  const positions = new Map();
+  let timeStamp = 0;
+  function pointerEvent(target, type, pointerId, properties) {
+    const event = emit(target, type, { pointerId, timeStamp: timeStamp += 16, ...properties });
+    timeStamp = event.timeStamp;
+    positions.set(pointerId, { clientX: event.clientX, clientY: event.clientY });
+    return event;
+  }
   let destroyed = false;
   const destroy = () => { if (!destroyed) { controls.destroy(); destroyed = true; } };
   t.after(destroy);
   return {
     input, controls, viewport, doc, elements, destroy, pauses: () => pauses,
-    down(action, pointerId = 1, properties = {}) { return emit(elements.get(action), 'pointerdown', { pointerId, ...properties }); },
-    move(pointerId, clientX, clientY) { return emit(viewport, 'pointermove', { pointerId, clientX, clientY }); },
-    end(pointerId, type = 'pointerup') { return emit(viewport, type, { pointerId }); },
+    down(action, pointerId = 1, properties = {}) { return pointerEvent(elements.get(action), 'pointerdown', pointerId, properties); },
+    move(pointerId, clientX, clientY, properties = {}) { return pointerEvent(viewport, 'pointermove', pointerId, { clientX, clientY, ...properties }); },
+    end(pointerId, type = 'pointerup', properties = {}) { return pointerEvent(viewport, type, pointerId, { ...positions.get(pointerId), ...properties }); },
     click(action, detail = 0) { return emit(elements.get(action).querySelector('span'), 'click', { detail }); },
   };
 }
@@ -127,8 +136,11 @@ test('touch controls require opt-in, a visible play session, and active input', 
   assert.equal(f.controls.element.hidden, false);
   assert.equal(f.doc.body.dataset.touchControls, 'true');
   f.down('fire');
-  assert.equal(f.input.consumeFrame().leftDown, true);
+  assertReleased(f.input);
   f.end(1);
+  const frame = f.input.consumeFrame();
+  assert.equal(frame.leftPressed, true);
+  assert.equal(frame.leftDown, false);
   f.input.pause();
   f.down('fire', 2);
   f.click('jump');
@@ -177,8 +189,8 @@ test('losing firearm sights cancels their held pointer and toggle while other fi
   let frame = f.input.consumeFrame();
   assert.equal(frame.aimDown, false);
   assert.equal(frame.moveX, 1);
-  assert.equal(frame.leftDown, true);
-  assert.equal(frame.leftPressed, true);
+  assert.equal(frame.leftDown, false);
+  assert.equal(frame.leftPressed, false);
   assert.equal(frame.dx, 20);
   assert.equal(frame.dy, -10);
   f.controls.setContext({ canAim: true });
@@ -188,7 +200,9 @@ test('losing firearm sights cancels their held pointer and toggle while other fi
   f.controls.setContext({ canAim: false });
   frame = f.input.consumeFrame();
   assert.equal(frame.aimDown, false, 'context loss also clears a toggle whose pointer was already released');
-  assert.equal(frame.leftDown, true);
+  assert.equal(frame.leftDown, false);
+  f.end(3);
+  assert.equal(f.input.consumeFrame().leftPressed, true, 'the other finger can still complete its fire tap');
 });
 
 test('losing rage eligibility discards a pending press without allowing stale pointers to replay it', t => {
@@ -197,6 +211,7 @@ test('losing rage eligibility discards a pending press without allowing stale po
     f.down('rage', 1);
     if (released) f.end(1);
     f.down('fire', 2);
+    f.end(2);
     f.controls.setContext({ canRage: false });
     assert.equal(f.elements.get('rage').hidden, true);
     assert.equal(f.elements.get('rage').disabled, true);
@@ -205,7 +220,7 @@ test('losing rage eligibility discards a pending press without allowing stale po
     const frame = f.input.consumeFrame();
     assert.equal(frame.tPressed, false, `pending ${released ? 'tap' : 'hold'} was canceled`);
     assert.equal(frame.leftPressed, true, 'other pending touch actions survive');
-    assert.equal(frame.leftDown, true);
+    assert.equal(frame.leftDown, false);
     f.controls.setContext({ canRage: true });
     f.end(1);
     f.click('rage', 1);
@@ -216,7 +231,7 @@ test('losing rage eligibility discards a pending press without allowing stale po
   }
 });
 
-test('movement, look, and fire pointers stay independent while held and released', t => {
+test('movement, look, and fire pointers stay independent without firing while panning', t => {
   const f = fixture(t);
   f.down('move', 1);
   f.move(1, 228, 132);
@@ -227,8 +242,8 @@ test('movement, look, and fire pointers stay independent while held and released
   let frame = f.input.consumeFrame();
   assert.ok(frame.moveX > 0 && frame.moveY > 0);
   assert.ok(Math.abs(Math.hypot(frame.moveX, frame.moveY) - 1) < 1e-10);
-  assert.equal(frame.leftDown, true);
-  assert.equal(frame.leftPressed, true);
+  assert.equal(frame.leftDown, false);
+  assert.equal(frame.leftPressed, false);
   assert.equal(frame.dx, 25);
   assert.equal(frame.dy, -15);
   f.end(1);
@@ -236,14 +251,16 @@ test('movement, look, and fire pointers stay independent while held and released
   frame = f.input.consumeFrame();
   assert.equal(frame.moveX, 0);
   assert.equal(frame.moveY, 0);
-  assert.equal(frame.leftDown, true);
+  assert.equal(frame.leftDown, false);
   assert.equal(frame.leftPressed, false);
   assert.equal(frame.dx, 20);
   assert.equal(frame.dy, 12.5);
+  f.move(3, 650, 300);
   f.end(3);
   f.move(2, 514, 201);
   frame = f.input.consumeFrame();
   assert.equal(frame.leftDown, false);
+  assert.equal(frame.leftPressed, false, 'a fire drag cannot become a tap while another finger owns the camera');
   assert.equal(frame.dx, -10);
   assert.equal(frame.dy, 5);
   f.end(2);
@@ -251,25 +268,116 @@ test('movement, look, and fire pointers stay independent while held and released
   assertReleased(f.input);
 });
 
-test('dragging held fire rotates the camera without repeating the attack edge', t => {
+test('a completed fire tap tolerates small jitter and emits exactly one pulse on release', t => {
+  for (const jitter of [false, true]) {
+    const f = fixture(t);
+    const transitions = [];
+    const touchButton = f.input.touchButton.bind(f.input);
+    f.input.touchButton = (action, pressed) => {
+      if (action === 'fire') transitions.push(pressed);
+      touchButton(action, pressed);
+    };
+    f.down('fire', 4, { clientX: 600, clientY: 400, timeStamp: 1000 });
+    assertReleased(f.input);
+    if (jitter) {
+      f.move(4, 603, 404, { timeStamp: 1100 });
+      f.move(4, 606, 408, { timeStamp: 1200 });
+      const frame = f.input.consumeFrame();
+      assert.equal(frame.leftDown, false);
+      assert.equal(frame.leftPressed, false);
+      assert.equal(frame.dx, 15);
+      assert.equal(frame.dy, 20);
+    }
+    assert.deepEqual(transitions, [], 'pointerdown and aiming moves cannot issue fire commands');
+    f.end(4, 'pointerup', { timeStamp: 1300 });
+    const frame = f.input.consumeFrame();
+    assert.equal(frame.leftDown, false);
+    assert.equal(frame.leftPressed, true, 'a tap at the duration and movement limits is accepted');
+    assert.deepEqual(transitions, [true, false]);
+    f.end(4);
+    f.click('fire', 1);
+    assert.deepEqual(transitions, [true, false], 'stale release and compatibility click cannot replay the tap');
+    assertReleased(f.input);
+  }
+});
+
+test('fire rejects long holds and distant releases even when no pointermove was delivered', t => {
+  for (const { reason, duration, dx, dy } of [
+    { reason: 'held too long', duration: 301, dx: 0, dy: 0 },
+    { reason: 'released too far away', duration: 100, dx: 10.01, dy: 0 },
+    { reason: 'released diagonally outside the tap radius', duration: 100, dx: 8, dy: 8 },
+  ]) {
+    const f = fixture(t);
+    f.down('fire', 4, { clientX: 600, clientY: 400, timeStamp: 1000 });
+    assertReleased(f.input);
+    f.end(4, 'pointerup', { clientX: 600 + dx, clientY: 400 + dy, timeStamp: 1000 + duration });
+    const frame = f.input.consumeFrame();
+    assert.equal(frame.leftDown, false, reason);
+    assert.equal(frame.leftPressed, false, reason);
+    f.click('fire', 1);
+    assertReleased(f.input);
+  }
+});
+
+test('dragging fire rotates the camera and cannot fire even after returning to the start', t => {
   const f = fixture(t);
   f.down('fire', 4, { clientX: 600, clientY: 400 });
+  assertReleased(f.input);
   f.move(4, 620, 390);
   let frame = f.input.consumeFrame();
-  assert.equal(frame.leftDown, true);
-  assert.equal(frame.leftPressed, true);
+  assert.equal(frame.leftDown, false);
+  assert.equal(frame.leftPressed, false);
   assert.equal(frame.dx, 50);
   assert.equal(frame.dy, -25);
   f.move(4, 614, 396);
   frame = f.input.consumeFrame();
-  assert.equal(frame.leftDown, true);
+  assert.equal(frame.leftDown, false);
   assert.equal(frame.leftPressed, false);
   assert.equal(frame.dx, -15);
   assert.equal(frame.dy, 15);
+  f.move(4, 600, 400);
+  frame = f.input.consumeFrame();
+  assert.equal(frame.leftDown, false);
+  assert.equal(frame.leftPressed, false);
+  assert.equal(frame.dx, -35);
+  assert.equal(frame.dy, 10);
   f.end(4);
   f.move(4, 700, 500);
   f.click('fire', 1);
   assertReleased(f.input);
+});
+
+test('fire gestures cannot spend ammunition while aiming and a completed tap fires only once', t => {
+  const f = fixture(t);
+  const { Weapons, calls } = weaponHarness();
+  Weapons.init();
+  Weapons.restore({ current: 'machinegun', loaded: 3, reserve: 0 });
+  const step = () => {
+    Weapons.tick(1 / 60);
+    Weapons.handleInput(f.input.consumeFrame(), 1 / 60);
+  };
+  f.down('fire', 1, { clientX: 600, clientY: 400 });
+  step();
+  assert.equal(Weapons.loaded, 3, 'contact cannot fire before the gesture is known');
+  for (const [x, y] of [[620, 390], [640, 385], [600, 400]]) {
+    f.move(1, x, y);
+    step();
+    assert.equal(Weapons.loaded, 3, 'targeting cannot fire');
+  }
+  f.end(1);
+  step();
+  assert.equal(Weapons.loaded, 3, 'a completed pan cannot fire');
+  assert.equal(calls.shots.length, 0);
+  f.down('fire', 1);
+  step();
+  assert.equal(Weapons.loaded, 3);
+  f.end(1);
+  step();
+  assert.equal(Weapons.loaded, 2);
+  assert.equal(calls.shots.length, 1);
+  for (let frame = 0; frame < 60; frame++) step();
+  assert.equal(Weapons.loaded, 2, 'the tap cannot leave an automatic weapon firing');
+  assert.equal(calls.shots.length, 1);
 });
 
 test('releasing look or fire hands camera control to the other held finger without a jump', t => {
@@ -282,20 +390,20 @@ test('releasing look or fire hands camera control to the other held finger witho
     let frame = f.input.consumeFrame();
     assert.equal(frame.dx, 25);
     assert.equal(frame.dy, 25);
-    assert.equal(frame.leftPressed, true);
+    assert.equal(frame.leftPressed, false);
     f.end(1);
     f.move(2, 655, 336);
     frame = f.input.consumeFrame();
     assert.equal(frame.dx, 12.5, `${waiting} starts from its latest position`);
     assert.equal(frame.dy, -10, `${waiting} starts from its latest position`);
-    assert.equal(frame.leftDown, waiting === 'fire');
+    assert.equal(frame.leftDown, false);
     assert.equal(frame.leftPressed, false);
     f.end(2);
     assertReleased(f.input);
   }
 });
 
-test('a second finger cannot steal an owned stick or release an owned fire button', t => {
+test('a second finger cannot steal an owned stick or complete another finger’s fire tap', t => {
   const f = fixture(t);
   f.down('move', 1);
   f.move(1, 180, 132);
@@ -312,15 +420,21 @@ test('a second finger cannot steal an owned stick or release an owned fire butto
   assert.equal(frame.moveX, -1);
   assert.equal(Math.abs(frame.moveY), 0);
   f.down('fire', 3);
-  assert.equal(f.input.consumeFrame().leftPressed, true);
+  assert.equal(f.input.consumeFrame().leftPressed, false);
   f.down('fire', 4);
   f.end(4);
   frame = f.input.consumeFrame();
-  assert.equal(frame.leftDown, true);
+  assert.equal(frame.leftDown, false);
   assert.equal(frame.leftPressed, false);
+  assert.equal(f.elements.get('fire').hasPointerCapture(3), true);
+  assert.equal(f.elements.get('fire').hasPointerCapture(4), false);
   f.end(3);
-  assert.equal(f.input.consumeFrame().leftDown, false);
+  frame = f.input.consumeFrame();
+  assert.equal(frame.leftDown, false);
+  assert.equal(frame.leftPressed, true);
   f.down('fire', 5);
+  assert.equal(f.input.consumeFrame().leftPressed, false);
+  f.end(5);
   assert.equal(f.input.consumeFrame().leftPressed, true);
 });
 
@@ -338,12 +452,17 @@ test('pointer release, cancellation, and lost capture clear held controls and ig
       else f.end(pointerId, type);
       assert.equal(f.elements.get(action).hasPointerCapture(pointerId), false, `${type}: ${action}`);
     }
+    const frame = f.input.consumeFrame();
+    assert.equal(frame.leftDown, false);
+    assert.equal(frame.leftPressed, type === 'pointerup', `${type}: only a normal release completes the fire tap`);
     f.move(1, 250, 100);
     f.move(2, 300, 300);
     f.move(3, 300, 300);
     assertReleased(f.input);
     f.down('fire', 3);
-    assert.equal(f.input.consumeFrame().leftPressed, true, `${type} frees the old owner`);
+    assertReleased(f.input);
+    f.end(3);
+    assert.equal(f.input.consumeFrame().leftPressed, true, `${type} frees the old owner for a fresh tap`);
   }
 });
 
@@ -425,6 +544,23 @@ test('pause only activates on a completed press or native click and clears gamep
   assert.equal(f.input.active, false);
 });
 
+test('fire released while input is inactive is discarded and a fresh active tap still works', t => {
+  const f = fixture(t);
+  f.down('fire');
+  f.input.pause();
+  f.end(1);
+  assertReleased(f.input);
+  f.input.activate();
+  f.end(1);
+  assertReleased(f.input);
+  f.down('fire');
+  assertReleased(f.input);
+  f.end(1);
+  const frame = f.input.consumeFrame();
+  assert.equal(frame.leftPressed, true);
+  assert.equal(frame.leftDown, false);
+});
+
 test('reset, visibility changes, resize, rotation, and destruction clear touch state and ownership', t => {
   const resets = {
     reset: f => f.controls.reset(),
@@ -471,6 +607,8 @@ test('reset, visibility changes, resize, rotation, and destruction clear touch s
     f.end(3);
     assertReleased(f.input);
     f.down('fire', 3);
-    assert.equal(f.input.consumeFrame().leftPressed, true, `${reason}: fresh presses work after reset`);
+    assertReleased(f.input);
+    f.end(3);
+    assert.equal(f.input.consumeFrame().leftPressed, true, `${reason}: fresh taps work after reset`);
   }
 });
