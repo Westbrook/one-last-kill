@@ -27,7 +27,11 @@ export const GameTime = { elapsed: 0 };
 const frameBudget = new FrameBudget();
 export function configureRenderer() {
   const quality = Settings.get('quality');
-  const ratio = quality === 'high' ? 1.6 : quality === 'performance' ? 0.85 : frameBudget.scale;
+  // Spend the reviewed extra sampling on smaller high-DPI viewports. Do not
+  // increase large-window allocations beyond their previous 1.6× ceiling:
+  // only the additional headroom is limited to a four-megapixel buffer.
+  const highScale = Math.min(2, Math.max(1.6, Math.sqrt(4 * 1024 * 1024 / Math.max(1, innerWidth * innerHeight))));
+  const ratio = quality === 'high' ? highScale : quality === 'performance' ? 0.85 : frameBudget.scale;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, ratio));
   renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = quality !== 'performance';

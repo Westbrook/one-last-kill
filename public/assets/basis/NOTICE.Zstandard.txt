@@ -1,0 +1,15 @@
+Zstandard, xxHash, and Finite State Entropy attribution
+
+The following distinct copyright notices are retained from the headers of:
+https://raw.githubusercontent.com/BinomialLLC/basis_universal/v1_50_0/zstd/zstddeclib.c
+
+Copyright (c) 2016-2021, Yann Collet, Facebook, Inc.
+Copyright (c) 2016-2021, Facebook, Inc.
+Copyright (c) 2013-2021, Yann Collet, Facebook, Inc.
+Copyright (c) 2012-2021, Yann Collet, Facebook, Inc.
+Copyright (c) 2018-2021, Facebook, Inc.
+All rights reserved.
+
+These source headers offer the BSD-style license or GPLv2 at the recipient's
+option. This distribution uses the BSD alternative. Its complete copyright,
+conditions, and disclaimer are retained unchanged in LICENSE.Zstandard.txt.

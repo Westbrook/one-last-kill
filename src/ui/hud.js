@@ -21,6 +21,8 @@ const HUD = (() => {
   const healthtext = byId('healthtext');
   const healthbar = byId('healthbar');
   const vitals = byId('vitals');
+  const healthVignette = byId('healthvignette');
+  const healthWarningEl = byId('healthwarning');
   const weaponbox = byId('weaponbox');
   const weaponname = byId('weaponname');
   const ammoEl = byId('ammo');
@@ -49,7 +51,20 @@ const HUD = (() => {
   let messageTimer = 0, bloodOpacity = 0, hitTimer = 0, killTimer = 0, directionTimer = 0;
   let lastHeading = -1, lastOctant = -1;
   let threatPresentation = '', threatAngle = '', threatVisible = false;
+  let healthWarning = 'normal';
   const state = { health: 100, weapon: 'FISTS', ammo: '∞', kills: 0, shots: 0, hits: 0, headshots: 0, streak: 0, bestStreak: 0 };
+
+  function syncHealthWarning() {
+    const level = state.health > 0 && !deathEl.classList.contains('show')
+      ? state.health < 20 ? 'critical' : state.health < 40 ? 'low' : 'normal'
+      : 'normal';
+    if (level === healthWarning) return;
+    healthWarning = level;
+    healthVignette.dataset.level = level;
+    healthVignette.hidden = level === 'normal';
+    vitals.dataset.healthWarning = level;
+    write(healthWarningEl, level === 'critical' ? 'CRITICAL HEALTH' : level === 'low' ? 'LOW HEALTH' : '');
+  }
 
   function clearOffscreenThreat() {
     if (!threatVisible && !threatPresentation && !threatAngle && threatEl.hidden && threatEl.getAttribute('aria-hidden') === 'true') return;
@@ -120,12 +135,18 @@ const HUD = (() => {
   return {
     setHealth(value) {
       const health = clamp(nonNegative(value, 100), 0, 100);
-      if (state.health === health && healthbar.getAttribute('aria-valuenow') === String(Math.round(health))) return;
-      state.health = health;
-      healthfill.style.width = health + '%';
-      write(healthtext, Math.round(health));
-      healthbar.setAttribute('aria-valuenow', String(Math.round(health)));
-      vitals.dataset.low = String(health <= 30);
+      if (state.health !== health || healthbar.getAttribute('aria-valuenow') !== String(health)) {
+        state.health = health;
+        healthfill.style.width = health + '%';
+        write(healthtext, Math.round(health));
+        healthbar.setAttribute('aria-valuenow', String(health));
+        const low = String(health > 0 && health < 40);
+        if (vitals.dataset.low !== low) vitals.dataset.low = low;
+      }
+      syncHealthWarning();
+      const description = Math.round(health * 100) / 100 + ' percent health'
+        + (healthWarning === 'critical' ? '. Critical health.' : healthWarning === 'low' ? '. Low health.' : '.');
+      if (healthbar.getAttribute('aria-valuetext') !== description) healthbar.setAttribute('aria-valuetext', description);
     },
     setWeapon(name, ammoString) {
       state.weapon = String(name);
@@ -164,6 +185,9 @@ const HUD = (() => {
       deathEl.setAttribute('aria-hidden', String(!on));
       deathEl.setAttribute('role', 'dialog');
       deathEl.setAttribute('aria-modal', String(Boolean(on)));
+      // The persistent warning follows health, not the damage-flash timer.
+      // Recompute after a death/retry transition even if health is unchanged.
+      syncHealthWarning();
       if (on) {
         byId('overlay').classList.add('hidden');
         byId('restartbutton')?.focus({ preventScroll: true });
@@ -234,7 +258,7 @@ const HUD = (() => {
       }
     },
     snapshot() {
-      return { ...state, accuracy: state.shots ? Math.round(clamp(state.hits / state.shots, 0, 1) * 100) : 0 };
+      return { ...state, healthWarning, accuracy: state.shots ? Math.round(clamp(state.hits / state.shots, 0, 1) * 100) : 0 };
     },
     update(dt) {
       const delta = nonNegative(dt);

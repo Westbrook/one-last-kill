@@ -5,6 +5,8 @@ import { createFirstPersonHands, poseFirstPersonHands, punchExtension, FIRST_PER
 import { getViewModelMuzzle, VIEW_MODEL_LAYER } from '../../src/render/viewmodel.js';
 import { WEAPON_DEFS } from '../../src/game/weapon-data.js';
 import { weaponHarness } from './helpers/weapon-harness.js';
+import { createAuthoredGripHand, createHandDigits, getAuthoredHandGeometry } from '../../src/render/hand-geometry.js';
+import { HAND_ATLAS } from '../../src/render/hand-materials.js';
 
 // Traverse the actual vertices, including every instance. A union of rotated
 // boxes can greatly overstate the size of a curved finger or diagonal wrist.
@@ -17,7 +19,7 @@ function visitVertices(root, visitor) {
     for (let slot = 0; slot < (object.isInstancedMesh ? object.count : 1); slot++) {
       matrix.copy(object.matrixWorld);
       if (object.isInstancedMesh) { object.getMatrixAt(slot, instance); matrix.multiply(instance); }
-      for (let i = 0; i < positions.count; i++) visitor(point.fromBufferAttribute(positions, i).applyMatrix4(matrix), object);
+      for (let i = 0; i < positions.count; i++) visitor(object.getVertexPosition(i, point).applyMatrix4(matrix), object);
     }
   });
 }
@@ -36,16 +38,17 @@ test('two articulated fists share geometry and remain within a small draw budget
     assert.notEqual(object.geometry.type, 'RoundedBoxGeometry');
     assert.equal(object.castShadow, false); assert.equal(object.receiveShadow, false);
   });
-  assert.equal(meshes, 12); assert.ok(triangles <= 9000);
-  assert.equal(hands.left.palm.geometry, hands.right.palm.geometry);
-  assert.equal(hands.left.segments.geometry, b.userData.firstPersonHands.right.segments.geometry);
-  assert.equal(hands.left.knuckles.geometry, hands.right.knuckles.geometry);
-  assert.equal(hands.left.segments.material, hands.right.segments.material);
+  assert.equal(meshes, 6); assert.ok(triangles <= 9000);
+  assert.equal(hands.left.surface.geometry, b.userData.firstPersonHands.left.surface.geometry);
+  assert.equal(hands.right.surface.geometry, b.userData.firstPersonHands.right.surface.geometry);
+  assert.equal(hands.left.sleeve.geometry, hands.right.sleeve.geometry);
+  assert.equal(hands.left.surface.material, hands.right.surface.material);
   for (const rig of hands.order) {
     assert.equal(rig.fingers.length, 4);
     assert.equal(rig.thumb.joints.length, 3);
-    assert.equal(rig.segments.count, 15); assert.equal(rig.knuckles.count, 15);
-    assert.equal(rig.palm.geometry.type, 'SphereGeometry');
+    assert.equal(rig.surface.geometry.type, 'BufferGeometry');
+    assert.equal(rig.surface.geometry.morphAttributes.position.length, 1);
+    assert.equal(rig.surface.geometry.morphAttributes.normal.length, 1);
   }
 });
 
@@ -136,11 +139,107 @@ test('poses depend on simulation state rather than frame history and avoid repea
   for (const side of ['left', 'right']) {
     const a = stepped.userData.firstPersonHands[side], b = direct.userData.firstPersonHands[side];
     assert.deepEqual(a.hand.position.toArray(), b.hand.position.toArray());
-    assert.deepEqual(Array.from(a.segments.instanceMatrix.array), Array.from(b.segments.instanceMatrix.array));
-    const buffer = a.segments.instanceMatrix.array, version = a.segments.instanceMatrix.version;
+    assert.deepEqual(a.surface.morphTargetInfluences, b.surface.morphTargetInfluences);
+    const buffer = a.surface.geometry.attributes.position.array, version = a.surface.geometry.attributes.position.version;
+    const morph = a.surface.geometry.morphAttributes.position[0], morphVersion = morph.version;
     poseFirstPersonHands(stepped, 0.23, 1, 2, 0.5);
-    assert.equal(a.segments.instanceMatrix.array, buffer);
-    assert.equal(a.segments.instanceMatrix.version, version);
+    assert.equal(a.surface.geometry.attributes.position.array, buffer);
+    assert.equal(a.surface.geometry.attributes.position.version, version);
+    assert.equal(a.surface.geometry.morphAttributes.position[0], morph); assert.equal(morph.version, morphVersion);
+  }
+});
+
+test('authored palm, fingers and thumb form one closed, consistently wound surface', () => {
+  for (const side of [-1, 1]) {
+    for (const radius of [null, 0.015, 0.022, 0.030, 0.032, 0.036, 0.038, 0.040, 0.044]) {
+      const geometry = getAuthoredHandGeometry(side, radius), edges = new Map(), adjacency = new Map();
+      const indices = geometry.index.array, positions = geometry.attributes.position;
+      // Authored UV islands duplicate coincident vertices at the glove edge.
+      // Weld positions for physical topology, as an exported mesh validator does.
+      const vertices = new Map(), vertexIds = [];
+      for (let i = 0; i < positions.count; i++) {
+        const key = [positions.getX(i), positions.getY(i), positions.getZ(i)].map(value => Math.round(value * 1e8)).join(':');
+        if (!vertices.has(key)) vertices.set(key, vertices.size);
+        vertexIds.push(vertices.get(key));
+      }
+      let signedVolume = 0;
+      const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+      for (let i = 0; i < indices.length; i += 3) {
+        a.fromBufferAttribute(positions, indices[i]); b.fromBufferAttribute(positions, indices[i + 1]); c.fromBufferAttribute(positions, indices[i + 2]);
+        signedVolume += a.dot(b.cross(c)) / 6;
+        for (let corner = 0; corner < 3; corner++) {
+          const first = vertexIds[indices[i + corner]], second = vertexIds[indices[i + (corner + 1) % 3]];
+          const key = `${Math.min(first, second)}:${Math.max(first, second)}`;
+          const edge = edges.get(key) || { count: 0, winding: 0 };
+          edge.count++; edge.winding += first < second ? 1 : -1; edges.set(key, edge);
+          if (!adjacency.has(first)) adjacency.set(first, new Set());
+          adjacency.get(first).add(second);
+        }
+      }
+      for (const edge of edges.values()) { assert.equal(edge.count, 2, 'no exposed joint cracks'); assert.equal(edge.winding, 0, 'consistent face winding'); }
+      const visited = new Set(), pending = [vertexIds[indices[0]]];
+      while (pending.length) {
+        const vertex = pending.pop(); if (visited.has(vertex)) continue;
+        visited.add(vertex); pending.push(...adjacency.get(vertex));
+      }
+      assert.equal(visited.size, vertices.size, 'all digits and the thumb are attached to the palm topology');
+      assert.ok(signedVolume > 0.00025 && signedVolume < 0.00040, 'outward-facing human hand volume');
+      for (let i = 0; i < positions.count; i++) {
+        const normalLength = a.fromBufferAttribute(geometry.attributes.normal, i).length();
+        assert.ok(Math.abs(normalLength - 1) < 1e-6, 'no collapsed shading normals');
+        const displacement = a.fromBufferAttribute(geometry.morphAttributes.position[0], i).length();
+        assert.ok(Number.isFinite(displacement) && displacement < 0.003, 'UV seam repair must preserve clench target vertex correspondence');
+        const u = geometry.attributes.uv.getX(i), v = geometry.attributes.uv.getY(i), atlas = HAND_ATLAS[v < 0.5 ? 'skin' : 'glove'];
+        assert.ok(u >= atlas.uMin - 1e-7 && u <= atlas.uMax + 1e-7 && v >= atlas.vMin - 1e-7 && v <= atlas.vMax + 1e-7,
+          'large stock grips and seam repairs must stay inside the padded material atlas');
+      }
+      for (let i = 0; i < indices.length; i += 3) {
+        const atlasHalves = [0, 1, 2].map(corner => geometry.attributes.uv.getY(indices[i + corner]) < 0.5);
+        assert.ok(atlasHalves.every(skin => skin === atlasHalves[0]), 'no triangle samples across two atlas materials');
+        if (!atlasHalves[0]) {
+          const localV = [0, 1, 2].map(corner => (geometry.attributes.uv.getY(indices[i + corner]) - 136 / 256) / (112 / 256));
+          assert.ok(Math.max(...localV) - Math.min(...localV) < 0.4,
+            'a finger/thumb collar cannot stretch the dorsal glove panel down its first loft strip');
+        }
+      }
+    }
+  }
+});
+
+test('static firearm grips own disposable buffers and preserve shared dynamic hand resources', () => {
+  const dynamic = getAuthoredHandGeometry(1, 0.022), original = dynamic.attributes.position.array.slice();
+  const grip = createAuthoredGripHand(), second = createAuthoredGripHand();
+  assert.ok(grip.userData.presentation.triangles <= 4000);
+  assert.deepEqual(grip.userData.wristAnchor.toArray(), [0, 0.006, 0.152]);
+  const surface = grip.children[0];
+  assert.notEqual(surface.geometry, dynamic); assert.notEqual(surface.geometry, second.children[0].geometry);
+  assert.equal(surface.material, second.children[0].material); assert.deepEqual(surface.geometry.morphAttributes, {});
+  surface.geometry.translate(4, 5, 6); surface.geometry.dispose();
+  assert.deepEqual(dynamic.attributes.position.array, original, 'weapon batching cannot mutate cached fist/bat geometry');
+});
+
+test('grip fingers retain distinct human-scale reaches as the held stock gets wider', () => {
+  for (const side of [-1, 1]) {
+    for (const radius of [0.015, 0.022, 0.030, 0.032, 0.036, 0.040, 0.044]) {
+      const { fingers } = createHandDigits(side, radius);
+      const lengths = fingers.map(digit => new THREE.CatmullRomCurve3([
+        new THREE.Vector3(digit.rest[0].x, 0.009, -0.032), ...digit.rest,
+      ], false, 'centripetal').getLength());
+      assert.ok(lengths[1] > lengths[0] + 0.004, 'middle finger reaches beyond the index');
+      assert.ok(lengths[2] > lengths[0] && lengths[2] < lengths[1], 'ring finger lies between index and middle');
+      assert.ok(lengths[3] < lengths[1] * 0.90, 'little finger is visibly shorter instead of a fourth equal band');
+      for (const length of lengths) assert.ok(length > 0.055 && length < 0.132,
+        'a wider stock cannot stretch the fingers to match its full circumference');
+      const tips = fingers.map(digit => digit.rest.at(-1));
+      assert.ok(Math.abs(tips[3].y - tips[1].y) > 0.005, 'fingertip curl does not end on one straight cross-hand line');
+      for (const digit of fingers) {
+        for (const point of digit.rest) {
+          const distance = Math.hypot(point.y + 0.010, point.z + 0.060);
+          assert.ok(distance > radius + digit.radius - 0.002 && distance < radius + digit.radius,
+            'individual reach preserves the known inward grip contact envelope');
+        }
+      }
+    }
   }
 });
 

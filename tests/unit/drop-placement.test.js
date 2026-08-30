@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { placeWeaponDrop } from '../../src/game/drop-placement.js';
 import { BAT_DIMENSIONS, createBatAsset } from '../../src/render/bat-asset.js';
 import { weaponHarness } from './helpers/weapon-harness.js';
+import { getNPCFirearmGeometry } from '../../src/render/npc-firearms.js';
 
 const box = (x1, x2, y1, y2, z1, z2) => new THREE.Box3(new THREE.Vector3(x1, y1, z1), new THREE.Vector3(x2, y2, z2));
 const types = ['bat', 'knife', 'pistol', 'shotgun', 'smg', 'machinegun'];
@@ -58,6 +59,27 @@ test('stair pickups can settle across a tread without floating in the riser face
     assert.equal(placed.settled, true, `${type}, tread ${index}, yaw ${yaw}`);
     assert.ok(treads.every(tread => !bounds.intersectsBox(tread)), `${type} intersects a stair`);
     assert.ok(Math.hypot(mesh.position.x - 0.7, mesh.position.z - (index * 0.3 + 0.03)) <= 0.201);
+  }
+});
+
+test('full-length authored firearms settle without shrinking their shared held geometry', () => {
+  const { WeaponDrops } = weaponHarness();
+  const floor = box(-1.2, 1.2, 3.8, 4, 0, 0.3);
+  for (const type of ['pistol', 'shotgun', 'smg', 'machinegun']) {
+    const mesh = WeaponDrops._build(type), child = mesh.getObjectByName(`drop-model:${type}`);
+    const source = getNPCFirearmGeometry(type), original = source.attributes.position.array.slice();
+    const before = new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3());
+    assert.equal(child.geometry, source, `${type}: drop and held weapon use identical source vertices`);
+    assert.ok(Math.abs(before.x - (source.boundingBox.max.z - source.boundingBox.min.z)) < 1e-7,
+      `${type}: the pickup retains the full authored stock-to-muzzle length`);
+    assert.deepEqual(child.scale.toArray(), [1, 1, 1]);
+    const placement = placeWeaponDrop(mesh, type, { x: 0.7, y: 4.5, z: 0.15 }, [floor], 0.37);
+    const bounds = new THREE.Box3().setFromObject(mesh);
+    assert.equal(placement.settled, true, type);
+    assert.ok(Math.abs(bounds.min.y - 4.006) < 1e-6, `${type}: the real mesh rests above the tread`);
+    assert.ok(bounds.min.x >= floor.min.x && bounds.max.x <= floor.max.x, `${type}: full stock and barrel fit`);
+    assert.ok(bounds.min.z >= floor.min.z && bounds.max.z <= floor.max.z, `${type}: grip and magazine fit`);
+    assert.deepEqual(source.attributes.position.array, original, `${type}: settling does not rotate or shrink held buffers`);
   }
 });
 

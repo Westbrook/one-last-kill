@@ -13,6 +13,15 @@ import { createDoorAssemblies } from '../../src/world/door-assemblies.js';
 import { Colliders, capsuleHasClearance } from '../../src/core/collision.js';
 import { CHECKPOINTS } from '../../src/game/mission-data.js';
 import { mulberry32, TAU } from '../../src/core/math.js';
+import { createStaticSurfaceBatch } from '../../src/render/static-surface-batch.js';
+import { buildExteriorDetail, finishExteriorMaterials } from '../../src/render/exterior-detail.js';
+import { buildBakeryStoryDetail } from '../../src/render/bakery-story-detail.js';
+import { addBakeryBread, addBakeryPackage } from '../../src/render/bakery-provisions.js';
+import { getBakeryProvisionMaterials } from '../../src/render/bakery-provision-materials.js';
+import { addCrtHousing } from '../../src/render/crt-housing.js';
+import { refineConcreteBarrier } from '../../src/render/street-barrier.js';
+import { createSedanCabin } from '../../src/render/sedan-cabin.js';
+import { createSedanBumper, createSedanHood } from '../../src/render/sedan-panels.js';
 
 // Execute the authored builders with real Three.js math/geometry and injected
 // scene services. Their browser-facing imports are deliberately not evaluated:
@@ -72,9 +81,10 @@ function buildFixture() {
   }
   const WorldState = { bakeryLights: [], smokeSystems: [], flickerLights: [], fires: [] };
   const bindings = {
+    refineConcreteBarrier,
     THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, BALCONY, ROOF, APARTMENT_DOORS, DISTRICT, createInteriorProps, createDoorAssemblies,
     World, WorldState, MATS, _CG, _BG, Colliders,
-    addBox, addWallZ, addSign, pushDecor,
+    addBox, addWallZ, addSign, pushDecor, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, addCrtHousing, createSedanCabin, createSedanBumper, createSedanHood,
     addDecor: (x, y, z, sx, sy, sz, material) => addBox(x, y, z, sx, sy, sz, material, { collide: false }),
     makeSignTexture: () => new THREE.Texture(),
     makeHumanoid: () => new THREE.Group(), HUMANOID_PRESETS: { shopkeeper: {} },
@@ -102,7 +112,7 @@ function buildFixture() {
     },
   };
   const environment = loadBuilder('../../src/render/environment.js', {
-    ...bindings, scene, camera: new THREE.PerspectiveCamera(), mulberry32, TAU, document,
+    ...bindings, scene, camera: new THREE.PerspectiveCamera(), mulberry32, TAU, document, createStaticSurfaceBatch, buildExteriorDetail, finishExteriorMaterials, buildBakeryStoryDetail,
   }, ['buildEnvironment']);
   environment.buildEnvironment();
   World.updateMatrixWorld(true);
@@ -166,9 +176,21 @@ test('table, chair and counter supports reach their surfaces and floor', () => {
     near(leg.min.y, bounds('neighbor-floor').max.y, `table leg ${i} foot`);
     near(leg.max.y, bounds('neighbor-dining-top').min.y, `table leg ${i} top`);
   }
-  const chairLegs = fixture.decorations.filter(item => item.sx === 0.055 && item.sy === 0.39 && item.sz === 0.055);
+  // Authored legs carry their real dimensions in the geometry; inspect the
+  // rendered bounds instead of assuming every decoration is a scaled cube.
+  const chairLegs = [];
+  fixture.World.traverse(mesh => {
+    if (!mesh.isMesh) return;
+    const size = new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3());
+    if (Math.abs(size.x - 0.055) < 1e-5 && Math.abs(size.y - 0.39) < 1e-5
+      && Math.abs(size.z - 0.055) < 1e-5) chairLegs.push(mesh);
+  });
   assert.equal(chairLegs.length, 8);
-  for (const leg of chairLegs) near(leg.y - leg.sy / 2, BUILDING.apartmentY, 'chair foot');
+  for (const leg of chairLegs) {
+    const actual = new THREE.Box3().setFromObject(leg);
+    near(actual.min.y, BUILDING.apartmentY, 'chair foot');
+    near(actual.max.y, BUILDING.apartmentY + 0.39, 'chair seat connection');
+  }
   near(bounds('bakery-counter-base').min.y, bounds('bakery-floor').max.y, 'counter base');
   near(bounds('bakery-counter-base').max.y, bounds('bakery-counter-top').min.y, 'counter top');
 });

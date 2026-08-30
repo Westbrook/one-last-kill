@@ -49,7 +49,7 @@ bind(IMPACT_PROFILES.metal, ['metal', 'roofMetal', 'roof-metal', 'roof_metal', '
 bind(IMPACT_PROFILES.concrete, ['concrete', 'agedStone', 'aged-stone', 'stone', 'gravel']);
 bind(IMPACT_PROFILES.plaster, ['plaster', 'wallpaper', 'tile', 'ceramic']);
 bind(IMPACT_PROFILES.brick, ['brick', 'masonry']);
-bind(IMPACT_PROFILES.dark, ['tar', 'asphalt', 'rubber', 'roof']);
+bind(IMPACT_PROFILES.dark, ['tar', 'asphalt', 'rubber', 'roof', 'fabric', 'cloth']);
 bind(IMPACT_PROFILES.wood, ['wood', 'timber', 'plywood', 'floorboards', 'bat-aged-wood']);
 bind(IMPACT_PROFILES.glass, ['glass', 'glazing', 'window']);
 Object.freeze(aliases);

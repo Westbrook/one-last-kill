@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { MATS } from '../../render/materials.js';
+import { applyWaterTankStaveUV } from '../../render/water-tank-uv.js';
 import { _BG, pushDecor } from '../../render/models.js';
 import { Colliders } from '../../core/collision.js';
 import { BUILDING, ROOF, OPENINGS } from '../layout.js';
@@ -185,7 +186,7 @@ function buildWaterTank() {
     });
   }
   for (const [i, x] of [-9, -7].entries()) addBeam(`tank-brace-${i}`, [x, y + 0.1, -3], [x, y + 2.1, -1], 0.055, [legIds[i], legIds[i + 2]]);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 2.2, 48), MATS.wood);
+  const barrel = new THREE.Mesh(applyWaterTankStaveUV(new THREE.CylinderGeometry(1.4, 1.4, 2.2, 48)), MATS.wood);
   barrel.position.set(-8, y + 3.3, -2); barrel.castShadow = true; barrel.receiveShadow = true; World.add(barrel);
   const bounds = boxBounds(-8, y + 3.3, -2, 2.8, 2.2, 2.8);
   Architecture.register(barrel, Colliders.addBox(bounds.min, bounds.max), bounds, { id: 'water-tank', kind: 'tank', supports: cradleIds });

@@ -8,6 +8,7 @@ import { BUILDING, ROOF, OPENINGS } from '../../src/world/layout.js';
 import { STAIRS } from '../../src/world/stair-layout.js';
 import { Architecture, boxBounds } from '../../src/world/architecture.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
+import { applyWaterTankStaveUV } from '../../src/render/water-tank-uv.js';
 
 function buildTransition() {
   Architecture.clear(); Colliders.clear();
@@ -41,7 +42,7 @@ function buildTransition() {
     Architecture.register(mesh, null, new THREE.Box3().setFromObject(mesh), { id, kind: 'beam', supports, supportKind: 'anchored' });
   }
   const bindings = {
-    THREE, mergeGeometries, BUILDING, ROOF, OPENINGS, STAIRS, World, MATS, Colliders, Architecture, boxBounds,
+    THREE, mergeGeometries, BUILDING, ROOF, OPENINGS, STAIRS, World, MATS, Colliders, Architecture, boxBounds, applyWaterTankStaveUV,
     _BG: { unitBox: new THREE.BoxGeometry(1, 1, 1), pipe: new THREE.CylinderGeometry(1, 1, 1, 8) },
     addBox, pushDecor, addBeam, addSign() {}, Triggers: { add() {} },
     addDecor: (x, y, z, sx, sy, sz, material) => addBox(x, y, z, sx, sy, sz, material, { collide: false }),

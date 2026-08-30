@@ -13,18 +13,24 @@ function fixture() {
   const document = {
     getElementById(id) {
       if (!elements.has(id)) {
-        const classes = new Set(), attributes = new Map(), properties = new Map();
-        const writes = { text: 0, attributes: 0, style: 0 };
+        const tag = markup.match(new RegExp('<[a-z][a-z0-9]*\\b[^>]*\\bid="' + id + '"[^>]*>', 'i'))?.[0] ?? '';
+        const classes = new Set(), properties = new Map();
+        const attributes = new Map(Array.from(tag.matchAll(/([\w:-]+)="([^"]*)"/g), match => [match[1], match[2]]));
+        const writes = { text: 0, attributes: 0, style: 0, dataset: 0, hidden: 0 };
+        let hidden = /\shidden(?:\s|>)/.test(tag);
+        const dataset = Object.fromEntries(Array.from(attributes).filter(([name]) => name.startsWith('data-')).map(([name, value]) => [name.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), value]));
         let content = '';
         elements.set(id, {
           get textContent() { return content; },
           set textContent(value) { content = String(value); writes.text++; },
-          hidden: false, dataset: {}, writes,
-          style: {
+          get hidden() { return hidden; },
+          set hidden(value) { hidden = Boolean(value); writes.hidden++; },
+          dataset: new Proxy(dataset, { set(target, name, value) { target[name] = value; writes.dataset++; return true; } }), writes,
+          style: new Proxy({
             setProperty(name, value) { properties.set(name, String(value)); writes.style++; },
             removeProperty(name) { const old = properties.get(name) ?? ''; properties.delete(name); writes.style++; return old; },
             getPropertyValue(name) { return properties.get(name) ?? ''; },
-          },
+          }, { set(target, name, value) { target[name] = value; writes.style++; return true; } }),
           focus() {},
           classList: {
             add(...names) { for (const name of names) classes.add(name); },
@@ -56,6 +62,122 @@ test('initial HUD describes fists and hides an inactive reload from accessibilit
   assert.match(markup, /id="weaponname">FISTS<\/div>/);
   assert.match(markup, /id="ammo" aria-label="Unlimited melee attacks"/);
   assert.match(markup, /id="reloadindicator" aria-hidden="true"/);
+});
+
+test('low-health warning uses strict 40 and 20 percent boundaries, including fractional damage', () => {
+  const { hud, element } = fixture();
+  const vignette = element('healthvignette'), warning = element('healthwarning');
+  for (const [health, expected] of [[100, 'normal'], [40, 'normal'], [39.99, 'low'], [20, 'low'], [19.99, 'critical'], [1, 'critical']]) {
+    hud.setHealth(health);
+    assert.equal(hud.snapshot().health, health, 'presentation does not round simulation health');
+    assert.equal(hud.snapshot().healthWarning, expected);
+    assert.equal(vignette.dataset.level, expected);
+    assert.equal(vignette.hidden, expected === 'normal');
+    assert.equal(element('vitals').dataset.healthWarning, expected);
+    assert.equal(element('healthbar').getAttribute('aria-valuenow'), String(health));
+    assert.equal(warning.textContent, expected === 'critical' ? 'CRITICAL HEALTH' : expected === 'low' ? 'LOW HEALTH' : '');
+  }
+  assert.equal(element('healthbar').getAttribute('aria-valuetext'), '1 percent health. Critical health.');
+});
+
+test('healing reduces critical warning to low and clears it at exactly 40 percent', () => {
+  const { hud, element } = fixture();
+  hud.setHealth(8);
+  hud.setHealth(20);
+  assert.equal(element('healthvignette').dataset.level, 'low');
+  assert.equal(element('healthwarning').textContent, 'LOW HEALTH');
+  assert.equal(element('healthbar').getAttribute('aria-valuetext'), '20 percent health. Low health.');
+  hud.setHealth(40);
+  assert.equal(element('healthvignette').hidden, true);
+  assert.equal(element('healthwarning').textContent, '');
+  assert.equal(element('vitals').dataset.low, 'false');
+  assert.equal(element('healthbar').getAttribute('aria-valuetext'), '40 percent health.');
+  hud.setHealth(100);
+  assert.equal(hud.snapshot().healthWarning, 'normal');
+});
+
+test('persistent health warning survives elapsed time and transient feedback clears independently', () => {
+  const { hud, element } = fixture();
+  hud.setHealth(25);
+  hud.bloodFlash(0.8);
+  assert.equal(element('bloodvignette').style.opacity, '0.800');
+  hud.update(10);
+  assert.equal(element('bloodvignette').style.opacity, '0.000');
+  assert.equal(element('healthvignette').hidden, false);
+  assert.equal(hud.snapshot().healthWarning, 'low');
+  hud.bloodFlash(1);
+  hud.clearFeedback();
+  assert.equal(element('bloodvignette').style.opacity, '0');
+  assert.equal(element('healthvignette').hidden, false, 'clearing a hit flash must not erase actual low health');
+  assert.equal(element('healthwarning').textContent, 'LOW HEALTH');
+});
+
+test('death hides the persistent cue, rejects late low-health painting, and retry restores normal', () => {
+  const { hud, element } = fixture();
+  hud.setHealth(15);
+  hud.showDeath(true);
+  assert.equal(element('healthvignette').hidden, true);
+  assert.equal(element('healthwarning').textContent, '');
+  hud.setHealth(9);
+  assert.equal(element('healthvignette').hidden, true);
+  assert.equal(hud.snapshot().healthWarning, 'normal');
+  hud.setHealth(100);
+  hud.showDeath(false);
+  assert.equal(hud.snapshot().health, 100);
+  assert.equal(element('healthvignette').hidden, true);
+  assert.equal(element('healthwarning').textContent, '');
+  hud.setHealth(39);
+  assert.equal(element('healthvignette').hidden, false, 'a later life can warn normally');
+  hud.setHealth(0);
+  assert.equal(element('healthvignette').hidden, true, 'zero health clears even before the death dialog arrives');
+});
+
+test('repeated health updates and simulation ticks do not rewrite the persistent effect', () => {
+  const { hud, element } = fixture();
+  const ids = ['healthvignette', 'healthwarning', 'healthbar', 'healthtext', 'healthfill', 'vitals'];
+  for (const health of [100, 39, 20, 19, 0, 100]) {
+    hud.setHealth(health);
+    const writes = ids.map(id => ({ ...element(id).writes }));
+    for (let frame = 0; frame < 120; frame++) {
+      hud.setHealth(health);
+      hud.update(1 / 120);
+    }
+    assert.deepEqual(ids.map(id => ({ ...element(id).writes })), writes);
+  }
+  hud.setHealth(19);
+  const writes = ['healthvignette', 'healthwarning'].map(id => ({ ...element(id).writes }));
+  hud.setHealth(18);
+  assert.deepEqual(['healthvignette', 'healthwarning'].map(id => ({ ...element(id).writes })), writes, 'same severity does not repaint the screen-wide effect');
+});
+
+test('health display clamps invalid input without creating a stuck critical effect', () => {
+  const { hud, element } = fixture();
+  for (const value of [NaN, Infinity, undefined, 500]) {
+    hud.setHealth(10);
+    hud.setHealth(value);
+    assert.equal(hud.snapshot().health, 100);
+    assert.equal(element('healthvignette').hidden, true);
+  }
+  hud.setHealth(-1);
+  assert.equal(hud.snapshot().health, 0);
+  assert.equal(element('healthvignette').hidden, true);
+});
+
+test('health effect is a static full-screen layer below reticle text and respects HUD modal visibility', () => {
+  assert.match(markup, /id="healthvignette"[^>]*aria-hidden="true"[^>]* hidden>/);
+  assert.match(markup, /id="healthwarning"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
+  const rule = styles.match(/#healthvignette\s*\{([^}]+)\}/)?.[1];
+  assert.ok(rule);
+  assert.match(rule, /position:\s*absolute/);
+  assert.match(rule, /inset:\s*0/);
+  assert.match(rule, /z-index:\s*-1/);
+  assert.match(rule, /pointer-events:\s*none/);
+  assert.match(rule, /animation:\s*none/);
+  assert.match(rule, /transition:\s*none/);
+  assert.doesNotMatch(rule, /(?:backdrop-filter|filter|will-change):/);
+  assert.match(styles, /#healthvignette\[data-level="critical"\]/);
+  assert.match(styles, /body:has\(#overlay:not\(\.hidden\)\) #hud, body:has\(#introcard\.show\) #hud, body:has\(#endcard\.show\) #hud \{ visibility: hidden; \}/);
+  assert.match(styles, /body:has\(#deathscreen\.show\) #healthvignette, body:has\(#deathscreen\.show\) #healthwarning \{ display: none; \}/);
 });
 
 test('switching from a firearm to fists clears the ammunition presentation', () => {

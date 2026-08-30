@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
-  createHumanoidRig, attachHeldWeapon, updateHumanoidPose, resetHumanoidPose,
+  createHumanoidRig, attachHeldWeapon, updateHumanoidPose, resetHumanoidPose, getHumanoidVisualBounds,
 } from '../../src/render/humanoid-rig.js';
 import { sampleBatMotion, NPC_BAT_CONTACT_PHASE } from '../../src/render/humanoid-motion.js';
 import { BAT_DIMENSIONS } from '../../src/render/bat-asset.js';
@@ -241,7 +241,7 @@ test('pool resets preserve shared geometry, motion caches and bat anchors over r
     for (let frame = 0; frame <= 30; frame++) updateHumanoidPose(root, state(frame / 30), 1 / 60);
     resetHumanoidPose(root);
     assert.equal(rig.motion, motion);
-    assert.deepEqual(rig.motion, { batReady: 0, stance: 0 });
+    assert.deepEqual(rig.motion, { batReady: 0, stance: 0, walk: 0, stride: 0 });
     assert.equal(rig.anchors.weaponTip, tip); assert.equal(rig.anchors.weaponStrikeCenter, strike);
     assert.deepEqual(bat.children, children);
     assert.deepEqual(rig.bodyMeshes.map(mesh => mesh.geometry), geometry);
@@ -279,9 +279,9 @@ test('captured raised guards, windup, contact and recovery still collapse inside
       for (let frame = 0; frame <= 60; frame++) {
         updateHumanoidCollapse(root, frame / 60);
         root.updateMatrixWorld(true);
-        const box = new THREE.Box3();
-        for (const mesh of root.userData.rig.bodyMeshes) box.union(new THREE.Box3().setFromObject(mesh));
-        near(box.min.y, BALCONY.floorY + 0.004);
+        const box = getHumanoidVisualBounds(root, new THREE.Box3());
+        assert.ok(box.min.y >= BALCONY.floorY - 1e-6 && box.min.y <= BALCONY.floorY + 0.008,
+          `Actual deformed surface must meet the floor within 8mm: ${box.min.y - BALCONY.floorY}`);
         assert.ok(box.min.z >= BALCONY.wrap.z1 + 0.1 - 1e-6);
         assert.ok(box.max.z <= BALCONY.wrap.z2 - 0.1 + 1e-6);
       }

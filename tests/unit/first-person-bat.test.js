@@ -15,7 +15,7 @@ function visitVertices(root, visitor) {
     for (let slot = 0; slot < (object.isInstancedMesh ? object.count : 1); slot++) {
       matrix.copy(object.matrixWorld);
       if (object.isInstancedMesh) { object.getMatrixAt(slot, instance); matrix.multiply(instance); }
-      for (let i = 0; i < positions.count; i++) visitor(point.fromBufferAttribute(positions, i).applyMatrix4(matrix), object);
+      for (let i = 0; i < positions.count; i++) visitor(object.getVertexPosition(i, point).applyMatrix4(matrix), object);
     }
   });
 }
@@ -35,8 +35,9 @@ test('first-person bat keeps the canonical dimensions and shares both weapon and
   assert.equal(rig.asset.getObjectByName('bat-wood').geometry, worldBat.getObjectByName('bat-wood').geometry);
   assert.equal(rig.asset.getObjectByName('bat-grip').material, worldBat.getObjectByName('bat-grip').material);
   const grip = rig.hands.userData.firstPersonGripHands;
-  assert.equal(grip.left.palm.geometry, fists.userData.firstPersonHands.left.palm.geometry);
-  assert.equal(grip.right.segments.geometry, other.userData.firstPersonBat.hands.userData.firstPersonGripHands.right.segments.geometry);
+  assert.equal(grip.left.surface.material, fists.userData.firstPersonHands.left.surface.material);
+  assert.equal(grip.left.sleeve.geometry, fists.userData.firstPersonHands.left.sleeve.geometry);
+  assert.equal(grip.right.surface.geometry, other.userData.firstPersonBat.hands.userData.firstPersonGripHands.right.surface.geometry);
   let meshes = 0, triangles = 0;
   model.traverse(object => {
     if (!object.isMesh || !object.visible) return;
@@ -44,7 +45,7 @@ test('first-person bat keeps the canonical dimensions and shares both weapon and
     assert.equal(object.castShadow, false); assert.equal(object.receiveShadow, false);
     assert.notEqual(object.geometry.type, 'BoxGeometry'); assert.notEqual(object.geometry.type, 'RoundedBoxGeometry');
   });
-  assert.equal(meshes, 12); assert.ok(triangles <= 10_000, `first-person triangles ${triangles}`);
+  assert.equal(meshes, 8); assert.ok(triangles <= 10_000, `first-person triangles ${triangles}`);
 });
 
 test('idle guard holds the full-size barrel upright and slightly back beside the right shoulder', () => {
@@ -99,6 +100,12 @@ test('each articulated finger wraps the handle and both hands stay fixed to thei
         for (let i = 0; i < 3; i++) assert.ok(finger.joints[i].distanceTo(finger.joints[i + 1]) < 0.03);
       }
       assert.ok(hand.thumb.joints[2].z < hand.thumb.joints[0].z - 0.05, 'opposed thumb closes over the handle');
+      const point = new THREE.Vector3(), vertexCount = hand.surface.geometry.attributes.position.count;
+      for (let i = 0; i < vertexCount; i++) {
+        hand.surface.getVertexPosition(i, point);
+        const distance = Math.hypot(point.y - hand.gripCenter.y, point.z - hand.gripCenter.z);
+        assert.ok(distance > BAT_DIMENSIONS.gripRadius - 0.002, 'deformed hand surface cannot pass through the handle');
+      }
       const top = new THREE.Vector3(0, 0.5, 0).applyMatrix4(hand.sleeve.matrixWorld);
       const bottom = new THREE.Vector3(0, -0.5, 0).applyMatrix4(hand.sleeve.matrixWorld);
       assert.ok(top.distanceTo(hand.wrist) < 1e-9);
@@ -169,12 +176,14 @@ test('bat pose is stateless and repeated poses do not allocate geometry or uploa
     const first = a.hands.userData.firstPersonGripHands[side], second = b.hands.userData.firstPersonGripHands[side];
     assert.deepEqual(first.hand.position.toArray(), second.hand.position.toArray());
     assert.deepEqual(first.hand.quaternion.toArray(), second.hand.quaternion.toArray());
-    assert.deepEqual(Array.from(first.segments.instanceMatrix.array), Array.from(second.segments.instanceMatrix.array));
-    const array = first.segments.instanceMatrix.array, version = first.segments.instanceMatrix.version;
-    const matrix = first.poseMatrix, geometry = first.segments.geometry;
+    assert.deepEqual(first.surface.morphTargetInfluences, second.surface.morphTargetInfluences);
+    const array = first.surface.geometry.attributes.position.array, version = first.surface.geometry.attributes.position.version;
+    const matrix = first.poseMatrix, geometry = first.surface.geometry, morph = geometry.morphAttributes.position[0];
+    const morphVersion = morph.version;
     poseFirstPersonBat(stepped, 0.33, 2, 0.5);
-    assert.equal(first.segments.instanceMatrix.array, array); assert.equal(first.segments.instanceMatrix.version, version);
-    assert.equal(first.poseMatrix, matrix); assert.equal(first.segments.geometry, geometry);
+    assert.equal(first.surface.geometry.attributes.position.array, array); assert.equal(first.surface.geometry.attributes.position.version, version);
+    assert.equal(first.poseMatrix, matrix); assert.equal(first.surface.geometry, geometry);
+    assert.equal(geometry.morphAttributes.position[0], morph); assert.equal(morph.version, morphVersion);
   }
 });
 

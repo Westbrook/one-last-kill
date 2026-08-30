@@ -7,6 +7,7 @@ import { BUILDING, ROOF, OPENINGS } from '../../src/world/layout.js';
 import { STAIRS } from '../../src/world/stair-layout.js';
 import { Architecture, boxBounds } from '../../src/world/architecture.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
+import { applyWaterTankStaveUV } from '../../src/render/water-tank-uv.js';
 
 function buildFixture() {
   Architecture.clear(); Colliders.clear();
@@ -38,7 +39,7 @@ function buildFixture() {
   const source = readFileSync(new URL('../../src/world/zones/roof.js', import.meta.url), 'utf8')
     .replace(/^import .*;\s*$/gm, '').replace(/^export (?=function )/gm, '');
   const build = runInNewContext(`${source}\n;buildRoof;`, {
-    THREE, BUILDING, ROOF, OPENINGS, STAIRS, World, MATS, Colliders, Architecture, boxBounds,
+    THREE, BUILDING, ROOF, OPENINGS, STAIRS, World, MATS, Colliders, Architecture, boxBounds, applyWaterTankStaveUV,
     _BG: { unitBox: new THREE.BoxGeometry(1, 1, 1), pipe: new THREE.CylinderGeometry(1, 1, 1, 8) },
     addBox, pushDecor, addBeam, addSign() {}, Triggers: { add() {} },
     addDecor: (x, y, z, sx, sy, sz, mat) => addBox(x, y, z, sx, sy, sz, mat, { collide: false }),

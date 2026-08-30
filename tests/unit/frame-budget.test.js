@@ -23,3 +23,11 @@ test('adaptive scale respects bounds and waits for sustained pressure', () => {
   for (let i = 0; i < 10000; i++) budget.sample(1 / 120);
   assert.equal(budget.scale, 1.4);
 });
+
+test('adaptive steps land exactly on the contact-shading boundary', () => {
+  const budget = new FrameBudget();
+  for (let i = 0; i < 360; i++) budget.sample(1 / 30);
+  assert.equal(budget.scale, 1, 'two downward steps must not prematurely disable contact shading');
+  for (let i = 0; i < 720; i++) budget.sample(1 / 120);
+  assert.equal(budget.scale, 1.1, 'recovery uses the same stable hundredth increments');
+});

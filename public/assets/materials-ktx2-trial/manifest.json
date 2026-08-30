@@ -1,0 +1,562 @@
+{
+  "version": 1,
+  "status": "Accepted production default on reviewed ASTC 4x4 and BC7/BPTC GPU formats; raw PBR fallback on other formats or load/decode failure.",
+  "sourceEvidence": "artifacts/graphics-ceiling-2026-08-29/ktx2-uastc4/manifest.json",
+  "sourceEvidenceSha256": "4a67c5742993c9170cf645900823cef87751fcc90e4a752c4fcbed30e4ceae94",
+  "sourceManifest": "/assets/materials/manifest.json",
+  "decoderManifest": "/assets/basis/provenance.json",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://polyhaven.com/license",
+  "encoding": {
+    "codec": "UASTC LDR RGB",
+    "quality": 4,
+    "rdo": false,
+    "zstd": 18,
+    "mipFilter": "box",
+    "mipWrap": "wrap",
+    "threads": 2
+  },
+  "runtimeContract": {
+    "flipY": false,
+    "generateMipmaps": false,
+    "normalConvention": "OpenGL +Y; RGB retained",
+    "roughnessChannel": "green",
+    "color": "sRGB albedo; NoColorSpace data",
+    "orientation": "ru (offline vertical row flip from raw TextureLoader flipY=true)",
+    "qualityGate": [
+      "ASTC 4x4",
+      "BC7/BPTC"
+    ],
+    "selection": "KTX2 by default on reviewed formats. Production ignores query overrides. Development QA with qa=1&mute=1&surfaces=raw forces the raw reference pack."
+  },
+  "limits": [
+    "Raw source maps and encoded block data remain unchanged; the accepted integration selects compressed delivery only for reviewed GPU formats.",
+    "ASTC visual A/B and ASTC/BC7 base-mip numeric quality passed. The BC7 review is offline; no BC7 device performance result is claimed.",
+    "ETC1/ETC2/BC1/BC3/PVRTC and uncompressed transcoder output are not approved for this pack and fall back to raw PBR.",
+    "Normal images retain their OpenGL +Y RGB convention. Compressed rows are bottom-left with11 precomputed mips; raw TextureLoader rows use flipY=true.",
+    "Compressed byte counts describe decoded GPU block payloads, not vendor-specific physical allocator measurements."
+  ],
+  "maps": [
+    {
+      "id": "red_brick",
+      "kind": "albedo",
+      "bytes": 1289008,
+      "sha256": "b2b547296e41759b1213bc0e36ae609df8a3be5e922c39ffd309449964a4dd7d",
+      "sourcePath": "public/assets/materials/red_brick/red_brick_diff_1k.jpg",
+      "sourceSha256": "6dea3a2b5a3185ff48d299d182c405a9f787129d79677792db6de4afd81c47f6",
+      "sourceBytes": 766044,
+      "sourceBitDepth": 8,
+      "sourcePage": "https://polyhaven.com/a/red_brick",
+      "license": "CC0-1.0",
+      "tileSpanMeters": [
+        1.4,
+        1.4
+      ],
+      "quality": {
+        "uastcRgba8": {
+          "normalizedMse": 3.300263119927064e-05,
+          "rmse": 0.005744791658473842,
+          "psnrDb": 44.814514337654394,
+          "maxAbsoluteError": 0.07058823529411762,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            0,
+            1,
+            2
+          ]
+        },
+        "astc": {
+          "normalizedMse": 3.38373816073011e-05,
+          "rmse": 0.00581699076905758,
+          "psnrDb": 44.7060325075999,
+          "maxAbsoluteError": 0.07058823529411762,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            0,
+            1,
+            2
+          ]
+        }
+      },
+      "transcodeTargets": {
+        "astc": {
+          "format": "VK_FORMAT_ASTC_4x4_SRGB_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "bc7": {
+          "format": "VK_FORMAT_BC7_SRGB_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "etc-rgb": {
+          "format": "VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "bc1": {
+          "format": "VK_FORMAT_BC1_RGB_SRGB_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "rgba8": {
+          "format": "VK_FORMAT_R8G8B8A8_SRGB",
+          "payloadBytes": 5592404,
+          "levels": 11
+        }
+      },
+      "path": "public/assets/materials-ktx2-trial/red_brick_diff_1k.ktx2",
+      "url": "/assets/materials-ktx2-trial/red_brick_diff_1k.ktx2",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipLevels": 11,
+      "orientation": "ru",
+      "colorSpace": "sRGB"
+    },
+    {
+      "id": "red_brick",
+      "kind": "normal",
+      "bytes": 1303230,
+      "sha256": "74b7eeb142f0a7a1f75b19d9a90cabd180c7f3a7e4227cdae880aed613f27e26",
+      "sourcePath": "public/assets/materials/red_brick/red_brick_nor_gl_1k.png",
+      "sourceSha256": "e1116366df05651cb54edea4977563a4c0d4ee7a523be61a51fb895c279fa9a8",
+      "sourceBytes": 2236680,
+      "sourceBitDepth": 8,
+      "sourcePage": "https://polyhaven.com/a/red_brick",
+      "license": "CC0-1.0",
+      "tileSpanMeters": [
+        1.4,
+        1.4
+      ],
+      "quality": {
+        "uastcRgba8": {
+          "normalizedMse": 0.00018860952985143506,
+          "rmse": 0.01373351848039806,
+          "psnrDb": 37.24436367498317,
+          "maxAbsoluteError": 0.16862745098039222,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            0,
+            1,
+            2
+          ]
+        },
+        "uastcNormal": {
+          "meanDegrees": 2.1126430714359734,
+          "p95Degrees": 4.766726984403531,
+          "maxDegrees": 22.354772442402314,
+          "invalidNormals": 0,
+          "validNormals": 1048576,
+          "pixelCount": 1048576
+        },
+        "astc": {
+          "normalizedMse": 0.00018860952985143506,
+          "rmse": 0.01373351848039806,
+          "psnrDb": 37.24436367498317,
+          "maxAbsoluteError": 0.16862745098039222,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            0,
+            1,
+            2
+          ]
+        },
+        "astcNormal": {
+          "meanDegrees": 2.1126430714359734,
+          "p95Degrees": 4.766726984403531,
+          "maxDegrees": 22.354772442402314,
+          "invalidNormals": 0,
+          "validNormals": 1048576,
+          "pixelCount": 1048576
+        }
+      },
+      "transcodeTargets": {
+        "astc": {
+          "format": "VK_FORMAT_ASTC_4x4_UNORM_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "bc7": {
+          "format": "VK_FORMAT_BC7_UNORM_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "etc-rgb": {
+          "format": "VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "bc1": {
+          "format": "VK_FORMAT_BC1_RGB_UNORM_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "rgba8": {
+          "format": "VK_FORMAT_R8G8B8A8_UNORM",
+          "payloadBytes": 5592404,
+          "levels": 11
+        }
+      },
+      "path": "public/assets/materials-ktx2-trial/red_brick_nor_gl_1k.ktx2",
+      "url": "/assets/materials-ktx2-trial/red_brick_nor_gl_1k.ktx2",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipLevels": 11,
+      "orientation": "ru",
+      "colorSpace": "NoColorSpace"
+    },
+    {
+      "id": "red_brick",
+      "kind": "roughness",
+      "bytes": 504321,
+      "sha256": "6bb92920970483f7f3e34a04b47610dd9d0a43bfcf35efc64d645ba320380641",
+      "sourcePath": "public/assets/materials/red_brick/red_brick_rough_1k.jpg",
+      "sourceSha256": "9bc9ece8264eb53d6f290bd2950ece5e462f83ce9e65b945fb1caf9972973ab9",
+      "sourceBytes": 178614,
+      "sourceBitDepth": 8,
+      "sourcePage": "https://polyhaven.com/a/red_brick",
+      "license": "CC0-1.0",
+      "tileSpanMeters": [
+        1.4,
+        1.4
+      ],
+      "quality": {
+        "uastcRgba8": {
+          "normalizedMse": 1.1603954158256171e-07,
+          "rmse": 0.00034064577141447347,
+          "psnrDb": 69.35393995558421,
+          "maxAbsoluteError": 0.007843137254902044,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            1
+          ]
+        },
+        "astc": {
+          "normalizedMse": 1.1603954158256171e-07,
+          "rmse": 0.00034064577141447347,
+          "psnrDb": 69.35393995558421,
+          "maxAbsoluteError": 0.007843137254902044,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            1
+          ]
+        }
+      },
+      "transcodeTargets": {
+        "astc": {
+          "format": "VK_FORMAT_ASTC_4x4_UNORM_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "bc7": {
+          "format": "VK_FORMAT_BC7_UNORM_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "etc-rgb": {
+          "format": "VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "bc1": {
+          "format": "VK_FORMAT_BC1_RGB_UNORM_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "rgba8": {
+          "format": "VK_FORMAT_R8G8B8A8_UNORM",
+          "payloadBytes": 5592404,
+          "levels": 11
+        }
+      },
+      "path": "public/assets/materials-ktx2-trial/red_brick_rough_1k.ktx2",
+      "url": "/assets/materials-ktx2-trial/red_brick_rough_1k.ktx2",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipLevels": 11,
+      "orientation": "ru",
+      "colorSpace": "NoColorSpace"
+    },
+    {
+      "id": "plastered_wall_03",
+      "kind": "albedo",
+      "bytes": 1157489,
+      "sha256": "2d0f2ad0f953a47349293e28910e09b480dd75345b0fef06668c9357f803bf1b",
+      "sourcePath": "public/assets/materials/plastered_wall_03/plastered_wall_03_diff_1k.jpg",
+      "sourceSha256": "3d60687bae1d9cd2c14a46c4b2673e0fe753cf4b5eb82c22cc399271e16d8d5b",
+      "sourceBytes": 555233,
+      "sourceBitDepth": 8,
+      "sourcePage": "https://polyhaven.com/a/plastered_wall_03",
+      "license": "CC0-1.0",
+      "tileSpanMeters": [
+        4,
+        4
+      ],
+      "quality": {
+        "uastcRgba8": {
+          "normalizedMse": 5.772595648155347e-06,
+          "rmse": 0.002402622660376645,
+          "psnrDb": 52.386288623740725,
+          "maxAbsoluteError": 0.02352941176470591,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            0,
+            1,
+            2
+          ]
+        },
+        "astc": {
+          "normalizedMse": 5.953103231313094e-06,
+          "rmse": 0.002439898201014357,
+          "psnrDb": 52.25256586388123,
+          "maxAbsoluteError": 0.02352941176470591,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            0,
+            1,
+            2
+          ]
+        }
+      },
+      "transcodeTargets": {
+        "astc": {
+          "format": "VK_FORMAT_ASTC_4x4_SRGB_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "bc7": {
+          "format": "VK_FORMAT_BC7_SRGB_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "etc-rgb": {
+          "format": "VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "bc1": {
+          "format": "VK_FORMAT_BC1_RGB_SRGB_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "rgba8": {
+          "format": "VK_FORMAT_R8G8B8A8_SRGB",
+          "payloadBytes": 5592404,
+          "levels": 11
+        }
+      },
+      "path": "public/assets/materials-ktx2-trial/plastered_wall_03_diff_1k.ktx2",
+      "url": "/assets/materials-ktx2-trial/plastered_wall_03_diff_1k.ktx2",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipLevels": 11,
+      "orientation": "ru",
+      "colorSpace": "sRGB"
+    },
+    {
+      "id": "plastered_wall_03",
+      "kind": "normal",
+      "bytes": 962853,
+      "sha256": "51882c3a26fdd00631a30b194f06afa98ca195e297f943f00d8cece304b3e5c8",
+      "sourcePath": "public/assets/materials/plastered_wall_03/plastered_wall_03_nor_gl_1k.png",
+      "sourceSha256": "6e4f4213595833a6956b890114e06ef6b4a009592d48f5acfcfce1d816aa9743",
+      "sourceBytes": 5046300,
+      "sourceBitDepth": 16,
+      "sourcePage": "https://polyhaven.com/a/plastered_wall_03",
+      "license": "CC0-1.0",
+      "tileSpanMeters": [
+        4,
+        4
+      ],
+      "quality": {
+        "uastcRgba8": {
+          "normalizedMse": 1.0566369212775677e-05,
+          "rmse": 0.003250595209000296,
+          "psnrDb": 49.760742181550754,
+          "maxAbsoluteError": 0.14509803921568631,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            0,
+            1,
+            2
+          ]
+        },
+        "uastcNormal": {
+          "meanDegrees": 0.4913020921569892,
+          "p95Degrees": 1.004184029783764,
+          "maxDegrees": 17.80001797875856,
+          "invalidNormals": 0,
+          "validNormals": 1048576,
+          "pixelCount": 1048576
+        },
+        "astc": {
+          "normalizedMse": 1.0566369212775677e-05,
+          "rmse": 0.003250595209000296,
+          "psnrDb": 49.760742181550754,
+          "maxAbsoluteError": 0.14509803921568631,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            0,
+            1,
+            2
+          ]
+        },
+        "astcNormal": {
+          "meanDegrees": 0.4913020921569892,
+          "p95Degrees": 1.004184029783764,
+          "maxDegrees": 17.80001797875856,
+          "invalidNormals": 0,
+          "validNormals": 1048576,
+          "pixelCount": 1048576
+        },
+        "source16ToReference8Normal": {
+          "meanDegrees": 0.34364396940001796,
+          "p95Degrees": 0.5383457260652358,
+          "maxDegrees": 0.9497166109193212,
+          "invalidNormals": 0,
+          "validNormals": 1048576,
+          "pixelCount": 1048576
+        },
+        "source16ToUastcNormal": {
+          "meanDegrees": 0.6083069841963333,
+          "p95Degrees": 1.1796366498567459,
+          "maxDegrees": 17.947890170664966,
+          "invalidNormals": 0,
+          "validNormals": 1048576,
+          "pixelCount": 1048576
+        }
+      },
+      "transcodeTargets": {
+        "astc": {
+          "format": "VK_FORMAT_ASTC_4x4_UNORM_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "bc7": {
+          "format": "VK_FORMAT_BC7_UNORM_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "etc-rgb": {
+          "format": "VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "bc1": {
+          "format": "VK_FORMAT_BC1_RGB_UNORM_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "rgba8": {
+          "format": "VK_FORMAT_R8G8B8A8_UNORM",
+          "payloadBytes": 5592404,
+          "levels": 11
+        }
+      },
+      "path": "public/assets/materials-ktx2-trial/plastered_wall_03_nor_gl_1k.ktx2",
+      "url": "/assets/materials-ktx2-trial/plastered_wall_03_nor_gl_1k.ktx2",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipLevels": 11,
+      "orientation": "ru",
+      "colorSpace": "NoColorSpace"
+    },
+    {
+      "id": "plastered_wall_03",
+      "kind": "roughness",
+      "bytes": 712118,
+      "sha256": "0c92bf7afb52735bd921c1dee219eb3e7dd77b4b5c7d6f80573f6abeca9089ba",
+      "sourcePath": "public/assets/materials/plastered_wall_03/plastered_wall_03_rough_1k.jpg",
+      "sourceSha256": "0f005efa43089f10d40cc0f96c6739beb8d1d5813ddb1acb51a0fdda75ee62ba",
+      "sourceBytes": 301836,
+      "sourceBitDepth": 8,
+      "sourcePage": "https://polyhaven.com/a/plastered_wall_03",
+      "license": "CC0-1.0",
+      "tileSpanMeters": [
+        4,
+        4
+      ],
+      "quality": {
+        "uastcRgba8": {
+          "normalizedMse": 4.472479550762317e-07,
+          "rmse": 0.0006687659942582545,
+          "psnrDb": 63.494516364534654,
+          "maxAbsoluteError": 0.007843137254902044,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            1
+          ]
+        },
+        "astc": {
+          "normalizedMse": 4.472479550762317e-07,
+          "rmse": 0.0006687659942582545,
+          "psnrDb": 63.494516364534654,
+          "maxAbsoluteError": 0.007843137254902044,
+          "pixelCount": 1048576,
+          "measuredChannels": [
+            1
+          ]
+        }
+      },
+      "transcodeTargets": {
+        "astc": {
+          "format": "VK_FORMAT_ASTC_4x4_UNORM_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "bc7": {
+          "format": "VK_FORMAT_BC7_UNORM_BLOCK",
+          "payloadBytes": 1398128,
+          "levels": 11
+        },
+        "etc-rgb": {
+          "format": "VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "bc1": {
+          "format": "VK_FORMAT_BC1_RGB_UNORM_BLOCK",
+          "payloadBytes": 699064,
+          "levels": 11
+        },
+        "rgba8": {
+          "format": "VK_FORMAT_R8G8B8A8_UNORM",
+          "payloadBytes": 5592404,
+          "levels": 11
+        }
+      },
+      "path": "public/assets/materials-ktx2-trial/plastered_wall_03_rough_1k.ktx2",
+      "url": "/assets/materials-ktx2-trial/plastered_wall_03_rough_1k.ktx2",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipLevels": 11,
+      "orientation": "ru",
+      "colorSpace": "NoColorSpace"
+    }
+  ],
+  "totalBytes": 5929019,
+  "acceptance": {
+    "date": "2026-08-29",
+    "approvedGpuFormats": [
+      "ASTC 4x4",
+      "BC7/BPTC"
+    ],
+    "astcReview": "Accepted by root visual A/B and independent GPU review.",
+    "bc7Review": "Offline base-mip quality and all66 pinned-Three decoder mip blocks passed; no BC7 browser performance claim.",
+    "bc7Evidence": "artifacts/graphics-ceiling-2026-08-29/ktx2-uastc4/bc7-quality.json",
+    "bc7EvidenceSha256": "a8aa945b643bc0949d425edbe887ad7e6c110dc404470cb56cc1baceb25f22c1",
+    "filenamePolicy": "Historical trial filenames are retained to identify the exact reviewed encoded bytes."
+  }
+}

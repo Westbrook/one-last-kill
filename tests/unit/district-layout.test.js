@@ -9,6 +9,11 @@ import { DISTRICT } from '../../src/world/district-layout.js';
 import { BUILDING } from '../../src/world/layout.js';
 import { Architecture, boxBounds, signYaw } from '../../src/world/architecture.js';
 import { Colliders, capsuleHasClearance } from '../../src/core/collision.js';
+import { addBakeryBread, addBakeryPackage } from '../../src/render/bakery-provisions.js';
+import { getBakeryProvisionMaterials } from '../../src/render/bakery-provision-materials.js';
+import { refineConcreteBarrier } from '../../src/render/street-barrier.js';
+import { createSedanCabin } from '../../src/render/sedan-cabin.js';
+import { createSedanBumper, createSedanHood } from '../../src/render/sedan-panels.js';
 
 // Real authored meshes and collision run without a renderer, browser or audio.
 function buildFixture() {
@@ -53,8 +58,9 @@ function buildFixture() {
     .replace(/^export \{[^}]+\};\s*$/gm, '');
   assert.doesNotMatch(source, /^import\s/m);
   const builders = runInNewContext(source + '\n;({ buildStreet, buildBakeryAndCar });', {
+    refineConcreteBarrier,
     THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, DISTRICT, MATS, World, WorldState,
-    _BG, _CG, Colliders, addBox, pushDecor, addSign, Triggers,
+    _BG, _CG, Colliders, addBox, pushDecor, addSign, Triggers, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, createSedanCabin, createSedanBumper, createSedanHood,
     makeHumanoid: () => new THREE.Group(), HUMANOID_PRESETS: { shopkeeper: {}, woman: {} },
     makeSmokeSystem: () => ({ points: new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()) }),
   }, { filename: 'street.js' });

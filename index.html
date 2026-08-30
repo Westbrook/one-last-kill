@@ -15,6 +15,7 @@
 
     <div id="hud" aria-label="Game status">
       <div id="vignette" aria-hidden="true"></div>
+      <div id="healthvignette" data-level="normal" aria-hidden="true" hidden></div>
       <div id="bloodvignette" aria-hidden="true"></div>
       <div class="objective-group">
         <div class="hud-eyebrow"><span class="objective-marker" aria-hidden="true"></span> <span>01 / LITTLE SICILY</span></div>
@@ -40,9 +41,10 @@
       <div id="banner" role="status"><small></small><span></span></div>
       <div id="message" role="status" aria-live="polite"></div>
 
-      <div id="vitals">
+      <div id="vitals" data-low="false" data-health-warning="normal">
         <div class="vital-readout"><span class="vital-cross" aria-hidden="true">+</span><span id="healthtext">100</span><span class="vital-label">HEALTH</span></div>
-        <div id="healthbar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div id="healthfill"></div></div>
+        <div id="healthbar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100 percent health."><div id="healthfill"></div></div>
+        <div id="healthwarning" role="status" aria-live="polite" aria-atomic="true"></div>
         <div id="playerstatus">STAY MOVING. FIND A WAY OUT.</div>
       </div>
 

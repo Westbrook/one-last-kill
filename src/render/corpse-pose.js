@@ -155,7 +155,10 @@ export function updateHumanoidCollapse(root, age, sink = 0) {
   root.position.set(state.originX, state.floorY, state.originZ);
   root.updateMatrixWorld(true);
   _worldBounds.makeEmpty();
-  for (const body of state.bodies) expandBodyBounds(body, _worldBounds);
+  // Skinned characters supply a bounded contact cloud. This samples support
+  // geometry only during the short fall; it never updates render vertices.
+  if (rig.contactBounds) rig.contactBounds(_worldBounds);
+  else for (const body of state.bodies) expandBodyBounds(body, _worldBounds);
   state.groundOffset = state.floorY - _worldBounds.min.y + FLOOR_SKIN;
   if (state.hasRegion) {
     state.offsetX = fitIntervalTranslation(_worldBounds.min.x, _worldBounds.max.x, state.region.minX, state.region.maxX);

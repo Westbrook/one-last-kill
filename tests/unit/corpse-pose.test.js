@@ -2,17 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { BALCONY } from '../../src/world/layout.js';
-import { createHumanoidRig, resetHumanoidPose, updateHumanoidPose } from '../../src/render/humanoid-rig.js';
+import { createHumanoidRig, resetHumanoidPose, updateHumanoidPose, getHumanoidVisualBounds } from '../../src/render/humanoid-rig.js';
 import {
   COLLAPSE_DURATION, alignedFallYaw, fitIntervalTranslation,
   beginHumanoidCollapse, updateHumanoidCollapse,
 } from '../../src/render/corpse-pose.js';
 
 function bounds(root) {
-  root.updateMatrixWorld(true);
-  const result = new THREE.Box3();
-  for (const mesh of root.userData.rig.bodyMeshes) result.union(new THREE.Box3().setFromObject(mesh));
-  return result;
+  return getHumanoidVisualBounds(root, new THREE.Box3());
 }
 
 function armedPose(kind, yaw, x = 0, z = BALCONY.laneZ, floor = BALCONY.floorY) {

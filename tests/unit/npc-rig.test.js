@@ -166,12 +166,12 @@ test('neutral reset restores every joint and clears previous attack/gait state',
     assert.ok(rest.object.scale.equals(rest.scale));
   }
   assert.deepEqual(rig.pose, { mode: 'idle', phase: 'idle', gait: 0, clock: 0 });
-  assert.deepEqual(rig.motion, { batReady: 0, stance: 0 });
+  assert.deepEqual(rig.motion, { batReady: 0, stance: 0, walk: 0, stride: 0 });
   near(bodyBounds(root).max.y, 1.78);
   near(point(rig.anchors.soleL).y, 0);
 });
 
-test('articulation shares geometry and keeps body meshes within a modest budget', () => {
+test('articulation retains shared bounds proxies while actual visible surfaces have an explicit budget', () => {
   const first = createHumanoidRig({ kind: 'bruiser' }), second = createHumanoidRig({ kind: 'brawler' });
   const firstMeshes = first.userData.rig.bodyMeshes, secondMeshes = second.userData.rig.bodyMeshes;
   assert.ok(firstMeshes.length <= 22 && secondMeshes.length <= 20);
@@ -180,11 +180,16 @@ test('articulation shares geometry and keeps body meshes within a modest budget'
   }
   let triangles = 0;
   for (const mesh of firstMeshes) {
-    assert.equal(mesh.userData.role, 'body');
-    triangles += (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3;
+    assert.equal(mesh.userData.role, 'bounds-proxy');
+    assert.equal(mesh.visible, false);
     for (const value of mesh.geometry.attributes.position.array) assert.ok(Number.isFinite(value));
   }
-  assert.ok(triangles <= 5728, `${triangles} body triangles exceeds the previous model's budget`);
+  for (const mesh of first.userData.rig.visualMeshes) {
+    assert.equal(mesh.userData.role, 'body'); assert.equal(mesh.visible, true);
+    triangles += (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3;
+  }
+  assert.ok(triangles >= 8000 && triangles <= 15000, `${triangles} visible body triangles exceeds the authored budget`);
+  assert.equal(first.userData.rig.visualMeshes.length, 4);
   const firstBat = createHeldWeapon('bat'), secondBat = createHeldWeapon('bat');
   for (const name of ['bat-wood', 'bat-grip']) {
     assert.equal(firstBat.getObjectByName(name).geometry, secondBat.getObjectByName(name).geometry);

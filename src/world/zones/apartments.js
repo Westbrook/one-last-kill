@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { MATS } from '../../render/materials.js';
 import { _BG, pushDecor } from '../../render/models.js';
+import { addCrtHousing } from '../../render/crt-housing.js';
 
 import { Colliders } from '../../core/collision.js';
 import { Ballistics } from '../../core/ballistics.js';
@@ -14,6 +15,12 @@ const interiorProps = createInteriorProps({
   addBox, pushDecor, boxGeometry: _BG.unitBox, pipeGeometry: _BG.pipe, materials: MATS,
 });
 const doors = createDoorAssemblies({ addBox, pushDecor, boxGeometry: _BG.unitBox, materials: MATS });
+
+// Authoring helpers keep soft furniture independent of layout and reuse the
+// same cached profiles/materials as the injected fixture builders.
+function addBedding(name, x, y, z, width, height, depth, radius) {
+  return interiorProps.bedding({ name, x, y, z, width, height, depth, radius });
+}
 
 // Interior walls stop at the existing ceiling. Their openings have no sill:
 // only the authored broken party wall requires a jump in the opening rooms.
@@ -40,25 +47,8 @@ function partitionZ({ id, x, zStart, zEnd, doorStart, doorEnd, floorY, ceilingY,
     0.20, 0.05, doorEnd - doorStart);
 }
 
-function upholsteredSeat({ id, x, z, floorY, floorId, width, depth }) {
-  const baseHeight = 0.5;
-  addBox(x, floorY + baseHeight / 2, z, width, baseHeight, depth, MATS.wallpaper, {
-    architecture: { id, kind: 'furniture', supports: [floorId] },
-  });
-  addBox(x, floorY + 0.8, z - depth / 2 + 0.09, width, 0.6, 0.18, MATS.wallpaper, {
-    architecture: { id: `${id}-back`, kind: 'furniture', supports: [id] },
-  });
-  for (const [i, side] of [-1, 1].entries()) {
-    addBox(x + side * (width / 2 - 0.065), floorY + 0.64, z, 0.13, 0.28, depth, MATS.wallpaper, {
-      architecture: { id: `${id}-arm-${i}`, kind: 'furniture', supports: [id] },
-    });
-  }
-  const cushions = width > 1.2 ? 2 : 1;
-  const cushionWidth = (width - 0.30) / cushions;
-  for (let i = 0; i < cushions; i++) {
-    pushDecor(_BG.unitBox, MATS.wallpaper, x + (i - (cushions - 1) / 2) * cushionWidth,
-      floorY + 0.545, z + 0.07, cushionWidth - 0.025, 0.09, depth - 0.23);
-  }
+function upholsteredSeat(options) {
+  return interiorProps.upholsteredSeat(options);
 }
 
 // ─── ZONE 1: PLAYER'S APARTMENT ────────────────────────────────────────────
@@ -137,9 +127,8 @@ function buildPlayerApartment() {
   addBox(-13.8, FY + 0.25, -8.0, 2.1, 0.5, 1.2, MATS.wood, {
     architecture: { id: 'apartment-bed', kind: 'furniture', supports: ['apartment-floor'] },
   });
-  const mattress = addBox(-13.8, FY + 0.65, -8.0, 2.0, 0.3, 1.1, MATS.wallpaper, { collide: false });
-  mattress.name = 'apartment-mattress';
-  addBox(-13.0, FY + 0.78, -8.35, 0.5, 0.12, 0.35, MATS.wallpaper, { collide: false });
+  addBedding('apartment-mattress', -13.8, FY + 0.65, -8.0, 2.0, 0.3, 1.1, 0.055);
+  addBedding('apartment-pillow', -13.0, FY + 0.86, -8.35, 0.5, 0.12, 0.35, 0.035);
   interiorProps.sideboard({ id: 'apartment-bedside', x: -14.5, z: -9.3, floorY: FY, floorId: 'apartment-floor', width: 0.6, depth: 0.44, height: 0.65 });
   interiorProps.bookcase({ id: 'apartment-bedroom-storage', x: -12.3, z: -9.5, floorY: FY, floorId: 'apartment-floor', width: 0.7, depth: 0.45, height: 1.9 });
   pushDecor(_BG.unitBox, MATS.wallpaper, -14.5, FY + 0.676, -9.3, 0.25, 0.03, 0.18);
@@ -153,7 +142,7 @@ function buildPlayerApartment() {
     floorY: FY, floorId: 'apartment-floor', width: 1.8, depth: 0.6, height: 1.05 });
   interiorProps.bench({ id: 'apartment-entry-bench', x: -3.4, z: -2.9, yaw: -Math.PI / 2,
     floorY: FY, floorId: 'apartment-floor', width: 1.1, depth: 0.6 });
-  pushDecor(_BG.unitBox, MATS.wallpaper, -9.8, FY + 0.009, -5.9, 3.8, 0.012, 4.5);
+  interiorProps.story.rug({ x: -9.8, z: -5.9, floorY: FY, width: 3.8, depth: 4.5, variant: 'warm' });
 
   // Kitchenette: counter + sink slab + cabinets
   const worktopOffset = 0.92, worktopThickness = 0.05;
@@ -165,6 +154,7 @@ function buildPlayerApartment() {
   });
   const worktop = addBox(-14.4, FY + worktopOffset, -2.5, 1.0, worktopThickness, 2.4, MATS.metal, { collide: false });
   worktop.name = 'apartment-kitchen-top';
+  interiorProps.story.kitchenStillLife({ x: -14.4, z: -1.71, topY: FY + 0.945, yaw: Math.PI / 2 });
   // A recessed basin and tap distinguish this from a second flat metal slab.
   pushDecor(_BG.unitBox, MATS.tar, -14.4, FY + 0.949, -2.5, 0.65, 0.012, 0.80);
   pushDecor(_BG.pipe, MATS.metal, -14.70, FY + 1.065, -2.5, 0.018, 0.24, 0.018);
@@ -186,18 +176,23 @@ function buildPlayerApartment() {
   pushDecor(_BG.unitBox, MATS.metal, -14.62, FY + 1.78, -4.08, 0.55, 0.18, 0.73);
   pushDecor(_BG.unitBox, MATS.metal, -14.77, FY + 2.635, -4.08, 0.25, 1.53, 0.28);
 
-  // Wooden table (collidable) with a glass on it.
+  // Milled table edge and turned legs share the original collider/support bounds.
   const coffeeLegs = [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]];
-  addBox(-10.0, FY + 0.45, -5.0, 1.4, 0.06, 0.9, MATS.wood, {
+  const coffeeTop = addBox(-10.0, FY + 0.45, -5.0, 1.4, 0.06, 0.9, interiorProps.finishes.wood, {
     architecture: { id: 'apartment-coffee-table', kind: 'furniture', supports: coffeeLegs.map((_, i) => `apartment-coffee-leg-${i}`) },
   });
+  interiorProps.refineMesh(coffeeTop, { radius: 0.016, segments: 2 });
   for (const [i, [lx, lz]] of coffeeLegs.entries()) {
-    addBox(-10.0 + lx, FY + 0.21, -5.0 + lz, 0.06, 0.42, 0.06, MATS.wood, {
+    const leg = addBox(-10.0 + lx, FY + 0.21, -5.0 + lz, 0.06, 0.42, 0.06, interiorProps.finishes.wood, {
       collide: false, architecture: { id: `apartment-coffee-leg-${i}`, kind: 'furniture', supports: ['apartment-floor'] },
     });
+    interiorProps.refineMesh(leg, { leg: true });
   }
-  const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.14, 12), MATS.glass);
-  glass.position.set(-9.6, FY + 0.55, -5.0); World.add(glass);
+  for (const dz of [-0.35, 0.35]) interiorProps.roundedDetail(interiorProps.finishes.wood,
+    -10, FY + 0.385, -5 + dz, 1.20, 0.07, 0.03, 0.005);
+  for (const dx of [-0.60, 0.60]) interiorProps.roundedDetail(interiorProps.finishes.wood,
+    -10 + dx, FY + 0.385, -5, 0.03, 0.07, 0.70, 0.005);
+  interiorProps.tableSetting({ x: -10, z: -5, topY: FY + 0.48 });
 
   // Locked gear chest (heavy metal box with a glowing keyhole hint).
   addBox(-12.0, FY + 0.4, -3.8, 1.2, 0.8, 0.7, MATS.metal, {
@@ -290,28 +285,30 @@ function buildNeighborApartment() {
     pushDecor(_BG.unitBox, i % 2 ? MATS.wood : MATS.wallpaper, -2.76, FY + 1.48, z,
       0.10, 0.70, 0.23);
   }
-  pushDecor(_BG.unitBox, MATS.wallpaper, -0.6, FY + 0.009, -3.4, 1.45, 0.012, 2.2);
-  pushDecor(_BG.unitBox, MATS.wallpaper, 6.85, FY + 0.009, -8.0, 3.2, 0.012, 2.7);
+  interiorProps.story.rug({ x: -0.6, z: -3.4, floorY: FY, width: 1.45, depth: 2.2, variant: 'warm' });
+  interiorProps.story.rug({ x: 6.85, z: -8.0, floorY: FY, width: 3.2, depth: 2.7, variant: 'cool' });
 
   // Dining height is measured at the top surface; the papers use this datum too.
   const diningHeight = 0.74, tabletopThickness = 0.08;
   const legHeight = diningHeight - tabletopThickness;
   const tableLegs = [[-0.9, -0.4], [0.9, -0.4], [-0.9, 0.4], [0.9, 0.4]];
-  addBox(3.0, FY + diningHeight - tabletopThickness / 2, -5.0, 2.0, tabletopThickness, 1.0, MATS.wood, {
+  const diningTop = addBox(3.0, FY + diningHeight - tabletopThickness / 2, -5.0, 2.0, tabletopThickness, 1.0, interiorProps.finishes.wood, {
     architecture: { id: 'neighbor-dining-top', kind: 'furniture', supports: tableLegs.map((_, i) => `neighbor-table-leg-${i}`) },
   });
+  interiorProps.refineMesh(diningTop, { radius: 0.021, segments: 2 });
   for (const [i, [lx, lz]] of tableLegs.entries()) {
-    addBox(3.0 + lx, FY + legHeight / 2, -5.0 + lz, 0.08, legHeight, 0.08, MATS.wood, {
+    const leg = addBox(3.0 + lx, FY + legHeight / 2, -5.0 + lz, 0.08, legHeight, 0.08, interiorProps.finishes.wood, {
       collide: false, architecture: { id: `neighbor-table-leg-${i}`, kind: 'furniture', supports: ['neighbor-floor'] },
     });
+    interiorProps.refineMesh(leg, { leg: true });
   }
-  // Chairs face the table, with four feet under each seat instead of floating backs.
+  for (const dz of [-0.40, 0.40]) interiorProps.roundedDetail(interiorProps.finishes.wood,
+    3, FY + legHeight - 0.04, -5 + dz, 1.8, 0.08, 0.04, 0.006);
+  for (const dx of [-0.90, 0.90]) interiorProps.roundedDetail(interiorProps.finishes.wood,
+    3 + dx, FY + legHeight - 0.04, -5, 0.04, 0.08, 0.80, 0.006);
+  // Chairs retain four grounded feet and the same clear central shooting gaps.
   for (const [x, facing] of [[1.7, 1], [4.3, -1]]) {
-    addBox(x, FY + 0.415, -5.0, 0.4, 0.05, 0.4, MATS.wood);
-    pushDecor(_BG.unitBox, MATS.wood, x - facing * 0.19, FY + 0.72, -5.0, 0.05, 0.60, 0.4);
-    for (const dx of [-0.15, 0.15]) {
-      for (const dz of [-0.15, 0.15]) pushDecor(_BG.unitBox, MATS.wood, x + dx, FY + 0.195, -5 + dz, 0.055, 0.39, 0.055);
-    }
+    interiorProps.chair({ x, z: -5, floorY: FY, facing });
   }
 
   // A compact kitchen and flush cupboard face occupy the south wall, clear of
@@ -334,6 +331,7 @@ function buildNeighborApartment() {
     floorY: FY, floorId: 'neighbor-floor', width: 0.6, depth: 0.65 });
   interiorProps.sideboard({ id: 'neighbor-kitchen-island', x: 3.55, z: -1.5, yaw: Math.PI / 2,
     floorY: FY, floorId: 'neighbor-floor', width: 1.8, depth: 0.65, height: 1.05 });
+  interiorProps.story.kitchenStillLife({ x: 3.55, z: -1.70, topY: FY + 1.0668, yaw: Math.PI / 2, variant: 1 });
   pushDecor(_BG.unitBox, MATS.metal, 6.48, FY + 1.79, -0.375, 0.65, 0.16, 0.50);
   pushDecor(_BG.unitBox, MATS.metal, 6.48, FY + 2.635, -0.265, 0.26, 1.53, 0.26);
   pushDecor(_BG.unitBox, MATS.wood, 7.18, FY + 0.989, -0.475, 0.5, 0.05, 0.32);
@@ -353,7 +351,7 @@ function buildNeighborApartment() {
 
   // Living furniture faces one another instead of a television in the hall.
   upholsteredSeat({ id: 'neighbor-sofa', x: 7, z: -9, floorY: FY,
-    floorId: 'neighbor-floor', width: 2.2, depth: 0.8 });
+    floorId: 'neighbor-floor', width: 2.2, depth: 0.8, palette: 'cool', throwSide: 1 });
   upholsteredSeat({ id: 'neighbor-armchair', x: 3.5, z: -6.9, floorY: FY,
     floorId: 'neighbor-floor', width: 0.8, depth: 0.7 });
   interiorProps.sideboard({ id: 'neighbor-side-table', x: 4.65, z: -8.75,
@@ -363,14 +361,12 @@ function buildNeighborApartment() {
   addBox(7, FY + 0.4, -6.95, 1.2, 0.8, 0.5, MATS.wood, {
     architecture: { id: 'neighbor-tv-console', kind: 'furniture', supports: ['neighbor-floor'] },
   });
-  addBox(7, FY + 1.105, -6.99, 1.0, 0.59, 0.50, MATS.metal, { collide: false });
-  for (const x of [6.67, 7.33]) pushDecor(_BG.unitBox, MATS.metal, x, FY + 0.82, -6.99, 0.10, 0.04, 0.34);
+  addCrtHousing(pushDecor, { parent: World, x: 7, y: FY + 1.105, z: -6.99 });
   const crt = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.45, 0.04),
     new THREE.MeshStandardMaterial({ color: 0x051018, emissive: 0x3a4d80, emissiveIntensity: 1.0, roughness: 0.3, metalness: 0.3 }));
   // The dark tube is opaque cover, but its front surface is glass for impacts.
   crt.material.userData.surfaceKind = 'glass';
   crt.position.set(7.05, FY + 1.105, -7.26); World.add(crt);
-  for (const y of [FY + 0.99, FY + 1.19]) pushDecor(_BG.unitBox, MATS.wood, 6.58, y, -7.27, 0.055, 0.055, 0.045);
   const crtLight = new THREE.PointLight(0x4a6aa0, 0.7, 4, 2.0);
   crtLight.position.set(7, FY + 1.0, -7.5);
   World.add(crtLight); addFlickerLight(crtLight, 0.7, 7);

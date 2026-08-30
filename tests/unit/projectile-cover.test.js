@@ -72,9 +72,26 @@ function assertPlayerHit(enemy) {
   assert.equal(weapon.calls.tracers.length, 1);
 }
 
+const televisionHousing = ai.fixture.World.getObjectByName('neighbor-crt-housing');
+const televisionDetails = ai.fixture.entries.filter(entry => entry.mesh.geometry.name === 'crt-recessed-details');
+const televisionScreens = ai.fixture.entries.filter(entry => entry.zone === 'neighbor'
+  && entry.mesh.position.distanceTo(vector([7.05, 5.105, -7.26])) < 1e-6);
+assert.ok(televisionHousing?.isMesh);
+assert.equal(televisionDetails.length, 1); assert.equal(televisionScreens.length, 1);
+
 const furnitureCases = [
-  { name: 'CRT front', origin: [7.05, 5.105, -8.1], feet: [7.05, 4, -5.9], axis: 'z', surface: -7.28 },
-  { name: 'television rear case', origin: [7.05, 5.105, -5.9], feet: [7.05, 4, -8.1], axis: 'z', surface: -6.74, kind: 'metal' },
+  { name: 'CRT front', origin: [7.05, 5.105, -8.1], feet: [7.05, 4, -5.9], axis: 'z', surface: -7.28,
+    kind: 'glass', object: televisionScreens[0].mesh, normal: [0, 0, -1] },
+  { name: 'television recessed vent gap', origin: [7.05, 5.105, -5.9], feet: [7.05, 4, -8.1], axis: 'z', surface: -6.747,
+    kind: 'solid', object: televisionDetails[0].mesh, normal: [0, 0, 1] },
+  { name: 'television raised vent rib', origin: [7.145, 5.096, -5.9], feet: [7.145, 4, -8.1], axis: 'z', surface: -6.74,
+    kind: 'solid', object: televisionHousing, normal: [0, 0, 1] },
+  { name: 'television plain rear casing', origin: [7, 5.105, -5.9], feet: [7, 4, -8.1], axis: 'z', surface: -6.75,
+    kind: 'solid', object: televisionHousing, normal: [0, 0, 1] },
+  { name: 'television left tapered shoulder', origin: [5.9, 5.105, -6.99], feet: [8.1, 4, -6.99], axis: 'x', surface: 6.550851063829787,
+    kind: 'solid', object: televisionHousing, normal: [-0.235, 0, 0.08] },
+  { name: 'television right tapered shoulder', origin: [8.1, 5.105, -6.99], feet: [5.9, 4, -6.99], axis: 'x', surface: 7.449148936170213,
+    kind: 'solid', object: televisionHousing, normal: [0.235, 0, 0.08] },
   { name: 'chair back', origin: [1.15, 4.82, -5], feet: [5.5, 4, -5], axis: 'x', surface: 1.485, kind: 'wood' },
   { name: 'chair seat', origin: [1.7, 4.415, -6.3], feet: [1.7, 4, -3.9], axis: 'z', surface: -5.2, kind: 'wood' },
   { name: 'chair leg', origin: [1.55, 4.195, -6.3], feet: [1.55, 4, -3.9], axis: 'z', surface: -5.1775, kind: 'wood' },
@@ -84,7 +101,11 @@ const furnitureCases = [
 for (const scenario of furnitureCases) {
   test(`actual player firing cannot damage a target through the ${scenario.name}`, () => {
     const enemy = prepareShot(scenario.origin, scenario.feet);
-    assertStopped(enemy, scenario.axis, scenario.surface, scenario.kind);
+    const impact = assertStopped(enemy, scenario.axis, scenario.surface, scenario.kind, scenario.object);
+    if (scenario.normal) {
+      const expected = vector(scenario.normal).normalize();
+      for (const axis of ['x', 'y', 'z']) near(impact.normal[axis], expected[axis], `real firing preserves the ${axis} surface normal`);
+    }
   });
 }
 

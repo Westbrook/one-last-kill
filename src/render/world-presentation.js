@@ -6,10 +6,12 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const AUTO = Object.freeze({
+  msaa: 2,
   blend: 0.55,
   ao: Object.freeze({ samples: 8, radius: 0.40, thickness: 0.18, distanceExponent: 1.2, distanceFallOff: 1, scale: 1, screenSpaceRadius: false }),
 });
 const HIGH = Object.freeze({
+  msaa: 4,
   blend: 0.62,
   ao: Object.freeze({ samples: 12, radius: 0.45, thickness: 0.20, distanceExponent: 1.2, distanceFallOff: 1, scale: 1, screenSpaceRadius: false }),
 });
@@ -63,9 +65,12 @@ export function createWorldPresentation(renderer, scene, camera, { getQuality = 
     const nextHeight = Math.max(1, Math.floor(drawingSize.y));
     const nextAoWidth = Math.max(1, Math.ceil(nextWidth / 2));
     const nextAoHeight = Math.max(1, Math.ceil(nextHeight / 2));
+    const samples = Math.min(nextProfile.msaa, Math.max(0, Math.floor(renderer.capabilities.maxSamples || 0)));
+    // Sample count belongs to the framebuffer allocation. Rebuild only for an
+    // explicit quality change, never on each frame or adaptive resize.
+    if (beauty && beauty.samples !== samples) release();
     if (!beauty) {
       try {
-        const samples = Math.min(2, Math.max(0, Math.floor(renderer.capabilities.maxSamples || 0)));
         depth = factories.createDepthTexture(nextWidth, nextHeight);
         depth.name = 'world-presentation-depth';
         depth.format = DepthFormat;

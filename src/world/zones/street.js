@@ -3,6 +3,11 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as THREE from 'three';
 
 import { MATS } from '../../render/materials.js';
+import { addBakeryBread, addBakeryPackage } from '../../render/bakery-provisions.js';
+import { getBakeryProvisionMaterials } from '../../render/bakery-provision-materials.js';
+import { refineConcreteBarrier } from '../../render/street-barrier.js';
+import { createSedanCabin } from '../../render/sedan-cabin.js';
+import { createSedanBumper, createSedanHood } from '../../render/sedan-panels.js';
 import { makeHumanoid, HUMANOID_PRESETS, _CG, _BG, pushDecor } from '../../render/models.js';
 import { Colliders } from '../../core/collision.js';
 import { World, WorldState, Triggers, addBox, addSign, makeSmokeSystem } from '../world.js';
@@ -56,12 +61,14 @@ function buildStreet() {
   }
   for (const cover of street.cover) {
     const floor = street.road.floorY;
-    addBox(cover.x, floor + cover.height / 2, cover.z, cover.width, cover.height, cover.depth, MATS[cover.material], {
+    const mesh = addBox(cover.x, floor + cover.height / 2, cover.z, cover.width, cover.height, cover.depth, MATS[cover.material], {
       architecture: { id: cover.id, kind: 'cover', supports: ['street-road'] },
     });
     if (cover.material === 'metal') {
       boxDetail(MATS.metal, cover.x, floor + cover.height + 0.035, cover.z, cover.width + 0.08, 0.07, cover.depth + 0.08);
       for (const offset of [-0.8, 0, 0.8]) boxDetail(MATS.metal, cover.x + offset, floor + cover.height / 2, cover.z - cover.depth / 2 - 0.025, 0.045, cover.height * 0.78, 0.045);
+    } else if (cover.id === 'street-cover-center') {
+      refineConcreteBarrier(mesh, { pushDecor, reflectorMaterial: whitePaint });
     } else {
       for (const offset of [-0.9, 0.9]) boxDetail(whitePaint, cover.x + offset, floor + 0.63, cover.z - cover.depth / 2 - 0.007, 0.34, 0.14, 0.01);
     }
@@ -254,35 +261,18 @@ function spawnParkedCar(x, y, z, rotY, bodyColor, opts = {}) {
   // Lower rocker panel — narrow dark strip under the body for visual weight.
   const rocker = new THREE.Mesh(new THREE.BoxGeometry(o.length * 0.98, 0.10, o.width * 1.02), trimMat);
   rocker.position.y = 0.35; car.add(rocker);
-  const hood = new THREE.Mesh(new RoundedBoxGeometry(o.length * 0.95, 0.1, o.width * 0.95, 2, 0.04), bodyMat);
+  const hood = new THREE.Mesh(createSedanHood(o.length, o.width), bodyMat);
   hood.position.y = 0.82; hood.castShadow = true; car.add(hood);
   // Hood vent / ornament — small chrome strip near the front of the hood.
   const hoodOrn = new THREE.Mesh(_CG.unitBox, chromeMat);
   hoodOrn.scale.set(0.18, 0.04, 0.22);
   hoodOrn.position.set(o.length * 0.38, 0.88, 0); car.add(hoodOrn);
-  const cabinGeometry = new THREE.BoxGeometry(o.length * 0.55, 0.6, o.width * 0.9);
-  const cabinVertices = cabinGeometry.attributes.position;
-  for (let i = 0; i < cabinVertices.count; i++) {
-    if (cabinVertices.getY(i) > 0) {
-      cabinVertices.setX(i, cabinVertices.getX(i) * 0.78);
-      cabinVertices.setZ(i, cabinVertices.getZ(i) * 0.86);
-    }
-  }
-  cabinGeometry.computeVertexNormals();
-  const cabin = new THREE.Mesh(cabinGeometry, cabinMat);
-  cabin.position.set(-0.1, 1.15, 0); cabin.castShadow = true; car.add(cabin);
-  // Cabin pillars (A + B) and waistline trim — break up the glass with a few
-  // dark struts so the cabin reads as a windowed greenhouse instead of a slab.
+  const cabinParts = createSedanCabin(o.length, o.width);
+  const cabin = new THREE.Mesh(cabinParts.glass, cabinMat);
+  cabin.castShadow = true; car.add(cabin);
+  // Window frames follow both slopes of the glass and meet the crowned roof.
   const cabL = o.length * 0.55;
-  for (const px of [cabL * 0.46, -cabL * 0.46, cabL * 0.05]) {
-    for (const sz of [-1, 1]) {
-      const pillar = new THREE.Mesh(_CG.unitBox, trimMat);
-      pillar.scale.set(0.06, 0.6, 0.06);
-      pillar.rotation.z = Math.atan2(px * 0.22, 0.6);
-      pillar.position.set(-0.1 + px * 0.89, 1.15, sz * (o.width * 0.42));
-      car.add(pillar);
-    }
-  }
+  for (const geometry of cabinParts.pillars) car.add(new THREE.Mesh(geometry, trimMat));
   // Window-base waistline trim — thin chrome line where glass meets body.
   for (const sz of [-1, 1]) {
     const wb = new THREE.Mesh(_CG.unitBox, chromeMat);
@@ -290,11 +280,11 @@ function spawnParkedCar(x, y, z, rotY, bodyColor, opts = {}) {
     wb.position.set(-0.1, 0.88, sz * (o.width * 0.46));
     car.add(wb);
   }
-  const roof = new THREE.Mesh(new RoundedBoxGeometry(o.length * 0.43, 0.05, o.width * 0.77, 2, 0.018), bodyMat);
-  roof.position.set(-0.1, 1.48, 0); roof.castShadow = true; car.add(roof);
-  const bumperF = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, o.width), chromeMat);
+  const roof = new THREE.Mesh(cabinParts.roof, bodyMat);
+  roof.castShadow = true; car.add(roof);
+  const bumperF = new THREE.Mesh(createSedanBumper(o.width), chromeMat);
   bumperF.position.set(o.length / 2, 0.45, 0); car.add(bumperF);
-  const bumperR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, o.width), chromeMat);
+  const bumperR = new THREE.Mesh(createSedanBumper(o.width), chromeMat);
   bumperR.position.set(-o.length / 2, 0.45, 0); car.add(bumperR);
   // Front grille — five vertical chrome slats sunk into the body face.
   for (let k = 0; k < 5; k++) {
@@ -561,12 +551,11 @@ function buildBakeryCounter(b) {
   addBox(c.x, bodyTop + 0.045, c.z, c.width + 0.12, 0.09, c.depth + 0.12, MATS.concrete, {
     collide: false, architecture: { id: 'bakery-counter-top', kind: 'furniture', supports: ['bakery-counter-base'] },
   });
-  const bread = new THREE.SphereGeometry(1, 10, 6);
   for (let i = 0; i < 12; i++) {
     const x = c.x - c.width / 2 + 0.46 + i * 0.61;
-    pushDecor(bread, MATS.wood, x, top + 0.085, c.z - 0.15 + i % 2 * 0.30, 0.24, 0.085, 0.13, i * 0.2);
+    addBakeryBread(pushDecor, { x, topY: top, z: c.z - 0.15 + i % 2 * 0.30,
+      width: 0.48, height: 0.17, depth: 0.26, yaw: i * 0.2, variant: i % 2, retail: true });
   }
-  bread.dispose();
   for (const x of [c.x - 2.8, c.x - 0.7, c.x + 1.4]) {
     addBox(x, top + 0.13, c.z - c.depth / 2 - 0.015, 1.95, 0.26, 0.028, MATS.glass);
     boxDetail(MATS.glass, x, top + 0.28, c.z - 0.17, 1.95, 0.035, 1.05);
@@ -591,11 +580,14 @@ function bakeryShelf(id, x, z, width, depth, height, floor) {
     architecture: { id, kind: 'furniture', supports: ['bakery-floor'] },
   });
   boxDetail(MATS.tar, x, floor + height / 2, z - depth / 2 - 0.005, width - 0.15, height - 0.15, 0.012);
-  for (let y = floor + 0.17; y < floor + height; y += 0.58) {
+  let row = 0;
+  const palette = id === 'bakery-retail-shelf' ? 2 : id === 'bakery-prep-shelf-west' ? 0 : 1;
+  for (let y = floor + 0.17; y < floor + height; y += 0.58, row++) {
     boxDetail(MATS.wood, x, y, z - depth / 2 - 0.035, width - 0.05, 0.065, 0.16);
+    let slot = 0;
     if (y + 0.35 < floor + height) for (let dx = -width / 2 + 0.3; dx < width / 2 - 0.1; dx += 0.62) {
-      boxDetail(MATS.wood, x + dx, y + 0.15, z - depth / 2 - 0.065, 0.39, 0.23, 0.18);
-      boxDetail(MATS.plaster, x + dx, y + 0.16, z - depth / 2 - 0.161, 0.14, 0.11, 0.012);
+      addBakeryPackage(pushDecor, { x: x + dx, topY: y + 0.0325, z: z - depth / 2 - 0.065,
+        variant: (slot++ + row * 2 + palette) % 6, minX: x - width / 2 + 0.10, maxX: x + width / 2 - 0.10 });
     }
   }
   for (const dx of [-width / 2 + 0.05, width / 2 - 0.05]) boxDetail(MATS.wood, x + dx, floor + height / 2, z - depth / 2 - 0.055, 0.10, height, 0.12);
@@ -603,16 +595,19 @@ function bakeryShelf(id, x, z, width, depth, height, floor) {
 
 function buildBakeryPreparation(b) {
   const table = b.prepTable, oven = b.oven;
+  const steel = getBakeryProvisionMaterials().steel;
   addBox(table.x, b.floorY + table.height / 2, table.z, table.width, table.height, table.depth, MATS.wood, {
     architecture: { id: 'bakery-prep-island-base', kind: 'cover', supports: ['bakery-floor'] },
   });
-  addBox(table.x, b.floorY + table.height + 0.035, table.z, table.width + 0.08, 0.07, table.depth + 0.10, MATS.metal, {
+  addBox(table.x, b.floorY + table.height + 0.035, table.z, table.width + 0.08, 0.07, table.depth + 0.10, steel, {
     collide: false, architecture: { id: 'bakery-prep-island-top', kind: 'furniture', supports: ['bakery-prep-island-base'] },
   });
   for (const x of [-29.25, -27.75, -26.25]) {
     boxDetail(MATS.plaster, x, 1.279, table.z, 0.78, 0.015, 0.53);
-    for (const dx of [-0.22, 0.1]) boxDetail(MATS.wood, x + dx, 1.34, table.z, 0.30, 0.10, 0.20);
-    boxDetail(MATS.metal, x, 0.62, table.z - table.depth / 2 - 0.022, 1.29, 0.93, 0.035);
+    for (const [variant, dx] of [-0.22, 0.1].entries()) addBakeryBread(pushDecor, {
+      x: x + dx, topY: 1.279 + 0.015 / 2, z: table.z, width: 0.30, height: 0.10, depth: 0.20, variant,
+    });
+    boxDetail(steel, x, 0.62, table.z - table.depth / 2 - 0.022, 1.29, 0.93, 0.035);
   }
 
   addBox(oven.x, b.floorY + oven.height / 2, oven.z, oven.width, oven.height, oven.depth, MATS.metal, {

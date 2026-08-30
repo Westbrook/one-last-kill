@@ -1,63 +1,6 @@
 import * as THREE from 'three';
-import { mulberry32 } from '../core/math.js';
-import { makeCanvas, canvasToTexture } from '../render/materials.js';
 import { createHumanoidRig, HUMANOID_GEOMETRY } from './humanoid-rig.js';
 import { applyBoxWorldUV } from './world-uv.js';
-
-// ─── 4. HUMANOID MODEL BUILDER ───────────────────────────────────────────────
-function makeFaceTexture(skinHex = '#caa590', seed = 100) {
-  const c = makeCanvas(256), ctx = c.getContext('2d');
-  const rng = mulberry32(seed);
-  ctx.fillStyle = skinHex; ctx.fillRect(0, 0, 256, 256);
-  // The face occupies the front of the curved head's UVs, not six box faces.
-  const shade = ctx.createLinearGradient(0, 65, 0, 245);
-  shade.addColorStop(0, 'rgba(47,30,23,0.015)');
-  shade.addColorStop(0.65, 'rgba(47,30,23,0.035)');
-  shade.addColorStop(1, 'rgba(39,26,22,0.22)');
-  ctx.fillStyle = shade; ctx.fillRect(0, 0, 256, 256);
-  for (const x of [115, 141]) {
-    ctx.fillStyle = 'rgba(57,39,32,0.18)';
-    ctx.beginPath(); ctx.ellipse(x, 117, 8, 4.7, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#9c9584';
-    ctx.beginPath(); ctx.ellipse(x, 115, 5.4, 1.8, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#272922';
-    ctx.beginPath(); ctx.ellipse(x + (rng() - 0.5), 115, 1.65, 2, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(31,23,19,0.75)'; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.moveTo(x - 6.5, 104); ctx.quadraticCurveTo(x, 100.5, x + 6.2, 104); ctx.stroke();
-  }
-  ctx.strokeStyle = 'rgba(91,50,42,0.55)'; ctx.lineWidth = 1.9;
-  ctx.beginPath(); ctx.moveTo(119, 195); ctx.quadraticCurveTo(128, 197.5, 137, 195); ctx.stroke();
-  ctx.strokeStyle = 'rgba(63,37,29,0.17)'; ctx.lineWidth = 1.3;
-  ctx.beginPath(); ctx.moveTo(124, 156); ctx.quadraticCurveTo(128, 159, 132, 156); ctx.stroke();
-  // Subtle stubble and skin variation stay subordinate to the facial shape.
-  for (let i = 0; i < 420; i++) {
-    const x = 95 + rng() * 66, y = 173 + rng() * 64;
-    ctx.fillStyle = `rgba(49,36,29,${0.025 + rng() * 0.075})`;
-    ctx.fillRect(x, y, 0.8, 0.9);
-  }
-  return canvasToTexture(c, { repeat: 1 });
-}
-
-function makeClothTexture(baseHex, accentHex, seed = 200) {
-  const c = makeCanvas(128), ctx = c.getContext('2d'), rng = mulberry32(seed);
-  ctx.fillStyle = baseHex; ctx.fillRect(0, 0, 128, 128);
-  for (let y = 0; y < 128; y += 2) {
-    ctx.fillStyle = y % 4 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.055)';
-    ctx.fillRect(0, y, 128, 1);
-  }
-  for (let i = 0; i < 500; i++) {
-    ctx.fillStyle = rng() > 0.5 ? 'rgba(225,225,215,0.035)' : 'rgba(0,0,0,0.035)';
-    ctx.fillRect(rng() * 128, rng() * 128, 1, 1);
-  }
-  ctx.strokeStyle = accentHex; ctx.globalAlpha = 0.14; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(21, 0); ctx.lineTo(18, 128); ctx.moveTo(107, 0); ctx.lineTo(111, 128); ctx.stroke();
-  ctx.globalAlpha = 0.055;
-  for (const y of [37, 82, 115]) {
-    ctx.beginPath(); ctx.moveTo(30, y); ctx.quadraticCurveTo(63, y - 5, 98, y + 2); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-  return canvasToTexture(c, { repeat: 1 });
-}
 
 // Keep the public geometry cache while the articulated rig owns its shapes.
 const _HG = HUMANOID_GEOMETRY;
@@ -163,31 +106,13 @@ function flushDecor(parent) {
   _decorBuckets.clear();
 }
 
-// Three deterministic appearance variants per outfit are shared across pooled
-// rigs. Animation never mutates these materials or textures.
-const humanoidMaterialCache = new Map();
 function makeHumanoid(opts = {}) {
   const o = {
     skin: '#caa590', shirt: '#3a3a44', shirtAccent: '#1a1a1f',
     pants: '#1d1d24', hair: '#1c1410', height: 1.78, build: 1,
     seed: 1, kind: 'adult', ...opts,
   };
-  const variant = Math.abs(o.seed | 0) % 3;
-  const key = [o.skin, o.shirt, o.shirtAccent, o.pants, o.hair, o.kind, variant].join('|');
-  let materials = humanoidMaterialCache.get(key);
-  if (!materials) {
-    materials = {
-      skin: new THREE.MeshStandardMaterial({ color: o.skin, roughness: 0.78, metalness: 0 }),
-      face: new THREE.MeshStandardMaterial({ map: makeFaceTexture(o.skin, 100 + variant * 73), roughness: 0.79, metalness: 0 }),
-      shirt: new THREE.MeshStandardMaterial({ map: makeClothTexture(o.shirt, o.shirtAccent, 200 + variant), roughness: 0.94 }),
-      pants: new THREE.MeshStandardMaterial({ map: makeClothTexture(o.pants, '#66685f', 300 + variant), roughness: 0.96 }),
-      hair: new THREE.MeshStandardMaterial({ color: o.hair, roughness: 0.91 }),
-      boots: new THREE.MeshStandardMaterial({ color: '#181b1b', roughness: 0.79 }),
-      equipment: new THREE.MeshStandardMaterial({ color: o.kind === 'bruiser' ? '#393d32' : '#2b3432', roughness: 0.94 }),
-    };
-    humanoidMaterialCache.set(key, materials);
-  }
-  return createHumanoidRig(o, materials);
+  return createHumanoidRig(o);
 }
 
 // Civilian and combat appearances share the same articulated anatomy.

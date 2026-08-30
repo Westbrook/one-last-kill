@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TAU, clamp, mulberry32, makeValueNoise, fBm } from '../core/math.js';
 import { renderer } from '../core/renderer.js';
 import { SURFACE_METERS, SURFACE_SPECS, bakeSurfaceData, deriveSurfaceData } from './surface-detail.js';
+import { PBR_SURFACES, PBR_KTX2_TRIAL, loadPbrMaterialWithFallback, commitSurfaceMaps, getRequestedSurfaceFormat, supportsPbrCompression } from './pbr-materials.js';
 
 // ─── 2. CANVAS / TEXTURE HELPERS ─────────────────────────────────────────────
 const TEX_SIZE = 512;
@@ -78,8 +79,8 @@ function defineMat(name, builder) {
     get() {
       const material = builder();
       material.name = `surface-${name}`;
-      material.userData.surfaceMeters = SURFACE_METERS[name] ?? 1;
-      material.userData.surfaceKind = name;
+      material.userData.surfaceMeters ??= SURFACE_METERS[name] ?? 1;
+      material.userData.surfaceKind ??= name;
       // World UVs carry the physical scale. Keep every PBR channel aligned,
       // including legacy canvas fallbacks and instanced object-space props.
       for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'bumpMap']) {
@@ -216,6 +217,64 @@ defineMat('wallpaper', () => {
     normalMap: canvasToTexture(heightToNormalCanvas(hc, 1.4), { repeat: 2, color: false }),
     roughness: 0.85, metalness: 0.0, envMapIntensity: 0.32,
   });
+});
+
+// Interior cloth has a quiet, millimetric weave instead of wallpaper's large
+// printed motifs. These three 256px maps are shared by every upholstered piece;
+// mipmaps suppress the threads at distance. No canvas work runs during play.
+defineMat('fabric', () => {
+  const size = 256, albedo = new Uint8Array(size * size * 4);
+  const normal = new Uint8Array(albedo.length), finish = new Uint8Array(albedo.length);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const u = (x % (size - 1)) / (size - 1), v = (y % (size - 1)) / (size - 1);
+      const warp = Math.sin(TAU * u * 64), weft = Math.sin(TAU * v * 64);
+      const wear = Math.sin(TAU * u * 3 + Math.sin(TAU * v * 2)) * Math.cos(TAU * v * 3);
+      const tone = wear * 3.5 + warp * weft * 1.8;
+      const i = (y * size + x) * 4;
+      albedo[i] = 98 + tone; albedo[i + 1] = 96 + tone; albedo[i + 2] = 84 + tone;
+      const nx = -Math.cos(TAU * u * 64) * (0.55 + weft * 0.25) * 0.12;
+      const ny = Math.cos(TAU * v * 64) * (0.55 + warp * 0.25) * 0.12;
+      const inverseLength = 1 / Math.hypot(nx, ny, 1);
+      normal[i] = (nx * inverseLength * 0.5 + 0.5) * 255;
+      normal[i + 1] = (ny * inverseLength * 0.5 + 0.5) * 255;
+      normal[i + 2] = (inverseLength * 0.5 + 0.5) * 255;
+      finish[i] = 255; finish[i + 1] = 237 + wear * 6; finish[i + 2] = 0;
+      albedo[i + 3] = normal[i + 3] = finish[i + 3] = 255;
+    }
+  }
+  const material = new THREE.MeshStandardMaterial({
+    map: surfaceTexture(albedo, size, size, true),
+    normalMap: surfaceTexture(normal, size, size), normalScale: new THREE.Vector2(0.45, 0.45),
+    roughnessMap: surfaceTexture(finish, size, size), roughness: 1,
+    metalness: 0, envMapIntensity: 0.16,
+  });
+  material.userData.surfaceMeters = 0.32;
+  material.userData.staticSurfaceMaps = true;
+  material.userData.textureBytes = size * size * 4 * 3;
+  return material;
+});
+
+// Vitreous appliance enamel is a dielectric coating. Its quieter cream color
+// and satin finish keep the existing metal handles and dark seals readable.
+defineMat('enamel', () => {
+  const size = 128, finish = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const u = (x % (size - 1)) / (size - 1), v = (y % (size - 1)) / (size - 1), i = (y * size + x) * 4;
+      const wear = Math.sin(TAU * u * 3 + Math.sin(TAU * v * 2)) * Math.cos(TAU * v * 4);
+      finish[i] = 255; finish[i + 1] = 104 + wear * 13; finish[i + 2] = 0; finish[i + 3] = 255;
+    }
+  }
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xbcb8aa, roughnessMap: surfaceTexture(finish, size, size),
+    roughness: 1, metalness: 0, envMapIntensity: 0.36,
+  });
+  material.userData.surfaceMeters = 0.6;
+  material.userData.surfaceKind = 'metal';
+  material.userData.staticSurfaceMaps = true;
+  material.userData.textureBytes = size * size * 4;
+  return material;
 });
 
 defineMat('brick', () => {
@@ -378,45 +437,126 @@ function buildSkybox() {
 export { MATS, makeCanvas, makeRectCanvas, canvasToTexture, heightToNormalCanvas, fillNoiseCanvas, buildSkybox };
 
 let surfaceTextureLoad = null;
+const surfaceTextureStatus = { requestedMode: 'ktx2', state: 'idle', materials: {} };
 
-/** Generated albedo maps upgrade shared materials; procedural maps remain fallbacks. */
-export function loadSurfaceTextures() {
-  if (surfaceTextureLoad) return surfaceTextureLoad;
+export function getSurfaceTextureStatus() {
+  return JSON.parse(JSON.stringify(surfaceTextureStatus));
+}
+
+function recordSurfaceStatus(name, material, failed, unavailableReason) {
+  const data = material.userData, provenance = data.pbrProvenance;
+  const format = data.surfaceFormat ?? data.surfaceSource ?? 'procedural';
+  const fallback = format !== surfaceTextureStatus.requestedMode;
+  surfaceTextureStatus.materials[name] = {
+    status: failed ? 'failed' : fallback ? 'fallback' : 'ready',
+    source: data.surfaceSource ?? 'procedural', format,
+    assetId: provenance?.assetId ?? null, tileMeters: data.surfaceMeters,
+    mipCount: provenance?.mipLevels ?? 0,
+    gpuFormats: provenance?.gpuFormats ?? {}, gpuFormatNames: provenance?.gpuFormatNames ?? {},
+    compressedBytes: provenance?.compressedBytes ?? 0,
+    textureBytes: data.textureBytes ?? 0, textureBytesWithMipmaps: data.textureBytesWithMipmaps ?? 0,
+    downloadBytes: data.textureDownloadBytes ?? 0, fallback,
+    fallbackReason: !fallback ? null : failed ? 'all-surface-upgrades-failed'
+      : format === 'generated' ? 'raw-pbr-load-failed' : unavailableReason ?? 'ktx2-load-or-decode-failed',
+  };
+}
+
+async function loadGeneratedSurface(name, url, loader, material) {
+  const texture = await loader.loadAsync(url);
+  const created = [texture];
+  try {
+    // Downsample only the derived PBR channels. Original full-resolution
+    // albedo is preserved; this work never runs in the frame loop.
+    const sample = makeCanvas(512), ctx = sample.getContext('2d');
+    ctx.drawImage(texture.image, 0, 0, 512, 512);
+    const data = deriveSurfaceData(ctx.getImageData(0, 0, 512, 512).data, 512, 512, name);
+    const normal = surfaceTexture(data.normal, 512, 512);
+    created.push(normal);
+    const roughness = surfaceTexture(data.orm, 512, 512);
+    created.push(roughness);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1, 1);
+    texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    const textureBytes = (texture.image.width * texture.image.height + 2 * 512 * 512) * 4;
+    commitSurfaceMaps(material, { map: texture, normalMap: normal, roughnessMap: roughness }, {
+      surfaceMeters: SURFACE_METERS[name], normalScale: name === 'brick' ? 0.65 : 0.8,
+      color: name === 'plaster' ? 0xb4bdae : 0xffffff,
+      userData: {
+        surfaceSource: 'generated', surfaceFormat: 'generated', generatedAlbedoUrl: url, pbrProvenance: undefined,
+        textureBytes, textureBytesWithMipmaps: Math.ceil(textureBytes * 4 / 3), textureDownloadBytes: undefined,
+      },
+    });
+  } catch (error) {
+    for (const resource of created) resource.dispose();
+    throw error;
+  }
+}
+
+async function loadSurfaceTextureSets() {
+  surfaceTextureStatus.state = 'loading';
   const loader = new THREE.TextureLoader();
   const assets = [['plaster', '/assets/plaster-aged.png'], ['brick', '/assets/brick-weathered.png']];
-  surfaceTextureLoad = Promise.allSettled(assets.map(async ([name, url]) => {
-    const texture = await loader.loadAsync(url);
-    const created = [texture];
+  let ktx2Loader = null, unavailableReason = null;
+  // Production ignores URL overrides. Development QA can explicitly force
+  // the raw reference pack for comparisons against this accepted delivery.
+  surfaceTextureStatus.requestedMode = getRequestedSurfaceFormat({ dev: import.meta.env.DEV, search: globalThis.location?.search ?? '' });
+  if (surfaceTextureStatus.requestedMode === 'ktx2') {
     try {
-      // Downsample only the derived PBR channels. Original full-resolution
-      // albedo is preserved; this work never runs in the frame loop.
-      const sample = makeCanvas(512), ctx = sample.getContext('2d');
-      ctx.drawImage(texture.image, 0, 0, 512, 512);
-      const data = deriveSurfaceData(ctx.getImageData(0, 0, 512, 512).data, 512, 512, name);
-      const normal = surfaceTexture(data.normal, 512, 512);
-      const roughness = surfaceTexture(data.orm, 512, 512);
-      created.push(normal, roughness);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(1, 1);
-      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      const material = MATS[name];
-      const previous = new Set([material.map, material.normalMap, material.roughnessMap, material.metalnessMap, material.bumpMap]);
-      material.map = texture; material.normalMap = normal; material.roughnessMap = roughness;
-      material.bumpMap = null; material.metalnessMap = null;
-      material.roughness = 1; material.metalness = 0;
-      const strength = name === 'brick' ? 0.65 : 0.8;
-      material.normalScale.set(strength, strength);
-      if (name === 'plaster') material.color.setHex(0xb4bdae);
-      material.userData.staticSurfaceMaps = true;
-      material.userData.generatedAlbedoUrl = url;
-      material.needsUpdate = true;
-      for (const old of previous) old?.dispose();
-      return name;
-    } catch (error) {
-      for (const resource of created) resource.dispose();
-      throw error;
+      const { KTX2Loader } = await import('three/addons/loaders/KTX2Loader.js');
+      ktx2Loader = new KTX2Loader();
+      ktx2Loader.setTranscoderPath('/assets/basis/').setWorkerLimit(1).detectSupport(renderer);
+      if (!supportsPbrCompression(ktx2Loader.workerConfig)) {
+        // Before init(), no worker or decoder resource exists. r185's
+        // dispose() decrements its active count even for uninitialized loaders.
+        unavailableReason = Object.values(ktx2Loader.workerConfig ?? {}).some(value => value === true)
+          ? 'compressed-format-not-approved' : 'compressed-textures-unsupported';
+        ktx2Loader = null;
+      } else {
+        await ktx2Loader.init();
+      }
+    } catch {
+      if (ktx2Loader?.transcoderPending) ktx2Loader.dispose();
+      ktx2Loader = null;
+      unavailableReason = 'ktx2-decoder-unavailable';
     }
-  }));
+  }
+  try {
+    return await Promise.allSettled(assets.map(async ([name, url]) => {
+      const material = MATS[name];
+      let failed = false;
+      try {
+        await loadPbrMaterialWithFallback(material, PBR_SURFACES[name], {
+          loader, maxAnisotropy: renderer.capabilities.getMaxAnisotropy(),
+          ktx2Loader, ktx2Spec: ktx2Loader ? PBR_KTX2_TRIAL[name] : null,
+        });
+        if (surfaceTextureStatus.requestedMode === 'ktx2' && !ktx2Loader) {
+          material.userData.pbrProvenance.fallbackFrom = 'ktx2';
+        }
+      } catch (pbrError) {
+        try {
+          await loadGeneratedSurface(name, url, loader, material);
+        } catch (generatedError) {
+          failed = true;
+          throw new AggregateError([pbrError, generatedError], `Surface upgrades failed; using procedural ${name}`);
+        }
+      } finally {
+        recordSurfaceStatus(name, material, failed, unavailableReason);
+      }
+      return name;
+    }));
+  } finally {
+    // A single decoder owns both triplets. Every candidate request (including
+    // failed-set late arrivals) has settled before its worker is terminated.
+    ktx2Loader?.dispose();
+    surfaceTextureStatus.state = 'complete';
+  }
+}
+
+/** Reviewed ASTC/BC7 PBR by default, with raw -> generated -> procedural fallback. */
+export function loadSurfaceTextures() {
+  if (surfaceTextureLoad) return surfaceTextureLoad;
+  // main.js awaits completion before UVs and material clones are constructed.
+  surfaceTextureLoad = loadSurfaceTextureSets();
   return surfaceTextureLoad;
 }

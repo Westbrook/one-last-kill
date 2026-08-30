@@ -1,4 +1,3 @@
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { WEAPON_DEFS } from './weapon-data.js';
 import { sanitizeWeaponSnapshot, reloadMagazine, canPickupWeapon, weaponPickupPrompt } from './weapon-rules.js';
 import { CombatStats } from './combat-stats.js';
@@ -23,15 +22,15 @@ import { prepareViewModel, getViewModelMuzzle } from '../render/viewmodel.js';
 import { createFirstPersonHands, poseFirstPersonHands, FIRST_PERSON_PUNCH_SECONDS } from '../render/first-person-hands.js';
 import { createFirstPersonBat, poseFirstPersonBat } from '../render/first-person-bat.js';
 import { createBatAsset, BAT_DIMENSIONS } from '../render/bat-asset.js';
+import { getWeaponFinishes, batchStaticWeaponParts } from '../render/weapon-finishes.js';
+import { createHeroWeapon } from '../render/hero-weapons.js';
+import { addHeroWeaponHands } from '../render/hero-weapon-grips.js';
+import { createDroppedWeaponAsset, warmDroppedWeaponAssets } from '../render/dropped-weapon-assets.js';
 
 // ── Weapon drops ────────────
-// Each drop is a small mesh + light + userData payload { weaponType, ammo,
-// kind:'weaponDrop' } used by the pickup controller.
-// Drops are small composite Groups built from a tiny set of shared sub-
-// geometries and materials. Compared to the prior single-Box mesh the world
-// pickup now reads as a proper weapon silhouette (barrel + grip + mag etc.)
-// without per-spawn geometry allocations beyond the few small Mesh objects
-// the Group needs.
+// Static pickups share the authored NPC firearm/knife surfaces. Placement
+// nodes are independent; collecting/removing a drop never disposes the cached
+// geometry or alters the matching held weapon. Firearms use two draws each.
 const WeaponDrops = {
   list: [],
   matCache: {},
@@ -49,6 +48,7 @@ const WeaponDrops = {
   _haloPoolSize: 16,
   _initHaloPool() {
     if (this._haloPool.length) return;
+    warmDroppedWeaponAssets(type => this._mat(type));
     for (let i = 0; i < this._haloPoolSize; i++) {
       const l = new THREE.PointLight(0xffd070, 0, 1.6, 1.8);
       l.position.set(0, -200, 0);
@@ -88,8 +88,6 @@ const WeaponDrops = {
     if (this._smallGeoCache) return this._smallGeoCache;
     this._smallGeoCache = {
       box1:   new THREE.BoxGeometry(1, 1, 1),
-      cyl12:  new THREE.CylinderGeometry(0.5, 0.5, 1, 12),
-      sph8:   new THREE.SphereGeometry(0.5, 8, 6),
     };
     return this._smallGeoCache;
   },
@@ -102,14 +100,6 @@ const WeaponDrops = {
     const m = new THREE.MeshStandardMaterial({ color: col, roughness: rough, metalness: metal });
     this.matCache[type] = m; return m;
   },
-  _matDark() {
-    if (!this._dm) this._dm = new THREE.MeshStandardMaterial({ color: 0x1a1a1e, roughness: 0.6, metalness: 0.4 });
-    return this._dm;
-  },
-  _matWood() {
-    if (!this._wm) this._wm = new THREE.MeshStandardMaterial({ color: 0x6b4628, roughness: 0.6, metalness: 0.05 });
-    return this._wm;
-  },
   _build(weaponType) {
     if (weaponType === 'bat') {
       const group = new THREE.Group(), asset = createBatAsset();
@@ -120,79 +110,13 @@ const WeaponDrops = {
       group.add(asset);
       return group;
     }
-    const G = this._geos();
-    const mainMat = this._mat(weaponType);
-    const darkMat = this._matDark();
-    const woodMat = this._matWood();
+    const material = this._mat(weaponType);
+    const authored = createDroppedWeaponAsset(weaponType, material);
+    if (authored) return authored;
     const group = new THREE.Group();
-    const mk = (geo, mat) => new THREE.Mesh(geo, mat);
-    if (weaponType === 'knife') {
-      const bl = mk(G.box1, this._mat('knife'));
-      bl.scale.set(0.22, 0.025, 0.005);
-      const handle = mk(G.box1, woodMat);
-      handle.scale.set(0.12, 0.04, 0.04); handle.position.x = -0.17;
-      const guard = mk(G.box1, darkMat);
-      guard.scale.set(0.015, 0.07, 0.05); guard.position.x = -0.10;
-      group.add(bl, handle, guard);
-    } else if (weaponType === 'pistol') {
-      const slide = mk(G.box1, mainMat);
-      slide.scale.set(0.22, 0.06, 0.05); slide.position.y = 0.04;
-      const grip = mk(G.box1, darkMat);
-      grip.scale.set(0.05, 0.14, 0.06); grip.position.set(-0.07, -0.03, 0);
-      const bbl = mk(G.cyl12, mainMat);
-      bbl.scale.set(0.013, 0.06, 0.013); bbl.rotation.z = Math.PI / 2; bbl.position.set(0.13, 0.04, 0);
-      const sight = mk(G.box1, darkMat);
-      sight.scale.set(0.02, 0.012, 0.04); sight.position.set(-0.08, 0.075, 0);
-      group.add(slide, grip, bbl, sight);
-    } else if (weaponType === 'shotgun') {
-      const stock = mk(G.box1, woodMat);
-      stock.scale.set(0.22, 0.08, 0.06); stock.position.set(-0.36, 0, 0);
-      const barrel = mk(G.cyl12, mainMat);
-      barrel.scale.set(0.022, 0.55, 0.022); barrel.rotation.z = Math.PI / 2; barrel.position.set(0.10, 0.03, 0);
-      const tube = mk(G.cyl12, mainMat);
-      tube.scale.set(0.017, 0.42, 0.017); tube.rotation.z = Math.PI / 2; tube.position.set(0.08, -0.01, 0);
-      const pump = mk(G.box1, woodMat);
-      pump.scale.set(0.10, 0.045, 0.07); pump.position.set(-0.05, -0.005, 0);
-      const grip = mk(G.box1, woodMat);
-      grip.scale.set(0.06, 0.10, 0.05); grip.position.set(-0.18, -0.06, 0);
-      group.add(stock, barrel, tube, pump, grip);
-    } else if (weaponType === 'smg') {
-      const body = mk(G.box1, mainMat);
-      body.scale.set(0.30, 0.08, 0.06);
-      const bbl = mk(G.cyl12, mainMat);
-      bbl.scale.set(0.013, 0.10, 0.013); bbl.rotation.z = Math.PI / 2; bbl.position.set(0.18, 0.0, 0);
-      const mag = mk(G.box1, darkMat);
-      mag.scale.set(0.05, 0.13, 0.045); mag.position.set(-0.02, -0.10, 0);
-      const grip = mk(G.box1, darkMat);
-      grip.scale.set(0.04, 0.09, 0.05); grip.position.set(-0.12, -0.07, 0);
-      const sight = mk(G.box1, darkMat);
-      sight.scale.set(0.022, 0.025, 0.03); sight.position.set(-0.06, 0.06, 0);
-      group.add(body, bbl, mag, grip, sight);
-    } else if (weaponType === 'machinegun') {
-      const receiver = mk(G.box1, mainMat);
-      receiver.scale.set(0.40, 0.10, 0.07);
-      const barrel = mk(G.cyl12, mainMat);
-      barrel.scale.set(0.018, 0.42, 0.018); barrel.rotation.z = Math.PI / 2; barrel.position.set(0.32, 0.02, 0);
-      for (let r = 0; r < 3; r++) {
-        const rib = mk(G.cyl12, darkMat);
-        rib.scale.set(0.024, 0.02, 0.024); rib.rotation.z = Math.PI / 2;
-        rib.position.set(0.20 + r * 0.08, 0.02, 0);
-        group.add(rib);
-      }
-      const stock = mk(G.box1, mainMat);
-      stock.scale.set(0.18, 0.07, 0.05); stock.position.set(-0.28, 0, 0);
-      const mag = mk(G.box1, darkMat);
-      mag.scale.set(0.06, 0.18, 0.045); mag.position.set(-0.04, -0.11, 0); mag.rotation.z = -0.18;
-      const grip = mk(G.box1, darkMat);
-      grip.scale.set(0.045, 0.10, 0.05); grip.position.set(-0.14, -0.07, 0);
-      const fh = mk(G.cyl12, darkMat);
-      fh.scale.set(0.024, 0.04, 0.024); fh.rotation.z = Math.PI / 2; fh.position.set(0.55, 0.02, 0);
-      group.add(receiver, barrel, stock, mag, grip, fh);
-    } else {
-      const fallback = mk(G.box1, mainMat); fallback.scale.set(0.2, 0.14, 0.05);
-      group.add(fallback);
-    }
-    group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+    const fallback = new THREE.Mesh(this._geos().box1, material);
+    fallback.scale.set(0.2, 0.14, 0.05); fallback.castShadow = true;
+    group.add(fallback);
     return group;
   },
   spawn(x, y, z, weaponType, ammo) {
@@ -231,155 +155,16 @@ const WeaponDrops = {
 function makeWeaponViewModel(type) {
   if (type === 'fists') return prepareViewModel(createFirstPersonHands());
   if (type === 'bat') return prepareViewModel(createFirstPersonBat());
-  const vmBox = (w, h, d) => new RoundedBoxGeometry(w, h, d, 2, Math.min(w, h, d) * 0.16);
-  const g = new THREE.Group();
-  g.name = 'vm_' + type;
-  const metal = new THREE.MeshStandardMaterial({ color: 0x62696c, roughness: 0.4, metalness: 0.65 });
-  const metalDark = new THREE.MeshStandardMaterial({ color: 0x1c1c20, roughness: 0.55, metalness: 0.6 });
-  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4628, roughness: 0.6, metalness: 0.05 });
-  const blade = new THREE.MeshStandardMaterial({ color: 0xc8ccd2, roughness: 0.2, metalness: 0.92 });
-  if (type === 'knife') {
-    const handle = new THREE.Mesh(vmBox(0.12, 0.04, 0.04), wood);
-    handle.position.set(-0.04, -0.01, 0.0);
-    const bl = new THREE.Mesh(vmBox(0.22, 0.025, 0.005), blade);
-    bl.position.set(0.13, 0.0, 0.0);
-    // Crossguard + pommel — tiny details that make the knife read.
-    const guard = new THREE.Mesh(vmBox(0.015, 0.07, 0.05), metal);
-    guard.position.set(0.025, -0.005, 0.0);
-    const pommel = new THREE.Mesh(new THREE.SphereGeometry(0.025, 10, 8), metal);
-    pommel.position.set(-0.105, -0.01, 0.0);
-    // Bevelled blade tip — a small angled box edge.
-    const edge = new THREE.Mesh(vmBox(0.04, 0.012, 0.008), blade);
-    edge.position.set(0.22, 0.0, 0.0); edge.rotation.z = -0.18;
-    g.add(handle, bl, guard, pommel, edge);
-  } else if (type === 'pistol') {
-    g.userData.muzzle = [0.201, 0.04, 0];
-    const grip = new THREE.Mesh(vmBox(0.05, 0.14, 0.06), metalDark);
-    grip.position.set(-0.05, -0.04, 0.0);
-    const slide = new THREE.Mesh(vmBox(0.22, 0.06, 0.05), metal);
-    slide.position.set(0.04, 0.04, 0.0);
-    // Barrel cylinder peeking out the front of the slide.
-    const bbl = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.06, 10), metal);
-    bbl.rotation.z = Math.PI / 2; bbl.position.set(0.17, 0.04, 0.0);
-    // Trigger guard (small ring approximated by a thin torus-like shape).
-    const tg = new THREE.Mesh(new THREE.TorusGeometry(0.020, 0.006, 6, 12, Math.PI), metalDark);
-    tg.rotation.x = Math.PI / 2; tg.rotation.z = Math.PI; tg.position.set(-0.025, -0.005, 0.0);
-    // Rear sight notch.
-    const sight = new THREE.Mesh(vmBox(0.02, 0.012, 0.04), metalDark);
-    sight.position.set(-0.05, 0.075, 0.0);
-    // Magazine base peeking from grip.
-    const magBase = new THREE.Mesh(vmBox(0.055, 0.015, 0.06), metal);
-    magBase.position.set(-0.05, -0.115, 0.0);
-    const port = new THREE.Mesh(vmBox(0.056, 0.021, 0.003), metalDark);
-    port.position.set(0.055, 0.055, 0.027);
-    const frontSight = new THREE.Mesh(vmBox(0.012, 0.014, 0.008), metalDark);
-    frontSight.position.set(0.13, 0.079, 0);
-    const sightDot = new THREE.Mesh(new THREE.SphereGeometry(0.003, 6, 4), new THREE.MeshBasicMaterial({ color: 0xaebfb0 }));
-    sightDot.position.set(0.126, 0.084, 0);
-    const muzzleBore = new THREE.Mesh(new THREE.CircleGeometry(0.008, 12), metalDark);
-    muzzleBore.rotation.y = Math.PI / 2; muzzleBore.position.set(0.201, 0.04, 0);
-    for (let i = 0; i < 7; i++) {
-      const serration = new THREE.Mesh(vmBox(0.003, 0.047, 0.053), metalDark);
-      serration.position.set(-0.043 + i * 0.007, 0.04, 0);
-      g.add(serration);
-    }
-    g.add(grip, slide, bbl, tg, sight, magBase, port, frontSight, sightDot, muzzleBore);
-  } else if (type === 'shotgun') {
-    g.userData.muzzle = [0.50, 0.03, 0];
-    const stock = new THREE.Mesh(vmBox(0.22, 0.07, 0.05), wood);
-    stock.position.set(-0.14, -0.02, 0.0);
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.55, 14), metal);
-    barrel.rotation.z = Math.PI / 2; barrel.position.set(0.22, 0.03, 0.0);
-    // Magazine tube under the barrel.
-    const magTube = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.45, 12), metal);
-    magTube.rotation.z = Math.PI / 2; magTube.position.set(0.18, -0.005, 0.0);
-    // Pump action (chunky ribbed slider mid-barrel).
-    const pump = new THREE.Mesh(vmBox(0.10, 0.045, 0.07), wood);
-    pump.position.set(0.05, -0.005, 0.0);
-    const grip = new THREE.Mesh(vmBox(0.06, 0.10, 0.05), wood);
-    grip.position.set(-0.05, -0.06, 0.0);
-    // Front bead sight.
-    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.010, 8, 6), metal);
-    bead.position.set(0.49, 0.055, 0.0);
-    g.add(stock, barrel, magTube, pump, grip, bead);
-  } else if (type === 'smg') {
-    g.userData.muzzle = [0.28, 0.02, 0];
-    const body = new THREE.Mesh(vmBox(0.30, 0.07, 0.05), metal);
-    body.position.set(0.04, 0.02, 0.0);
-    const mag = new THREE.Mesh(vmBox(0.05, 0.12, 0.04), metalDark);
-    mag.position.set(0.0, -0.06, 0.0);
-    const grip = new THREE.Mesh(vmBox(0.04, 0.10, 0.05), metalDark);
-    grip.position.set(-0.08, -0.05, 0.0);
-    // Short barrel poking out the front.
-    const bbl = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.10, 10), metal);
-    bbl.rotation.z = Math.PI / 2; bbl.position.set(0.23, 0.02, 0.0);
-    // Foregrip handle.
-    const fore = new THREE.Mesh(vmBox(0.035, 0.07, 0.04), metalDark);
-    fore.position.set(0.10, -0.025, 0.0);
-    // Iron sight.
-    const sight = new THREE.Mesh(vmBox(0.022, 0.025, 0.03), metalDark);
-    sight.position.set(-0.05, 0.065, 0.0);
-    g.add(body, mag, grip, bbl, fore, sight);
-  } else if (type === 'machinegun') {
-    g.userData.muzzle = [0.59, 0.03, 0];
-    // Longer receiver, ribbed barrel, banana mag, stock — reads as a heavy
-    // assault rifle / LMG distinct from the compact SMG silhouette.
-    const stock = new THREE.Mesh(vmBox(0.18, 0.07, 0.05), metal);
-    stock.position.set(-0.16, 0.0, 0.0);
-    const receiver = new THREE.Mesh(vmBox(0.36, 0.09, 0.06), metal);
-    receiver.position.set(0.04, 0.02, 0.0);
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.40, 14), metal);
-    barrel.rotation.z = Math.PI / 2; barrel.position.set(0.36, 0.03, 0.0);
-    // Heat shroud/handguard ribs — three small bands along the barrel.
-    for (let r = 0; r < 3; r++) {
-      const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.02, 12), metalDark);
-      rib.rotation.z = Math.PI / 2; rib.position.set(0.22 + r * 0.08, 0.03, 0.0);
-      g.add(rib);
-    }
-    const mag = new THREE.Mesh(vmBox(0.06, 0.18, 0.045), metalDark);
-    mag.position.set(0.0, -0.10, 0.0); mag.rotation.z = -0.18;
-    const grip = new THREE.Mesh(vmBox(0.045, 0.11, 0.05), metalDark);
-    grip.position.set(-0.09, -0.06, 0.0);
-    const sight = new THREE.Mesh(vmBox(0.04, 0.03, 0.04), metalDark);
-    sight.position.set(0.06, 0.08, 0.0);
-    // Flash hider on muzzle.
-    const fh = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.020, 0.04, 10), metalDark);
-    fh.rotation.z = Math.PI / 2; fh.position.set(0.57, 0.03, 0.0);
-    g.add(stock, receiver, barrel, mag, grip, sight, fh);
-  } else {
-    const box = new THREE.Mesh(vmBox(0.1, 0.1, 0.1), metal);
-    g.add(box);
-  }
-  // A rounded gloved grip and sleeved forearm anchor each weapon to the player.
-  const glove = new THREE.MeshStandardMaterial({ color: 0x24282a, roughness: 0.92 });
-  const sleeve = new THREE.MeshStandardMaterial({ color: 0x161b1c, roughness: 0.9 });
-  const hand = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), glove);
-  hand.scale.set(0.054, 0.064, 0.045);
-  hand.position.set(-0.055, -0.07, 0.008);
-  const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.25, 4, 10), sleeve);
-  forearm.rotation.z = Math.PI / 2 + 0.32;
-  forearm.position.set(-0.23, -0.14, 0.018);
-  g.add(hand, forearm);
-  for (let i = 0; i < 4; i++) {
-    const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.009, 0.032, 3, 6), glove);
-    finger.rotation.z = Math.PI / 2;
-    finger.position.set(-0.027, -0.04 - i * 0.017, 0.038);
-    g.add(finger);
-  }
-  if (['shotgun', 'smg', 'machinegun'].includes(type)) {
-    const support = hand.clone();
-    support.position.set(0.13, -0.052, -0.05);
-    const supportArm = forearm.clone();
-    supportArm.position.set(-0.035, -0.14, -0.075);
-    supportArm.rotation.z = Math.PI / 2 - 0.26;
-    g.add(support, supportArm);
-  }
-  prepareViewModel(g);
-  // Hand-held offset (right-handed, slightly down, slightly forward of near plane).
-  g.position.set(0, 0, 0);
-  g.rotation.set(0, Math.PI / 2, 0);
-  g.scale.setScalar(1.3);
-  return g;
+  const model = createHeroWeapon(type);
+  addHeroWeaponHands(model, type);
+  // Owned profile meshes and connected grip hands are assembled only once.
+  // Preserve the established rigid animation, framing and exact muzzle anchors.
+  batchStaticWeaponParts(model);
+  prepareViewModel(model);
+  model.position.set(0, 0, 0);
+  model.rotation.set(0, Math.PI / 2, 0);
+  model.scale.setScalar(1.3);
+  return model;
 }
 
 // Central Weapons controller: holds exactly one weapon (defaulting to fists),
@@ -400,6 +185,8 @@ const Weapons = {
   aimBlend: 0,
   baseRot: new THREE.Euler(0, 0, 0),
   init() {
+    // Bake once during setup, not at the first weapon pickup during combat.
+    getWeaponFinishes();
     this.vmGroup = new THREE.Group();
     this.vmGroup.name = 'weaponViewModel';
     camera.add(this.vmGroup);

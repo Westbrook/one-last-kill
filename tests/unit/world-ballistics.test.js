@@ -48,7 +48,7 @@ function meshAt(position) {
   return matches[0].mesh;
 }
 
-function assertSolidSegment(label, start, end, expectedObject, axis, surfaceCoordinates, { twoSided = false } = {}) {
+function assertSolidSegment(label, start, end, expectedObject, axis, surfaceCoordinates, { twoSided = false, normals = null } = {}) {
   for (const [directionIndex, [a, b]] of [[start, end], [end, start]].entries()) {
     const origin = vector(a), target = vector(b), range = origin.distanceTo(target);
     const direction = target.clone().sub(origin).normalize();
@@ -59,8 +59,13 @@ function assertSolidSegment(label, start, end, expectedObject, axis, surfaceCoor
     near(hit.point[axis], surfaceCoordinates[directionIndex], `${label}: contact surface`);
     near(hit.distance, Math.abs(origin[axis] - surfaceCoordinates[directionIndex]), `${label}: contact distance`);
     near(hit.normal.length(), 1, `${label}: unit normal`);
-    assert.ok((twoSided ? Math.abs(hit.normal.dot(direction)) : -hit.normal.dot(direction)) > 0.99,
-      `${label}: surface normal follows the actual face`);
+    if (normals) {
+      const expected = vector(normals[directionIndex]).normalize();
+      for (const component of ['x', 'y', 'z']) near(hit.normal[component], expected[component], `${label}: sloped ${component} normal`);
+    } else {
+      assert.ok((twoSided ? Math.abs(hit.normal.dot(direction)) : -hit.normal.dot(direction)) > 0.99,
+        `${label}: surface normal follows the actual face`);
+    }
     for (const channel of ['bullet', 'sight']) {
       assert.equal(index.segmentOccluded(origin, target, channel), true, `${label}: ${channel} blocked from side ${directionIndex}`);
     }
@@ -103,23 +108,71 @@ for (const [name, x, facing] of [['left', 1.7, 1], ['right', 4.3, -1]]) {
   });
 }
 
-test('the actual CRT and television case stop shots at their front, rear and side surfaces', () => {
-  const screen = meshAt([7.05, 5.105, -7.26]), housing = meshAt([7, 5.105, -6.99]);
+function televisionParts() {
+  const housing = fixture.World.getObjectByName('neighbor-crt-housing');
+  const details = fixture.entries.filter(entry => entry.zone === 'neighbor' && entry.mesh.geometry.name === 'crt-recessed-details');
+  assert.ok(housing?.isMesh, 'the named molded casing is present');
+  assert.equal(details.length, 1, 'one merged opaque CRT detail part');
+  return { housing, details: details[0].mesh, screen: meshAt([7.05, 5.105, -7.26]) };
+}
+
+test('the actual CRT screen and rear recess stop shots at their nearest rendered surfaces', () => {
+  const { screen, details } = televisionParts();
   const front = vector([7.05, 5.105, -7.7]), rear = vector([7.05, 5.105, -6.3]);
   assert.equal(isSegmentOccluded(front, rear, Colliders.list), false, 'the TV has no movement collider at screen height');
-  for (const [origin, target, object, coordinate] of [[front, rear, screen, -7.28], [rear, front, housing, -6.74]]) {
+  for (const [origin, target, object, coordinate, kind, normalZ] of [
+    [front, rear, screen, -7.28, 'glass', -1], [rear, front, details, -6.747, 'solid', 1],
+  ]) {
     const hit = index.raycast(origin, target.clone().sub(origin).normalize(), origin.distanceTo(target));
     assert.equal(hit?.object, object, 'nearest visible TV component wins');
+    assert.equal(hit.material, object.material); assert.equal(hit.surfaceKind, kind);
     near(hit.point.z, coordinate, 'TV face');
+    near(hit.distance, Math.abs(coordinate - origin.z), 'TV face distance');
+    near(hit.normal.x, 0, 'TV face normal X'); near(hit.normal.y, 0, 'TV face normal Y'); near(hit.normal.z, normalZ, 'TV face normal Z');
     assert.equal(index.segmentOccluded(origin, target, 'bullet'), true);
     assert.equal(index.segmentOccluded(origin, target, 'sight'), true);
   }
-  assertSolidSegment('TV case sides', [6.2, 5.36, -6.99], [7.8, 5.36, -6.99], housing, 'x', [6.5, 7.5]);
+});
+
+test('both rear vent banks block every rib and gap at their actual depths without a movement box', () => {
+  const { housing, details } = televisionParts();
+  const probes = [[7, 5.105, housing, -6.75], [7.145, 5.235, housing, -6.75]];
+  for (const x of [6.855, 7.145]) for (let row = 0; row < 6; row++) {
+    probes.push([x, 5.0 + row * 0.032, housing, -6.74]);
+    if (row < 5) probes.push([x, 5.016 + row * 0.032, details, -6.747]);
+  }
+  for (const [x, y, object, surface] of probes) {
+    const rear = vector([x, y, -6.3]), front = vector([x, y, -7.7]);
+    assert.equal(isSegmentOccluded(rear, front, Colliders.list), false);
+    const hit = index.raycast(rear, vector([0, 0, -1]), 1.4, 'bullet');
+    assert.equal(hit?.object, object, 'the raised rib, recessed backing or plain case is the exact nearest component');
+    assert.equal(hit.material, object.material); assert.equal(hit.surfaceKind, 'solid');
+    near(hit.point.z, surface, 'rear vent contact'); near(hit.distance, rear.z - surface, 'rear vent distance');
+    near(hit.normal.x, 0, 'rear normal X'); near(hit.normal.y, 0, 'rear normal Y'); near(hit.normal.z, 1, 'rear normal Z');
+    for (const channel of ['bullet', 'sight']) for (const [origin, target] of [[rear, front], [front, rear]]) {
+      assert.equal(index.segmentOccluded(origin, target, channel), true, `${channel} cannot pass through a vent recess`);
+    }
+  }
+});
+
+test('the tapered case sides block both directions at their real contact planes and sloped normals', () => {
+  const { housing } = televisionParts();
+  // Three measured sections of the molded body, not the old rectangular AABB.
+  // Side normals follow each section's half-width change over its depth span.
+  for (const [z, halfWidth, depthSpan, halfWidthChange] of [
+    [-7.165, 0.495238095238095, 0.105, 0.01],
+    [-6.99, 0.449148936170213, 0.235, 0.08],
+    [-6.79, 0.3624, 0.125, 0.07],
+  ]) {
+    assertSolidSegment(`TV tapered sides at ${z}`, [6.2, 5.105, z], [7.8, 5.105, z], housing, 'x',
+      [7 - halfWidth, 7 + halfWidth], { normals: [[-depthSpan, 0, halfWidthChange], [depthSpan, 0, halfWidthChange]] });
+  }
 });
 
 test('the television does not fill the gap between its feet or the air beside its case', () => {
   assertClearSegment('TV stand foot gap', [7, 4.805, -7.5], [7, 4.805, -6.4]);
   assertClearSegment('beside TV above console', [7.55, 5.1, -7.5], [7.55, 5.1, -6.4]);
+  assertClearSegment('air above the tapered shoulders inside the old box', [6.2, 5.36, -6.99], [7.8, 5.36, -6.99]);
 });
 
 test('all four real stair guards block their balusters and sloped rails, not the spaces between', () => {

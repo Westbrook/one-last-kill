@@ -5,6 +5,9 @@ import { MATS } from './materials.js';
 import { mulberry32, TAU } from '../core/math.js';
 import { BUILDING, ROOF } from '../world/layout.js';
 import { DISTRICT } from '../world/district-layout.js';
+import { createStaticSurfaceBatch } from './static-surface-batch.js';
+import { buildExteriorDetail, finishExteriorMaterials } from './exterior-detail.js';
+import { buildBakeryStoryDetail } from './bakery-story-detail.js';
 
 // Decorative only: no collision, trigger, or player state changes. Build after
 // buildWorld(), before the practical-light budget takes its source snapshot.
@@ -27,25 +30,29 @@ function makeBatches(root) {
       let instances = 0;
       for (const batch of batches) {
         if (!batch.entries.length) continue;
-        const mesh = new THREE.InstancedMesh(batch.geometry, batch.material, batch.entries.length);
-        mesh.name = batch.name;
-        const tinted = batch.entries.some(entry => entry.tint !== null);
-        for (let i = 0; i < batch.entries.length; i++) {
-          const e = batch.entries[i];
-          transform.position.set(e.x, e.y, e.z);
-          transform.rotation.set(e.rx, e.ry, e.rz);
-          transform.scale.set(e.sx, e.sy, e.sz);
-          transform.updateMatrix();
-          mesh.setMatrixAt(i, transform.matrix);
-          if (tinted) mesh.setColorAt(i, color.set(e.tint ?? 0xffffff));
+        let mesh = createStaticSurfaceBatch(batch.geometry, batch.material, batch.entries);
+        if (!mesh) {
+          mesh = new THREE.InstancedMesh(batch.geometry, batch.material, batch.entries.length);
+          const tinted = batch.entries.some(entry => entry.tint !== null);
+          for (let i = 0; i < batch.entries.length; i++) {
+            const e = batch.entries[i];
+            transform.position.set(e.x, e.y, e.z);
+            transform.rotation.set(e.rx, e.ry, e.rz);
+            transform.scale.set(e.sx, e.sy, e.sz);
+            transform.updateMatrix();
+            mesh.setMatrixAt(i, transform.matrix);
+            if (tinted) mesh.setColorAt(i, color.set(e.tint ?? 0xffffff));
+          }
+          mesh.instanceMatrix.needsUpdate = true;
+          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+          mesh.computeBoundingBox();
+          mesh.computeBoundingSphere();
         }
-        mesh.instanceMatrix.needsUpdate = true;
-        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        mesh.name = batch.name;
+        mesh.userData.batchInstances = batch.entries.length;
         mesh.castShadow = false;
         mesh.receiveShadow = batch.receiveShadow;
         mesh.matrixAutoUpdate = false;
-        mesh.computeBoundingBox();
-        mesh.computeBoundingSphere();
         root.add(mesh);
         instances += batch.entries.length;
       }
@@ -83,6 +90,46 @@ function makeClothGeometry() {
   }
   geometry.computeVertexNormals();
   return geometry;
+}
+
+// A single quiet inset window replaces flat color squares in the distant city.
+// Grayscale glazing keeps every existing warm/cool instance tint. The frame,
+// sash and room shapes are opaque, so this remains one depth-writing draw.
+function makeDistantWindowTexture() {
+  const width = 64, height = 128;
+  const pixels = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    const v = (y + 0.5) / height; // DataTexture rows start at the bottom.
+    for (let x = 0; x < width; x++) {
+      const u = (x + 0.5) / width;
+      let tone = 0.90 + v * 0.055;
+      // Soft curtain folds and one indistinct low room silhouette. No text,
+      // sharp reflections or tiny high-contrast pattern that shimmers at range.
+      if (u < 0.22) tone *= 0.72 + Math.sin(u * 105) * 0.035;
+      if (u > 0.84) tone *= 0.82 + Math.sin(u * 90) * 0.025;
+      if (v < 0.13) tone *= 0.72;
+      if (u > 0.61 && u < 0.80 && v < 0.31) tone *= 0.68;
+      if (u > 0.69 && u < 0.73 && v >= 0.31 && v < 0.45) tone *= 0.78;
+      // A narrow central mullion and the overlapping rail of a sash window.
+      if (Math.abs(u - 0.5) < 0.012) tone = 0.45;
+      if (Math.abs(v - 0.53) < 0.014) tone = v > 0.53 ? 0.48 : 0.30;
+      const edgeX = Math.min(x, width - 1 - x), edgeY = Math.min(y, height - 1 - y);
+      if (edgeX < 4 || edgeY < 7) tone *= 0.74; // Recess just inside the surround.
+      if (edgeX < 3 || edgeY < 5) tone = 0.34;
+      if (edgeX < 1 || edgeY < 2) tone = 0.22;
+      const offset = (y * width + x) * 4, value = Math.round(tone * 255);
+      pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = value;
+      pixels[offset + 3] = 255;
+    }
+  }
+  const map = new THREE.DataTexture(pixels, width, height, THREE.RGBAFormat);
+  map.name = 'city-window-inset-glazing';
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.minFilter = THREE.LinearMipmapLinearFilter;
+  map.magFilter = THREE.LinearFilter;
+  map.generateMipmaps = true;
+  map.needsUpdate = true;
+  return map;
 }
 
 // Include everything that projects beyond a city mass: cornices, window
@@ -166,7 +213,7 @@ function buildCity(batches, geometry, wires, rng) {
   const hardware = batches.add('city-roof-hardware', geometry.box, darkMetal);
   const tanks = batches.add('city-water-tanks', geometry.cylinder, MATS.wood);
   const tankCaps = batches.add('city-water-tank-caps', geometry.cone, darkMetal);
-  const windowMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const windowMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, map: makeDistantWindowTexture() });
   const window = batches.add('city-instanced-windows', geometry.plane, windowMaterial);
   const windowColors = [0x253032, 0x30383a, 0x313b3c, 0x72634b, 0x9c8662, 0x667678];
   const buildings = planCityBuildings(rng);
@@ -305,7 +352,6 @@ function buildDetails(root, batches, geometry, wires, rng) {
   paper(dining.x - 0.45, dining.y + 0.006, dining.z - 0.12, 0.4, 0.32, 1, -Math.PI / 2, 0, 0.25);
   wood(coffee.x - 0.42, coffee.y + 0.0375, coffee.z + 0.18, 0.24, 0.075, 0.31, 0, 0.13, 0, 0x5a675b);
   paper(coffee.x - 0.42, coffee.y + 0.078, coffee.z + 0.18, 0.2, 0.28, 1, -Math.PI / 2, 0, -0.13);
-  pipe(kitchen.x, kitchen.y + 0.05, kitchen.z + 0.79, 0.15, 0.1, 0.15);
   pipe(kitchen.x, kitchen.y + 0.14, kitchen.z - 0.87, 0.09, 0.28, 0.09);
   plaster(kitchen.x + 0.1, kitchen.y + 0.03, kitchen.z - 0.51, 0.24, 0.06, 0.26, 0, 0.15);
   // Surface-mounted electrical conduit beside the neighbor's TV alcove.
@@ -319,7 +365,9 @@ function buildDetails(root, batches, geometry, wires, rng) {
       1, -Math.PI / 2, 0, rng() * TAU, i % 4 ? 0xb7b19e : 0x676556);
   }
 
+  const facadeWindows = [];
   function facadeWindow(x, y, z, yaw, tint) {
+    facadeWindows.push({ x, y, z, yaw });
     const alongX = Math.cos(yaw), alongZ = -Math.sin(yaw);
     const normalX = Math.sin(yaw), normalZ = Math.cos(yaw);
     panes(x, y, z, 1.0, 1.65, 1, 0, yaw, 0, tint);
@@ -358,6 +406,13 @@ function buildDetails(root, batches, geometry, wires, rng) {
       facadeWindow(x, y, ROOF.z2 + 0.015, 0, rng() < 0.18 ? 0xb1a386 : 0x798787);
     }
   }
+
+  root.userData.exteriorDetail = buildExteriorDetail({
+    world: World, batches, geometry, metal: iron, pipe, stone: plaster,
+    facadeWindows, roofMetal: MATS.roofMetal,
+  });
+  const bakeryStory = buildBakeryStoryDetail(World, MATS);
+  if (bakeryStory) root.add(bakeryStory);
 
   function cable(ax, ay, az, bx, by, bz, sag) {
     for (let i = 0; i < 20; i++) {
@@ -503,6 +558,15 @@ export function buildEnvironment() {
   World.add(root);
   environment = root;
   return root;
+}
+
+// Surface ownership intentionally accepts only unmodified opaque materials.
+// Keep the macro finish after that pass and before any light/reflection bake.
+export function finishEnvironmentMaterials() {
+  if (!environment) return [];
+  const decks = finishExteriorMaterials(World);
+  environment.userData.exteriorDetail.finishedDecks = decks;
+  return decks;
 }
 
 export function updateEnvironment(dt, time) {

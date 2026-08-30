@@ -14,6 +14,10 @@ import { createBatAsset, BAT_DIMENSIONS } from '../../../src/render/bat-asset.js
 import { createFirstPersonBat, poseFirstPersonBat } from '../../../src/render/first-person-bat.js';
 import { placeWeaponDrop } from '../../../src/game/drop-placement.js';
 import { createBallisticWorld, createBallisticHit } from '../../../src/core/ballistics.js';
+import { getWeaponFinishes, batchStaticWeaponParts } from '../../../src/render/weapon-finishes.js';
+import { createHeroWeapon } from '../../../src/render/hero-weapons.js';
+import { addHeroWeaponHands } from '../../../src/render/hero-weapon-grips.js';
+import { createDroppedWeaponAsset, warmDroppedWeaponAssets } from '../../../src/render/dropped-weapon-assets.js';
 
 /** Actual controller/model code with explicit CPU-only services, never a browser or audio device. */
 export function weaponHarness({ supplies, colliders = { list: [] }, ballistics = createBallisticWorld({ colliders }), damageEnemy: damageTarget,
@@ -37,6 +41,8 @@ export function weaponHarness({ supplies, colliders = { list: [] }, ballistics =
   const api = runInNewContext(`${source}\n;({ Weapons, WeaponDrops, makeWeaponViewModel });`, {
     THREE, RoundedBoxGeometry, WEAPON_DEFS, ...weaponRules, ...meleeRules, lerp, clamp,
     createFirstPersonHands, poseFirstPersonHands, FIRST_PERSON_PUNCH_SECONDS, prepareViewModel, getViewModelMuzzle,
+    getWeaponFinishes, batchStaticWeaponParts, createHeroWeapon, addHeroWeaponHands,
+    createDroppedWeaponAsset, warmDroppedWeaponAssets,
     createBatAsset, BAT_DIMENSIONS, createFirstPersonBat, poseFirstPersonBat, placeWeaponDrop, isSegmentOccluded, AmmoSupplies: ammo,
     scene, camera, GameTime, World, currentZone: zone, Colliders: colliders, Ballistics: ballistics, createBallisticHit, Player, PlayerState, Math: deterministicMath,
     HUD: {

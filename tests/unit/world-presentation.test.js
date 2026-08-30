@@ -223,6 +223,27 @@ test('high quality keeps contact shading restrained and respects the hardware MS
   assert.equal(f.presentation.snapshot().aoSamples, 8);
 });
 
+test('high detail allocates four-sample edges and quality switches release old attachments', () => {
+  const f = fixture({ maxSamples: 4 });
+  f.presentation.render();
+  const previousBeauty = f.targets[0], previousComposite = f.targets[1], previousAO = f.aoPasses[0];
+  f.state.quality = 'high';
+  f.presentation.render();
+  assert.equal(f.presentation.snapshot().msaaSamples, 4);
+  assert.equal(previousBeauty.disposals, 1);
+  assert.equal(previousComposite.disposals, 1);
+  assert.equal(previousAO.disposals, 1);
+  assert.equal(f.targets[2].depthTexture, f.depths[1], 'new AA allocation supplies its own resolved depth to AO');
+  assert.equal(f.aoPasses[1].bindings[0].depth, f.depths[1]);
+  f.presentation.render();
+  assert.equal(f.targets.length, 4, 'steady High frames reuse their four-sample targets');
+  f.state.quality = 'auto';
+  f.presentation.render();
+  assert.equal(f.presentation.snapshot().msaaSamples, 2);
+  assert.equal(f.targets[2].disposals, 1);
+  assertRestored(f);
+});
+
 test('adaptive bypass retains buffers but explicit performance mode releases them', () => {
   const f = fixture();
   f.presentation.render();

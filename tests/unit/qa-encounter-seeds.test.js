@@ -120,8 +120,12 @@ function qaHarness({
     document: {
       removeEventListener(name) { record('removeDocumentListener', { name }); },
     },
+    removeEventListener(name) { record('removeWindowListener', { name }); },
+    configureRenderer() { record('configureRenderer'); },
     blockSpecimenClick() {},
     guardSpecimenSession() {},
+    restoreGameplayScale() {},
+    retainReviewScale() {},
   };
   const lifecycle = runInNewContext(`${runSuiteSource}\n;({ runSuite, ${disposeSource} });`, context,
     { filename: 'src/testing/qa.js (suite lifecycle)' });

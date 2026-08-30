@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-import { Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial, Vector3 } from 'three';
+import { Box3, BoxGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Vector3 } from 'three';
 import {
   APARTMENT_DOORS, BUILDING, BALCONY, ROOF, SCAFFOLD_LEVELS, OPENINGS, SCAFFOLD_TRIGGER_MIN_Z,
 } from '../../src/world/layout.js';
@@ -12,6 +12,9 @@ import { CHECKPOINTS, ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS } from '../../src/game/
 import { routeDistanceAt } from '../../src/game/encounter-rules.js';
 import { resolveSurfaceOwnership } from '../../src/world/surface-ownership.js';
 import { buildWorldSurfaceFixture } from './helpers/world-surface-fixture.js';
+import { Architecture } from '../../src/world/architecture.js';
+import { createAmmoSupplies } from '../../src/game/ammo-supplies.js';
+import { AMMO_SUPPLY_CACHES } from '../../src/game/ammo-supply-rules.js';
 
 // Keep this suite independent of player/enemy modules, which initialize the
 // browser renderer. These are the movement capsule radii, not visual bounds.
@@ -398,7 +401,7 @@ function readQaSurfaceChecks(records, worldState = { surfaceOwnership: null }) {
   return runInNewContext(`${source.slice(start, end)}; ({
     visibleFloorFaces, assertSurfacePatch, checkFinalizedArchitectureSurfaces, checkFlushThresholdSurfaces,
   });`, {
-    Vector3, APARTMENT_DOORS, BUILDING, ROOF, Architecture: { elements: records }, WorldState: worldState,
+    Matrix4, Vector3, APARTMENT_DOORS, BUILDING, ROOF, Architecture: { elements: records }, WorldState: worldState,
     assert: (condition, message) => assert.ok(condition, message),
     near(actual, expected, message, tolerance = 1e-6) {
       assert.ok(Number.isFinite(actual) && Math.abs(actual - expected) <= tolerance,
@@ -469,4 +472,88 @@ test('QA signed surfaces honor rendered indices, draw ranges and visibility, and
   geometry.setDrawRange(0, geometry.index.count);
   assert.throws(() => qa.assertSurfacePatch('Missing finish', region, 1, 1, { deck: 4 }), /visible indexed area/,
     'unused top vertices cannot conceal a hole in the actual rendered indices');
+});
+
+test('QA audits the actual registered ammo-case instances and still detects an overlapping foot', () => {
+  const fixture = buildWorldSurfaceFixture();
+  const state = { surfaceOwnership: resolveSurfaceOwnership(fixture.records.values()) };
+  const supplies = createAmmoSupplies();
+  supplies.init({ world: fixture.World, player: { pos: new Vector3(), _eyeH: 1.62 }, canInteract: () => false });
+  const qa = readQaSurfaceChecks(Architecture.elements, state);
+  const report = JSON.stringify(state.surfaceOwnership), inventory = JSON.stringify(supplies.snapshot());
+  assert.match(qa.checkFinalizedArchitectureSurfaces(), /boot-finalized meshes/,
+    'the real cache groups may touch a floor without aborting the architecture audit');
+  for (const config of AMMO_SUPPLY_CACHES) {
+    const owner = `ammo-cache-${config.id}`, record = Architecture.elements.get(owner);
+    assert.equal(record.mesh.children.filter(mesh => mesh.isInstancedMesh).length, 4);
+    const region = { x1: record.bounds.min.x, x2: record.bounds.max.x, z1: record.bounds.min.z, z2: record.bounds.max.z };
+    assert.equal(qa.visibleFloorFaces(region, config.floorY, 1).filter(face => face.owner === owner).length, 0,
+      'the case bottom is not an upward floor face');
+    const soles = qa.visibleFloorFaces(region, config.floorY, -1).filter(face => face.owner === owner);
+    assert.equal(soles.length, 4, 'both real rubber rails contribute their two downward triangles');
+    assert.equal(new Set(soles.map(face => face.id)).size, soles.length, 'instance triangles have distinct diagnostics');
+    assert.ok(soles.some(face => face.id.includes('instance 0')) && soles.some(face => face.id.includes('instance 1')));
+  }
+
+  const config = AMMO_SUPPLY_CACHES.find(cache => cache.id === 'roof-east-reserve');
+  const cache = Architecture.elements.get(`ammo-cache-${config.id}`).mesh;
+  const feet = cache.getObjectByName('ammo-case-feet-and-seal');
+  const original = new Matrix4(); feet.getMatrixAt(0, original);
+  const sunken = original.clone(); sunken.elements[13] -= 0.024;
+  feet.setMatrixAt(0, sunken);
+  const region = { x1: config.position.x - config.width / 2, x2: config.position.x + config.width / 2,
+    z1: config.position.z - config.depth / 2, z2: config.position.z + config.depth / 2 };
+  assert.throws(() => qa.assertSurfacePatch('Foot embedded at the roof plane', region, config.floorY, 1,
+    { [config.support]: config.width * config.depth }), /overlaps/,
+  'supporting instancing must not skip a genuine coplanar supply-case face');
+  feet.setMatrixAt(0, original);
+  assert.match(qa.checkFinalizedArchitectureSurfaces(), /boot-finalized meshes/);
+  assert.equal(JSON.stringify(state.surfaceOwnership), report, 'QA does not rewrite the boot surface report');
+  assert.equal(JSON.stringify(supplies.snapshot()), inventory, 'QA does not alter the supply ledger');
+});
+
+test('QA instance faces compose parent transforms and honor counts, draw ranges, materials and visibility', () => {
+  const geometry = new BoxGeometry(), materials = Array.from({ length: 6 }, () => new MeshBasicMaterial());
+  const mesh = new InstancedMesh(geometry, materials, 3);
+  mesh.name = 'fixture-slabs'; mesh.position.set(0.5, 0, 0.5);
+  for (const [index, x] of [-0.5, 0.5, -0.5].entries()) {
+    mesh.setMatrixAt(index, new Matrix4().makeScale(1, 0.2, 2).setPosition(x, 0.1, 0));
+  }
+  mesh.count = 2; // The allocated third instance is intentionally not drawn.
+  const child = new Group(); child.position.set(0.5, 0, -1); child.add(mesh);
+  const parent = new Group(); parent.position.set(10, 4, -6);
+  parent.rotation.y = Math.PI / 2; parent.scale.set(2, 1, 1.5); parent.add(child);
+  const bounds = new Box3().setFromObject(parent), owner = 'instanced-deck';
+  const records = new Map([[owner, { id: owner, mesh: parent, bounds }]]), qa = readQaSurfaceChecks(records);
+  const region = { x1: bounds.min.x, x2: bounds.max.x, z1: bounds.min.z, z2: bounds.max.z };
+  qa.assertSurfacePatch('Transformed instance tops', region, 4.2, 1, { [owner]: 12 });
+  qa.assertSurfacePatch('Transformed instance undersides', region, 4, -1, { [owner]: 12 });
+  const faces = qa.visibleFloorFaces(region, 4.2);
+  assert.equal(faces.length, 4);
+  assert.equal(new Set(faces.map(face => face.id)).size, faces.length);
+
+  mesh.geometry = geometry.toNonIndexed();
+  const top = mesh.geometry.groups.find(group => mesh.geometry.attributes.normal.getY(group.start) > 0.99);
+  mesh.geometry.setDrawRange(top.start, top.count);
+  assert.equal(qa.visibleFloorFaces(region, 4.2).length, 4, 'nonindexed top triangles retain both instance transforms');
+  assert.equal(qa.visibleFloorFaces(region, 4, -1).length, 0, 'draw range excludes the otherwise real underside');
+  materials[top.materialIndex].visible = false;
+  assert.equal(qa.visibleFloorFaces(region, 4.2).length, 0, 'invisible material groups are not drawn');
+  materials[top.materialIndex].visible = true;
+  materials[top.materialIndex].transparent = true; materials[top.materialIndex].opacity = 0;
+  assert.equal(qa.visibleFloorFaces(region, 4.2).length, 0, 'fully transparent instances contribute no visible face');
+  materials[top.materialIndex].opacity = 1;
+  child.visible = false;
+  assert.equal(qa.visibleFloorFaces(region, 4.2).length, 0, 'hidden descendants stay excluded');
+  child.visible = true; parent.visible = false;
+  assert.equal(qa.visibleFloorFaces(region, 4.2).length, 0, 'hidden registered ancestors stay excluded');
+  parent.visible = true;
+  mesh.count = 1;
+  assert.equal(qa.visibleFloorFaces(region, 4.2).length, 2);
+  assert.throws(() => qa.assertSurfacePatch('Missing instance', region, 4.2, 1, { [owner]: 12 }), /visible indexed area/);
+  mesh.count = 3;
+  assert.equal(qa.visibleFloorFaces(region, 4.2).length, 6);
+  assert.throws(() => qa.assertSurfacePatch('Overlapping instances', region, 4.2, 1, { [owner]: 12 }), /overlaps/);
+  mesh.count = 0;
+  assert.equal(qa.visibleFloorFaces(region, 4.2).length, 0, 'zero rendered instances contribute no geometry');
 });

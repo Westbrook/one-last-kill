@@ -1,0 +1,50 @@
+Brick weathered v2 built-in image edit trial
+Date: 2026-08-29
+Status: REJECTED. Neither candidate is approved for production. No brick-weathered-v2.png was created; brick-weathered.png and material references remain unchanged.
+Method: built-in image_gen__imagegen edit, followed by visual inspection and read-only Pillow/NumPy analysis. No CLI/API fallback, no deterministic image edits, and no exact model identity claimed: the built-in tool does not expose model selection.
+Original input: public/assets/brick-weathered.png
+Original: 1254 x 1254 RGB PNG; 3,170,332 bytes.
+Original edge MAE (RGB 0-255): left/right 9.344; top/bottom 19.381.
+Original limitation: top and bottom contain tiny partial brick slivers outside complete mortar bands, creating an extra partial course on vertical repeat.
+
+Candidate 1
+Built-in output: /Users/westbrook/.codex/generated_images/01a04e67-9f97-7cf0-a556-4523e178ef31/exec-f99c07ac-45d1-4b3f-ad5b-15540c66398f.png
+1254 x 1254 RGB PNG; 3,250,303 bytes.
+Edge MAE: left/right 8.170; top/bottom 15.205.
+Natural adjacent-pixel MAE: horizontal 8.760; vertical 9.765.
+Horizontal mortar-band center spacing in pixels: 127.5, 125.5, 128.0, 126.5, 129.0, 128.0, 129.5, 128.0, 128.5, 88.0.
+Interior mortar width: typically 17-18 pixels. Combined top/bottom mortar width: 31 pixels (18 + 13).
+Rejected: visibly shortened last course and nearly doubled wrapped mortar joint. The lower edge error does not establish seamless visual continuity.
+
+Candidate 2
+Input: Candidate 1.
+Built-in output: /Users/westbrook/.codex/generated_images/01a04e67-9f97-7cf0-a556-4523e178ef31/exec-a149f766-2fa3-4901-bc12-7cd8133e8024.png
+1254 x 1254 RGB PNG; 3,197,245 bytes.
+Edge MAE: left/right 9.418; top/bottom 10.616.
+Natural adjacent-pixel MAE: horizontal 8.553; vertical 8.897.
+Horizontal mortar-band center spacing in pixels: 129.5, 128.0, 132.5, 131.5, 133.0, 132.5, 134.0, 132.5, 132.0, 55.5.
+Interior mortar width: typically 17-18 pixels. Combined top/bottom mortar width: 26 pixels (14 + 12).
+Rejected: last course is less than half normal height, the repeat mortar remains too wide, and clay grain becomes coarser. A smaller top/bottom color jump is outweighed by obvious repeated geometry defects.
+
+Measurement method
+Images are decoded as RGB floats in [0,255]. Edge MAE is mean absolute channel difference between first/last columns or rows. Natural adjacent-pixel MAE is the corresponding mean across every internal neighboring pair. A mortar pixel has R-B < 40 and Rec.709 luminance > 80; a horizontal mortar band is a contiguous set of rows with more than 55% such pixels. Bands and course spacings are therefore approximate segmentation, corroborated by visual inspection. These checks do not prove perfectly matching fine-grain periodic detail.
+
+Exact prompt: Candidate 1
+Use case: precise-object-edit
+Asset type: seamless repeating brick albedo texture for a real-time 3D game
+Input images: Image 1 is the edit target, the current square brick texture.
+Primary request: Repair only the repeat layout and boundary continuity of this texture. Preserve its restrained, photorealistic warm umber fired-brick color, fine weathered clay grain, pale gray-beige mortar, and flat diffuse appearance.
+Composition/framing: Square, orthographic straight-on, edge-to-edge texture. Exactly TEN equally tall horizontal courses of running-bond brick. Each course repeats exactly THREE brick lengths across the tile; alternate courses have half-bricks at the left and right edges. The two half-bricks are the same brick continued across the repeat.
+Critical vertical repeat: The top and bottom canvas edges must both cut through the MIDDLE OF ONE HORIZONTAL MORTAR JOINT. On a 1024-pixel square, mortar joint midlines lie at y=0,102.4,204.8,307.2,409.6,512,614.4,716.8,819.2,921.6,1024. The mortar half-band at the bottom joins the mortar half-band at the top to form a single normal-width joint. Remove the current tiny extra slivers of partial brick beyond the first and last full courses. Do not add an eleventh or partial course.
+Critical horizontal repeat: Left and right edges continue the same bricks, joints, brick tones and grain without a color step or a doubled joint. Horizontal mortar joints align perfectly across the left-right seam. Tile periodically in BOTH axes, including all fine grain detail.
+Materials/textures: Natural restrained color variation between bricks, fine irregular pits and clay grain, small worn edges; retain the existing material's visual identity. Uniform neutral albedo with no directional lighting, cast shadows, specular highlights or shading gradients.
+Constraints: Change only the periodic layout and seam continuity; keep the same brick scale, 3-brick width, 10-course height, running bond, realistic texture, and subdued umber palette. No perspective, no border, no frame, no text, no watermark, no objects, no foliage, no obvious unique repeating stain. Produce a single square production texture, ideally 1024 by 1024.
+
+Exact prompt: Candidate 2
+Use case: precise-object-edit
+Asset type: a seamless repeatable albedo texture for a 3D game.
+Input images: Image 1 is the edit target, a 1254 by 1254 pixel brick texture.
+Primary request: Correct ONLY the vertical periodic layout. The current bottom course is too short and the top/bottom mortar is too thick when tiled. Re-space all TEN courses uniformly over the entire square. Keep its exact photorealistic umber brick texture, brick colors, gray-beige mortar, three-brick running-bond pattern across, alternating horizontal stagger, straight-on orthographic view, and fine grain unchanged.
+Required geometry: The full 1254-pixel height contains exactly 10 equal brick-and-mortar courses, each about 125.4 pixels tall (125 or 126 pixel courses as needed). Every horizontal mortar joint is about 16 pixels thick. Horizontal mortar joint CENTERS are at y=0,125.4,250.8,376.2,501.6,627,752.4,877.8,1003.2,1128.6,1254. There must be nine complete interior horizontal joints. At y=0 there is only an EIGHT-PIXEL half-joint, then the first full-height brick course begins. The last full-height brick course extends to y=1246, followed by only an EIGHT-PIXEL half-joint at the bottom border. Those two half-joints combine into exactly one ordinary 16-pixel joint when repeated vertically. All 10 brick courses have the same height including the bottom one. No extra partial brick slivers and no compressed last course.
+Periodic detail: Top and bottom edge mortar continues naturally and identically across the repeat, with continuous grain and no color step. Preserve the good left/right continuity and ensure split edge bricks match their counterpart.
+Constraints: This is solely a vertical spacing and seam-continuity repair. Keep all material appearance unchanged. Flat neutral diffuse albedo, no added lighting, no cast shadows, no specular highlights, no gradient, no perspective, no border, no frame, no text, no watermark, no objects, no moss, no extra stains. Produce one square texture at the same 1254 by 1254 dimensions.

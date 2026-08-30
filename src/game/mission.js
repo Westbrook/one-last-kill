@@ -21,6 +21,7 @@ import { isSegmentOccluded } from './combat-rules.js';
 import { readThreatView, ThreatFeedback } from './threat-feedback.js';
 import { DISTRICT } from '../world/district-layout.js';
 import { Architecture } from '../world/architecture.js';
+import { createHealthPickupModel } from '../render/health-pickup-model.js';
 
 let checkpoint = null;
 let initialized = false;
@@ -497,13 +498,6 @@ const HealPickups = (() => {
   const list = [];
   let activeZone = 'apartment';
   const haloIntensity = 0.35;
-  const bodyGeometry = new THREE.BoxGeometry(0.24, 0.08, 0.18);
-  const bandGeometry = new THREE.BoxGeometry(0.245, 0.025, 0.06);
-  const crossH = new THREE.BoxGeometry(0.10, 0.012, 0.025);
-  const crossV = new THREE.BoxGeometry(0.025, 0.012, 0.10);
-  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.65 });
-  const bandMaterial = new THREE.MeshStandardMaterial({ color: 0xd8d8d8, roughness: 0.7 });
-  const redMaterial = new THREE.MeshStandardMaterial({ color: 0xff3030, emissive: 0xb01010, emissiveIntensity: 0.9, roughness: 0.5 });
   function syncVisibility(pickup) {
     const visible = pickup.active && (!pickup.zone || pickup.zone === activeZone);
     pickup.mesh.visible = visible;
@@ -514,16 +508,10 @@ const HealPickups = (() => {
   return {
     list,
     spawn(x, y, z, amount = 25, zone = null, id = null) {
-      const mesh = new THREE.Group();
+      const mesh = createHealthPickupModel();
       if (id) {
         mesh.name = 'health:' + id;
         mesh.userData.healthSupplyId = id;
-      }
-      mesh.add(new THREE.Mesh(bodyGeometry, bodyMaterial), new THREE.Mesh(bandGeometry, bandMaterial));
-      for (const geometry of [crossH, crossV]) {
-        const cross = new THREE.Mesh(geometry, redMaterial);
-        cross.position.y = 0.046;
-        mesh.add(cross);
       }
       mesh.position.set(x, y + 0.18, z);
       const halo = new THREE.PointLight(0xffa0a0, haloIntensity, 1.8, 1.8);

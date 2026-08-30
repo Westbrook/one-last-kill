@@ -13,9 +13,11 @@ export class FrameBudget {
     this.slowWindows = average > 0.0205 ? this.slowWindows + 1 : 0;
     this.fastWindows = average < 0.0155 ? this.fastWindows + 1 : 0;
     let next = this.scale;
-    if (this.slowWindows >= 2) { next = Math.max(this.min, this.scale - 0.1); this.slowWindows = 0; }
-    if (this.fastWindows >= 4) { next = Math.min(this.max, this.scale + 0.05); this.fastWindows = 0; }
+    if (this.slowWindows >= 2) { next = Math.max(this.min, Math.round((this.scale - 0.1) * 100) / 100); this.slowWindows = 0; }
+    if (this.fastWindows >= 4) { next = Math.min(this.max, Math.round((this.scale + 0.05) * 100) / 100); this.fastWindows = 0; }
     if (Math.abs(next - this.scale) < 0.001) return null;
+    // Exact hundredths keep the 1.0 contact-shading threshold stable when
+    // repeated 0.1/0.05 steps otherwise accumulate floating-point roundoff.
     this.scale = next;
     return next;
   }

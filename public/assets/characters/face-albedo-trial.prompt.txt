@@ -1,0 +1,22 @@
+FACIAL ALBEDO — ACCEPTED 2026-08-29
+
+Method: built-in image_gen tool, new image (no reference image).
+The tool does not expose an exact model selector; no exact GPT Image 2 model claim is made.
+Original output: /Users/westbrook/.codex/generated_images/01a04e5f-6860-7162-a91d-43d6e1ef4140/exec-540a0689-062a-44d7-94be-00fce2688024.png
+Project copy is unchanged. Fictional adult face, no actor reference.
+Status: accepted for production after front/profile A/B review of the actual posed character on 2026-08-29. The filename retains its trial name for traceability. A developer A/B toggle and authored-skin fallback remain available.
+Known limitation: the generated source retains mild directional shading and eye glints despite the requested flat albedo; this is not a calibrated scan or perfectly de-lit PBR source. The accepted material projects diffuse colour only: rendered eyes/brows and hair are excluded, outer cheeks compress into skin pixels, side-jaw tones blend into authored skin, and no normal map is derived from the image.
+
+Accepted source: unchanged 1254 x 1254 PNG (the generation tool did not return the requested 1024 x 1024 dimensions). One shared texture; estimated RGBA8 mip allocation 8,386,752 bytes, below 8 MiB. Four body draws and existing triangle budgets are unchanged.
+
+Review artifacts: artifacts/graphics-ceiling-2026-08-29/npc-face-refined-front.png and npc-face-refined-profile.png. Initial on/off and first profile comparison images are retained in the same directory.
+
+EXACT PROMPT
+
+Use case: photorealistic-natural.
+Asset type: a square 1024 by 1024 facial diffuse ALBEDO texture source for a real-time game character, not a beauty portrait.
+Primary request: one original fictional adult man, about 38 years old, natural medium warm beige skin, ordinary rugged facial structure and subtle short dark stubble. Head faces EXACTLY forward with orthographic projection, neutral closed mouth, eyes looking straight ahead. No resemblance to any identifiable actor or public figure. Show the complete head only, no clothing, no shoulders, no neck below the chin; use a uniform warm beige skin-colored background. Very short dark buzz-cut hair confined to upper scalp; no long hair or beard.
+Composition is calibrated for texture projection: crown center x50% y5%, chin center x50% y95%, left/right eye centers x36.3% and x63.7% at y45.1%, nose base x50% y61.6%, closed mouth center x50% y73.2%, ear centers x7% and x93% at y51%. Maintain these proportions precisely; use the whole square. Bilateral facial structure, slight natural color asymmetry only.
+Materials: preserve believable skin pores, subtle age lines, freckles, tiny capillaries, muted lip color, eyelid pigmentation, natural dark stubble, cheek and temple hue variation. These are pigmentation and surface color, not painted cast shadows. No makeup, scars, wounds, blood or tattoos.
+Lighting: a professional de-lit PBR diffuse base-color reference. Extremely uniform omnidirectional shadowless illumination. Remove directional shading, strong nose shadows, ambient-occlusion shading, rim light, specular glints and eye catchlights. Avoid a photograph's contrast/exposure effects. No vignette, no depth of field. Crisp natural surface detail, not smooth plastic and not oversharpened.
+Constraints: no text, no labels, no rulers, no grid, no watermark, no extra faces, no split layout. One clean frontal head albedo image only.

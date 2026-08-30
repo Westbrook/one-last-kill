@@ -19,12 +19,13 @@ import { buildWorldSurfaceFixture } from './world-surface-fixture.js';
  * Real enemy perception, steering, attacks and capsule movement against all
  * authored geometry. Only rig presentation, GPU compilation and effect/audio
  * sinks are replaced; no browser, renderer or audio device is constructed.
+ * A focused integration test can supply the real DOM-free humanoid functions.
  */
-export function createEnemyAIHarness({ audio = null } = {}) {
+export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
   const fixture = buildWorldSurfaceFixture();
   const clock = { elapsed: 0 };
   const player = { pos: new THREE.Vector3(), _eyeH: 1.72, _bodyH: 1.84, radius: 0.32, health: 1000 };
-  const playerState = { dead: false }, damage = [];
+  const playerState = { dead: false }, damage = [], drops = [];
   const supplies = createAmmoSupplies();
   supplies.init({ world: fixture.World, player, canInteract: () => false });
   resolveSurfaceOwnership(fixture.records.values());
@@ -39,7 +40,7 @@ export function createEnemyAIHarness({ audio = null } = {}) {
   assert.doesNotMatch(source, /^import\s/m);
   const silentEffects = new Proxy({}, { get: () => () => {} });
   const deterministicMath = Object.create(Math); deterministicMath.random = () => 0.5;
-  const api = runInNewContext(`${source}\n;({ ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, enemyTick, enemyAttackPlayer, hasLineOfSight, isBlocked, primeEnemyInvestigation, raycastEnemies, damageEnemy });`, {
+  const api = runInNewContext(`${source}\n;({ ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, enemyTick, enemyAttackPlayer, hasLineOfSight, isBlocked, primeEnemyInvestigation, raycastEnemies, damageEnemy, killEnemy });`, {
     THREE, lerp, smoothstep, ...Navigation, ...Combat, ...StairPursuit,
     GameTime: clock, Player: player, PlayerState: playerState,
     scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera(), renderer: { compile() {} },
@@ -47,7 +48,8 @@ export function createEnemyAIHarness({ audio = null } = {}) {
     ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS, Math: deterministicMath, surfaceTopAt,
     makeHumanoid: () => new THREE.Group(), attachHeldWeapon: () => null, resetHumanoidPose() {}, updateHumanoidPose() {},
     beginHumanoidCollapse() {}, updateHumanoidCollapse: () => true,
-    WeaponDrops: { _mat: () => null, spawn() {} }, Audio: audio ?? silentEffects, Blood: silentEffects, FX: silentEffects,
+    ...humanoids,
+    WeaponDrops: { _mat: () => null, spawn(...args) { drops.push(args); } }, Audio: audio ?? silentEffects, Blood: silentEffects, FX: silentEffects,
     applyPlayerDamage(amount, origin, attacker) { damage.push({ time: clock.elapsed, amount, origin: origin.clone(), attacker }); return true; },
   }, { filename: 'src/game/enemies.js' });
   api.EnemyPool.init();
@@ -56,7 +58,7 @@ export function createEnemyAIHarness({ audio = null } = {}) {
     player.pos.set(point.x, point.y + player._eyeH, point.z);
   }
   function reset(goal) {
-    api.Enemies.clearAll(); clock.elapsed = 0; damage.length = 0;
+    api.Enemies.clearAll(); clock.elapsed = 0; damage.length = 0; drops.length = 0;
     player.health = 1000; playerState.dead = false;
     if (goal) placePlayer(goal);
   }
@@ -71,5 +73,5 @@ export function createEnemyAIHarness({ audio = null } = {}) {
     clock.elapsed += dt;
     api.enemiesUpdate(dt);
   }
-  return { ...api, fixture, ballistics: fixture.ballistics, colliders: Colliders.list, clock, player, playerState, damage, supplies, surfaceTopAt, placePlayer, reset, spawn, step };
+  return { ...api, fixture, ballistics: fixture.ballistics, colliders: Colliders.list, clock, player, playerState, damage, drops, supplies, surfaceTopAt, placePlayer, reset, spawn, step };
 }

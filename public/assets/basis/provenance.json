@@ -1,0 +1,78 @@
+{
+  "sourcePackage": "three",
+  "sourceVersion": "0.185.1",
+  "decoderFilesUnchanged": true,
+  "upstreamBasisTag": "v1_50_0",
+  "upstreamEvidenceURL": "https://github.com/mrdoob/three.js/commit/302240259d4ae8ae54557f7be6f0515a662f256d",
+  "decoderBytes": 584862,
+  "decoderBytesNote": "JS + WASM file bytes; excludes documentation, licenses, HTTP headers, content encoding, and cache effects.",
+  "licenseURLs": {
+    "BasisUniversalApache2.0": "https://github.com/BinomialLLC/basis_universal/blob/v1_50_0/LICENSE",
+    "ThreeMIT": "https://github.com/mrdoob/three.js/blob/r185/LICENSE",
+    "ZstandardBSD3Clause": "https://github.com/BinomialLLC/basis_universal/blob/v1_50_0/zstd/LICENSE",
+    "EmscriptenMITOrNCSA": "https://github.com/emscripten-core/emscripten/blob/main/LICENSE"
+  },
+  "licenseRetrievedOn": "2026-08-29",
+  "attributionNotes": [
+    "Original Three Basis README is unchanged, including its source and Apache license links.",
+    "Basis v1_50_0 has no NOTICE file. NOTICE.Basis.txt is a supplemental unchanged copy from current upstream master.",
+    "LICENSE.Emscripten.txt is a supplemental unchanged current upstream copy for the generated wrapper. Exact Emscripten compiler version and all linked toolchain components are not established by the Three package."
+  ],
+  "files": [
+    {
+      "file": "basis_transcoder.js",
+      "sourcePath": "node_modules/three/examples/jsm/libs/basis/basis_transcoder.js",
+      "bytes": 57529,
+      "sha256": "8478b5b6d6b74e7d3082b89f6417321d8d1dc0307f2b30d4484bb11b441696a1"
+    },
+    {
+      "file": "basis_transcoder.wasm",
+      "sourcePath": "node_modules/three/examples/jsm/libs/basis/basis_transcoder.wasm",
+      "bytes": 527333,
+      "sha256": "6cf17dc889352c42e9acf8897107978d127005fe3386c36a0e3845e27967630a"
+    },
+    {
+      "file": "README.md",
+      "sourcePath": "node_modules/three/examples/jsm/libs/basis/README.md",
+      "bytes": 1388,
+      "sha256": "a578df416c1e0852e9c36a1cf91b4d28d91a251294f87ce610a3bc7ca4df15e0"
+    },
+    {
+      "file": "LICENSE.Three.txt",
+      "sourcePath": "node_modules/three/LICENSE",
+      "bytes": 1081,
+      "sha256": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc"
+    },
+    {
+      "file": "LICENSE.Basis.txt",
+      "sourceURL": "https://raw.githubusercontent.com/BinomialLLC/basis_universal/v1_50_0/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "file": "NOTICE.Basis.txt",
+      "sourceURL": "https://raw.githubusercontent.com/BinomialLLC/basis_universal/master/NOTICE",
+      "bytes": 998,
+      "sha256": "a710c77f53231533f19fbc00e04a7109077f2dec74232b62a96f2ac1a1c04c85"
+    },
+    {
+      "file": "LICENSE.Zstandard.txt",
+      "sourceURL": "https://raw.githubusercontent.com/BinomialLLC/basis_universal/v1_50_0/zstd/LICENSE",
+      "bytes": 1530,
+      "sha256": "2c1a7fa704df8f3a606f6fc010b8b5aaebf403f3aeec339a12048f1ba7331a0b"
+    },
+    {
+      "file": "LICENSE.Emscripten.txt",
+      "sourceURL": "https://raw.githubusercontent.com/emscripten-core/emscripten/main/LICENSE",
+      "bytes": 5093,
+      "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86"
+    },
+    {
+      "file": "NOTICE.Zstandard.txt",
+      "sourceURL": "https://raw.githubusercontent.com/BinomialLLC/basis_universal/v1_50_0/zstd/zstddeclib.c",
+      "extracted": "Distinct copyright notices from source headers; BSD license election is project annotation.",
+      "bytes": 711,
+      "sha256": "59fccb7bcc86da6f236f4a83954aae3c775094852d03e14a23c68979a3aa7f26"
+    }
+  ]
+}

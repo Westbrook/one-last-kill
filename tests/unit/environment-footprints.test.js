@@ -6,6 +6,10 @@ import * as THREE from 'three';
 import { BUILDING, ROOF } from '../../src/world/layout.js';
 import { DISTRICT } from '../../src/world/district-layout.js';
 import { mulberry32, TAU } from '../../src/core/math.js';
+import { createStaticSurfaceBatch } from '../../src/render/static-surface-batch.js';
+import { buildExteriorDetail, finishExteriorMaterials } from '../../src/render/exterior-detail.js';
+import { buildBakeryStoryDetail } from '../../src/render/bakery-story-detail.js';
+import { SURFACE_METERS } from '../../src/render/surface-detail.js';
 
 // Real instance transforms, with no renderer, browser, canvas drawing or audio.
 // The environment builder's browser-facing imports are replaced explicitly.
@@ -31,12 +35,16 @@ function buildFixture(surfaceOverrides = {}) {
   const materials = new Map();
   const MATS = new Proxy({}, {
     get(_, key) {
-      if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial());
+      if (!materials.has(key)) {
+        const material = new THREE.MeshStandardMaterial();
+        material.userData.surfaceMeters = SURFACE_METERS[key];
+        materials.set(key, material);
+      }
       return materials.get(key);
     },
   });
   const bindings = {
-    THREE, BUILDING, ROOF, DISTRICT, mulberry32, TAU, scene, World, MATS,
+    THREE, BUILDING, ROOF, DISTRICT, mulberry32, TAU, scene, World, MATS, createStaticSurfaceBatch, buildExteriorDetail, finishExteriorMaterials, buildBakeryStoryDetail,
     camera: new THREE.PerspectiveCamera(),
     WorldState: { fires: [], flickerLights: [] },
     document: {
@@ -67,11 +75,24 @@ const footprint = box => ({ x1: box.min.x, x2: box.max.x, z1: box.min.z, z2: box
 
 function instances(name, world = fixture.World) {
   const mesh = world.getObjectByName(name);
-  assert.ok(mesh?.isInstancedMesh, `${name} is batched`);
+  const batch = mesh?.userData.surfaceBatch;
+  assert.ok(mesh?.isInstancedMesh || batch, `${name} is batched`);
   mesh.geometry.computeBoundingBox();
-  return Array.from({ length: mesh.count }, (_, index) => {
-    const matrix = new THREE.Matrix4(); mesh.getMatrixAt(index, matrix);
-    const bounds = mesh.geometry.boundingBox.clone().applyMatrix4(matrix).applyMatrix4(mesh.matrixWorld);
+  return Array.from({ length: batch?.count ?? mesh.count }, (_, index) => {
+    const matrix = new THREE.Matrix4();
+    let bounds;
+    if (batch) {
+      matrix.fromArray(batch.transforms, index * 16);
+      bounds = new THREE.Box3();
+      const point = new THREE.Vector3();
+      for (let vertex = index * batch.verticesPerEntry; vertex < (index + 1) * batch.verticesPerEntry; vertex++) {
+        bounds.expandByPoint(point.fromBufferAttribute(mesh.geometry.attributes.position, vertex));
+      }
+      bounds.applyMatrix4(mesh.matrixWorld);
+    } else {
+      mesh.getMatrixAt(index, matrix);
+      bounds = mesh.geometry.boundingBox.clone().applyMatrix4(matrix).applyMatrix4(mesh.matrixWorld);
+    }
     const position = new THREE.Vector3().setFromMatrixPosition(matrix);
     const scale = new THREE.Vector3().setFromMatrixScale(matrix);
     const normal = new THREE.Vector3(0, 0, 1).transformDirection(matrix);
@@ -94,7 +115,7 @@ test('city lots clear the expanded district, including their dressed edges, for 
 test('all rendered city masses, facades, cornices and rooftop details stay outside the playable block', () => {
   const buildings = fixture.planCityBuildings(mulberry32(27082026));
   const lots = buildings.map(fixture.cityBuildingFootprint);
-  for (const mesh of fixture.environment.children.filter(child => child.isInstancedMesh && child.name.startsWith('city-'))) {
+  for (const mesh of fixture.environment.children.filter(child => child.userData.batchInstances && child.name.startsWith('city-'))) {
     for (const item of instances(mesh.name)) {
       const actual = footprint(item.bounds);
       assert.ok(!overlaps(actual, playable, 3), `${mesh.name} clears district and bakery`);
@@ -211,7 +232,7 @@ test('existing apartment props follow moved furniture surfaces and radiator feet
   near(book.bounds.min.y, 4.61, 'book rests on coffee table');
   const vessels = instances('environment-pipes', moved.World)
     .filter(item => Math.abs(item.scale.y - 0.1) < epsilon || Math.abs(item.scale.y - 0.28) < epsilon);
-  assert.equal(vessels.length, 2);
+  assert.equal(vessels.length, 1, 'the lower placeholder vessel is replaced by the authored kitchen vignette');
   for (const { position, bounds } of vessels) {
     near(position.x, -14.3, 'vessel follows kitchen worktop');
     near(bounds.min.y, 5.03, 'vessel rests on kitchen worktop');
@@ -229,7 +250,9 @@ test('existing apartment props follow moved furniture surfaces and radiator feet
 
 test('expanded decoration keeps the fixed batch, light and particle budget', () => {
   assert.equal(fixture.environment.userData.cityBuildings, 56);
-  assert.equal(fixture.environment.children.filter(child => child.isInstancedMesh).length, 14);
+  assert.equal(fixture.environment.children.filter(child => child.userData.batchInstances).length, 15);
+  assert.equal(fixture.environment.children.filter(child => child.userData.surfaceBatch).length, 4);
+  assert.equal(fixture.environment.children.filter(child => child.isInstancedMesh).length, 11);
   assert.equal(fixture.environment.children.filter(child => child.isPointLight).length, 2);
   assert.equal(fixture.environment.userData.particleCount, 144);
   const atmosphere = fixture.getAtmosphere();

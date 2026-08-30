@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { lerp, smoothstep } from '../core/math.js';
-import { scene, camera, renderer, GameTime } from '../core/renderer.js';
+import { camera, GameTime } from '../core/renderer.js';
 import { makeHumanoid } from '../render/models.js';
 import { attachHeldWeapon, resetHumanoidPose, updateHumanoidPose } from '../render/humanoid-rig.js';
 import { beginHumanoidCollapse, updateHumanoidCollapse } from '../render/corpse-pose.js';
@@ -77,6 +77,8 @@ const ENEMY_TYPES = {
   },
 };
 
+const SUPPORT_LOOKDOWN = 2.5; // Match live movement and one-time death support probes.
+
 const EnemyNavigation = new EnemyNavigationPlanner({
   bounds: {
     x1: Math.min(BUILDING.tower.x1, ROOF.x1, DISTRICT.bounds.x1) - 1,
@@ -111,7 +113,7 @@ const EnemyPool = {
       const arr = new Array(size);
       for (let i = 0; i < size; i++) {
         const visual = Object.assign({}, def.visual,
-          { seed: 100 + i * 73 + (type.charCodeAt(0) * 17) });
+          { role: type, seed: 100 + i * 73 + (type.charCodeAt(0) * 17) });
         const rig = makeHumanoid(visual);
         rig.position.set(0, -200, 0);
         rig.visible = false;
@@ -123,18 +125,8 @@ const EnemyPool = {
       this.freeIdx[type] = 0;
     }
     this.initialized = true;
-    // Pre-compile shaders for every pooled rig so the first real spawn does
-    // not pay a shader-compile hitch. Show rigs briefly, run renderer.compile
-    // against the active scene/camera, then re-hide.
-    for (const type in this.pools) {
-      const arr = this.pools[type];
-      for (let i = 0; i < arr.length; i++) arr[i].rig.visible = true;
-    }
-    try { renderer.compile(scene, camera); } catch (_) {}
-    for (const type in this.pools) {
-      const arr = this.pools[type];
-      for (let i = 0; i < arr.length; i++) arr[i].rig.visible = false;
-    }
+    // Boot prepares the actual skin, bone textures and held variants through
+    // warmCharacters after the full pool exists. Bounds proxies stay hidden.
   },
   _poolSize(type) {
     // Zones and finale branches do not coexist, but survivors can span waves.
@@ -722,8 +714,8 @@ function enemyTick(enemy, dt) {
   // Navigation and movement share the player's capsule stepper. A valid
   // curb/flight probe therefore produces an actual step, not a stopped body
   // whose lower spherical cap still collides with the riser face.
-  const SUPPORT_LOOKDOWN = 2.5; // how far below feet still counts as "on ground"
   enemy.body.radius = enemy.radius; enemy.body.height = enemy.height;
+  const poseStartX = enemy.pos.x, poseStartZ = enemy.pos.z;
   EnemyNavigation.moveBody(enemy.body, dt);
 
   // Re-sample the actual surface under the CURRENT (x,z) so enemy.floorY
@@ -739,12 +731,16 @@ function enemyTick(enemy, dt) {
   enemy.mesh.position.copy(enemy.pos);
   enemy.mesh.rotation.y = enemy.yaw;
   enemy.mesh.rotation.z = lerp(enemy.mesh.rotation.z, 0, Math.min(1, dt * 12));
-  const speed2d = Math.hypot(enemy.vel.x, enemy.vel.z);
+  // Drive the visual stride from completed movement. Collision response and
+  // bounded physics steps can leave velocity different from distance covered.
+  const poseMoveX = enemy.pos.x - poseStartX, poseMoveZ = enemy.pos.z - poseStartZ;
+  const poseDistance = Math.hypot(poseMoveX, poseMoveZ);
+  const speed2d = Number.isFinite(dt) && dt > 0 ? poseDistance / dt : 0;
   const pose = enemy.poseInput;
   pose.mode = def.attack === 'hitscan' ? 'ranged' : def.weaponType === 'fists' ? 'fist' : 'bat';
   pose.speed = speed2d;
-  pose.forward = speed2d > 0.01 ? (Math.sin(enemy.yaw) * enemy.vel.x + Math.cos(enemy.yaw) * enemy.vel.z) / speed2d : 1;
-  pose.strafe = speed2d > 0.01 ? (Math.cos(enemy.yaw) * enemy.vel.x - Math.sin(enemy.yaw) * enemy.vel.z) / speed2d : 0;
+  pose.forward = speed2d > 0.01 ? (Math.sin(enemy.yaw) * poseMoveX + Math.cos(enemy.yaw) * poseMoveZ) / poseDistance : 1;
+  pose.strafe = speed2d > 0.01 ? (Math.cos(enemy.yaw) * poseMoveX - Math.sin(enemy.yaw) * poseMoveZ) / poseDistance : 0;
   pose.alert = enemy.state === 'attack' || enemy.state === 'chase' ? 1 : 0;
   pose.aim = def.attack !== 'hitscan' ? 0 : enemy.burstLeft > 0 || enemy.attackTimer > def.fireInterval - 0.14 ? 1 : enemy.windupRemaining >= 0 ? 1 - enemy.windupRemaining / def.aimTime : 0.12;
   pose.swingProgress = enemy.swingTimer > 0 ? 1 - enemy.swingTimer / def.swingTime : -1;
@@ -813,6 +809,12 @@ function killEnemy(enemy, hitPos) {
   enemy.coverTimer = 0;
   enemy.deathLean = (enemy.id % 2 ? -1 : 1) * 0.08;
   enemy.vel.set(0, 0, 0);
+  // A spawn can die before its first movement tick resolves the clearance
+  // offset. Refresh its actual support once so corpse and drop placement do
+  // not inherit that offset or a stale landing height. Unsupported deaths
+  // retain the last known floor, matching the live support fallback.
+  const support = surfaceTopAt(enemy.pos.x, enemy.pos.y + 0.20, enemy.pos.z, SUPPORT_LOOKDOWN);
+  if (Number.isFinite(support)) enemy.floorY = support;
   const fallAxis = enemy.zone === 'balcony'
     ? enemy.pos.z >= BALCONY.wrap.z1 ? 'x' : 'z'
     : null;

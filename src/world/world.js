@@ -28,18 +28,20 @@ function addLights() {
   const ambient = new THREE.AmbientLight(0xb0b6ad, 0.45);
   scene.add(ambient);
 
-  // A single shadow map covers the playable block.
+  // One shadow map, focused conservatively by the render budget at runtime.
   const moon = new THREE.DirectionalLight(0xc3d5e0, 1.6);
   moon.castShadow = true;
-  fitWorldShadow(moon, new THREE.Box3(
+  const shadowBounds = new THREE.Box3(
     new THREE.Vector3(DISTRICT.bounds.x1, -0.2, ROOF.z1),
     new THREE.Vector3(DISTRICT.bounds.x2, ROOF.floorY + 5.2, DISTRICT.bounds.z2),
-  ));
+  );
+  fitWorldShadow(moon, shadowBounds);
   scene.add(moon, moon.target);
 
   // Hemisphere lifts indoor floors/ceilings without a second shadow caster.
   const cityGlow = new THREE.HemisphereLight(0x99b1c2, 0x554a3d, 1.0);
   scene.add(cityGlow);
+  return { directional: moon, bounds: shadowBounds };
 }
 
 // World-state shared across zone builders.
@@ -370,7 +372,9 @@ function addWallZ(cx, cy, cz, length, height, thickness, mat, doorway) {
 
 // Decorative-only mesh (no collider).
 function addDecor(cx, cy, cz, sx, sy, sz, mat) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+  const geometry = new THREE.BoxGeometry(sx, sy, sz);
+  applyBoxWorldUV(geometry, mat.userData?.surfaceMeters, { x: cx, y: cy, z: cz });
+  const m = new THREE.Mesh(geometry, mat);
   m.position.set(cx, cy, cz);
   m.castShadow = true; m.receiveShadow = true;
   World.add(m);

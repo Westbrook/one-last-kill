@@ -15,6 +15,13 @@ import { SURFACE_METERS } from '../../../src/render/surface-detail.js';
 import { Colliders } from '../../../src/core/collision.js';
 import { createBallisticWorld } from '../../../src/core/ballistics.js';
 import { mulberry32 } from '../../../src/core/math.js';
+import { addBakeryBread, addBakeryPackage } from '../../../src/render/bakery-provisions.js';
+import { getBakeryProvisionMaterials } from '../../../src/render/bakery-provision-materials.js';
+import { addCrtHousing } from '../../../src/render/crt-housing.js';
+import { applyWaterTankStaveUV } from '../../../src/render/water-tank-uv.js';
+import { refineConcreteBarrier } from '../../../src/render/street-barrier.js';
+import { createSedanCabin } from '../../../src/render/sedan-cabin.js';
+import { createSedanBumper, createSedanHood } from '../../../src/render/sedan-panels.js';
 
 function loadFunctions(path, bindings, names) {
   // Preserve source line numbers in captured VM stacks while removing imports.
@@ -101,10 +108,11 @@ export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld() }
   }
   const WorldState = { fires: [], smokeSystems: [], flickerLights: [], bakeryLights: [] };
   const bindings = {
+    refineConcreteBarrier,
     THREE, RoundedBoxGeometry, mergeGeometries, World, WorldState, MATS, ...caches,
     Architecture, boxBounds, Colliders, Ballistics: ballistics, BUILDING, BALCONY, ROOF, OPENINGS, APARTMENT_DOORS, STAIRS, DISTRICT,
     SCAFFOLD_LEVELS, SCAFFOLD_TRIGGER_MIN_Z, createInteriorProps, createDoorAssemblies,
-    addBox, addDecor, pushDecor,
+    addBox, addDecor, pushDecor, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, addCrtHousing, applyWaterTankStaveUV, createSedanCabin, createSedanBumper, createSedanHood,
     addWallX: (...args) => wall('x', ...args), addWallZ: (...args) => wall('z', ...args),
     makeCanvas: fakeCanvas, makeSignTexture: () => new THREE.Texture(),
     addSign(x, y, z, width, height, normal, text) {

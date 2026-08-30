@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { HEALTH_SUPPLIES } from '../../../src/game/health-supply-data.js';
 import { ZONE_WAVE_CONFIG } from '../../../src/game/mission-data.js';
+import { createHealthPickupModel } from '../../../src/render/health-pickup-model.js';
 
 const missionSource = readFileSync(new URL('../../../src/game/mission.js', import.meta.url), 'utf8');
 
@@ -40,7 +41,7 @@ export function createHealthPickupHarness() {
   };
   const api = runInNewContext(`let initialized = false;\n${pickupSource}\n${initializationSource}\n`
     + ';({ HealPickups, initMission });', {
-    THREE, World, Player, PlayerState, GameTime, Math: deterministicMath, HEALTH_SUPPLIES, ZONE_WAVE_CONFIG,
+    THREE, World, Player, PlayerState, GameTime, Math: deterministicMath, HEALTH_SUPPLIES, ZONE_WAVE_CONFIG, createHealthPickupModel,
     HUD: {
       setHealth(value) { calls.health.push(value); },
       message(...values) { calls.messages.push(values); },

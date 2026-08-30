@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "prepared_at": "2026-08-29",
+  "purpose": "Approved 1K sets for in-game graphics trial; raw official maps copied unchanged.",
+  "provider": "Poly Haven",
+  "license": {
+    "id": "CC0-1.0",
+    "provider_confirmation": "https://polyhaven.com/license",
+    "legal_summary": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution_required": false
+  },
+  "source_evidence_manifest": "artifacts/graphics-ceiling-2026-08-29/material-candidates/manifest.json",
+  "materials": {
+    "red_brick": {
+      "name": "Red Brick",
+      "source_page": "https://polyhaven.com/a/red_brick",
+      "authors": [
+        "Rob Tuytel"
+      ],
+      "license": "CC0-1.0",
+      "intended_tile_span_m": [
+        1.4,
+        1.4
+      ],
+      "normal_convention": "OpenGL tangent-space (+Y / green up)",
+      "resolution_px": [
+        1024,
+        1024
+      ],
+      "maps": {
+        "albedo": {
+          "path": "public/assets/materials/red_brick/red_brick_diff_1k.jpg",
+          "url": "/assets/materials/red_brick/red_brick_diff_1k.jpg",
+          "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/red_brick/red_brick_diff_1k.jpg",
+          "source_evidence_path": "artifacts/graphics-ceiling-2026-08-29/material-candidates/red_brick/red_brick_diff_1k.jpg",
+          "dimensions_px": [
+            1024,
+            1024
+          ],
+          "format": "jpg",
+          "source_bit_depth": 8,
+          "source_channels": "RGB",
+          "shader_channels": "RGB",
+          "sampling_color_space": "sRGB",
+          "channel_meaning": "diffuse surface color",
+          "bytes": 766044,
+          "md5": "269e69449755abd1ede473e634b670e7",
+          "sha256": "6dea3a2b5a3185ff48d299d182c405a9f787129d79677792db6de4afd81c47f6",
+          "matches_official_source_md5": true,
+          "copied_without_modification": true
+        },
+        "normal": {
+          "path": "public/assets/materials/red_brick/red_brick_nor_gl_1k.png",
+          "url": "/assets/materials/red_brick/red_brick_nor_gl_1k.png",
+          "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/red_brick/red_brick_nor_gl_1k.png",
+          "source_evidence_path": "artifacts/graphics-ceiling-2026-08-29/material-candidates/red_brick/red_brick_nor_gl_1k.png",
+          "dimensions_px": [
+            1024,
+            1024
+          ],
+          "format": "png",
+          "source_bit_depth": 8,
+          "source_channels": "RGB",
+          "shader_channels": "RGB",
+          "sampling_color_space": "NoColorSpace / linear data",
+          "channel_meaning": "tangent-space normal X,Y,Z encoded in R,G,B",
+          "bytes": 2236680,
+          "md5": "f3f92057f5af1b90d747dd01717740ab",
+          "sha256": "e1116366df05651cb54edea4977563a4c0d4ee7a523be61a51fb895c279fa9a8",
+          "matches_official_source_md5": true,
+          "copied_without_modification": true
+        },
+        "roughness": {
+          "path": "public/assets/materials/red_brick/red_brick_rough_1k.jpg",
+          "url": "/assets/materials/red_brick/red_brick_rough_1k.jpg",
+          "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/red_brick/red_brick_rough_1k.jpg",
+          "source_evidence_path": "artifacts/graphics-ceiling-2026-08-29/material-candidates/red_brick/red_brick_rough_1k.jpg",
+          "dimensions_px": [
+            1024,
+            1024
+          ],
+          "format": "jpg",
+          "source_bit_depth": 8,
+          "source_channels": "L (grayscale)",
+          "shader_channels": "green (grayscale replicated on browser decode)",
+          "sampling_color_space": "NoColorSpace / linear data",
+          "channel_meaning": "roughness scalar, higher values are rougher",
+          "bytes": 178614,
+          "md5": "7ffbf7a7d2e0cff0a9c5f8848f9fada2",
+          "sha256": "9bc9ece8264eb53d6f290bd2950ece5e462f83ce9e65b945fb1caf9972973ab9",
+          "matches_official_source_md5": true,
+          "copied_without_modification": true
+        }
+      },
+      "map_bytes": 3181338
+    },
+    "plastered_wall_03": {
+      "name": "Plastered Wall 03",
+      "source_page": "https://polyhaven.com/a/plastered_wall_03",
+      "authors": [
+        "Rob Tuytel"
+      ],
+      "license": "CC0-1.0",
+      "intended_tile_span_m": [
+        4.0,
+        4.0
+      ],
+      "normal_convention": "OpenGL tangent-space (+Y / green up)",
+      "resolution_px": [
+        1024,
+        1024
+      ],
+      "maps": {
+        "albedo": {
+          "path": "public/assets/materials/plastered_wall_03/plastered_wall_03_diff_1k.jpg",
+          "url": "/assets/materials/plastered_wall_03/plastered_wall_03_diff_1k.jpg",
+          "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plastered_wall_03/plastered_wall_03_diff_1k.jpg",
+          "source_evidence_path": "artifacts/graphics-ceiling-2026-08-29/material-candidates/plastered_wall_03/plastered_wall_03_diff_1k.jpg",
+          "dimensions_px": [
+            1024,
+            1024
+          ],
+          "format": "jpg",
+          "source_bit_depth": 8,
+          "source_channels": "RGB",
+          "shader_channels": "RGB",
+          "sampling_color_space": "sRGB",
+          "channel_meaning": "diffuse surface color",
+          "bytes": 555233,
+          "md5": "0113b3562589857b4eb11400b228b8d5",
+          "sha256": "3d60687bae1d9cd2c14a46c4b2673e0fe753cf4b5eb82c22cc399271e16d8d5b",
+          "matches_official_source_md5": true,
+          "copied_without_modification": true
+        },
+        "normal": {
+          "path": "public/assets/materials/plastered_wall_03/plastered_wall_03_nor_gl_1k.png",
+          "url": "/assets/materials/plastered_wall_03/plastered_wall_03_nor_gl_1k.png",
+          "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/plastered_wall_03/plastered_wall_03_nor_gl_1k.png",
+          "source_evidence_path": "artifacts/graphics-ceiling-2026-08-29/material-candidates/plastered_wall_03/plastered_wall_03_nor_gl_1k.png",
+          "dimensions_px": [
+            1024,
+            1024
+          ],
+          "format": "png",
+          "source_bit_depth": 16,
+          "source_channels": "RGB",
+          "shader_channels": "RGB",
+          "sampling_color_space": "NoColorSpace / linear data",
+          "channel_meaning": "tangent-space normal X,Y,Z encoded in R,G,B",
+          "bytes": 5046300,
+          "md5": "e4f04df8432b3e7a1f32845e67df901f",
+          "sha256": "6e4f4213595833a6956b890114e06ef6b4a009592d48f5acfcfce1d816aa9743",
+          "matches_official_source_md5": true,
+          "copied_without_modification": true
+        },
+        "roughness": {
+          "path": "public/assets/materials/plastered_wall_03/plastered_wall_03_rough_1k.jpg",
+          "url": "/assets/materials/plastered_wall_03/plastered_wall_03_rough_1k.jpg",
+          "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plastered_wall_03/plastered_wall_03_rough_1k.jpg",
+          "source_evidence_path": "artifacts/graphics-ceiling-2026-08-29/material-candidates/plastered_wall_03/plastered_wall_03_rough_1k.jpg",
+          "dimensions_px": [
+            1024,
+            1024
+          ],
+          "format": "jpg",
+          "source_bit_depth": 8,
+          "source_channels": "L (grayscale)",
+          "shader_channels": "green (grayscale replicated on browser decode)",
+          "sampling_color_space": "NoColorSpace / linear data",
+          "channel_meaning": "roughness scalar, higher values are rougher",
+          "bytes": 301836,
+          "md5": "e1fa4ca9db73976014f36bf26ef5719f",
+          "sha256": "0f005efa43089f10d40cc0f96c6739beb8d1d5813ddb1acb51a0fdda75ee62ba",
+          "matches_official_source_md5": true,
+          "copied_without_modification": true
+        }
+      },
+      "map_bytes": 5903369
+    }
+  },
+  "total_map_bytes": 9084707,
+  "delivery_notes": [
+    "Only 1K maps are included; 2K maps and worn_plaster_wall remain review artifacts.",
+    "Red Brick normal is 8-bit RGB PNG. Plastered Wall 03 normal is raw 16-bit RGB PNG; no conversion or compression was performed.",
+    "Roughness uses official JPEG source alternatives; lossless 16-bit PNG originals remain in review artifacts.",
+    "Use identical UV transforms for all three maps and honor the measured physical tile spans.",
+    "Normal and roughness are data maps and must not be tagged sRGB. No green-channel inversion is intended for these OpenGL normals.",
+    "Source authors are recorded for provenance even though CC0 does not require attribution."
+  ]
+}

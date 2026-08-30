@@ -42,3 +42,34 @@ export function sampleBatMotion(progress, out) {
   }
   return out;
 }
+
+const TAU = Math.PI * 2;
+
+/** Half the distance covered by a foot during its planted half-cycle. */
+export function gaitStrideAmplitude(speed, height) {
+  const pace = Math.max(0, Number.isFinite(speed) ? speed : 0);
+  const moving = Math.min(1, pace / 3.6);
+  return height * (0.06 + moving * 0.14) * Math.min(1, pace / 0.35);
+}
+
+/**
+ * A flat support foot travels backwards at constant speed. During the other
+ * half-cycle it clears the floor and returns with the same endpoint velocity,
+ * avoiding both sinusoidal foot sliding and a stop/snap at touchdown.
+ * With phase advancing by speed / (4 * stride), a steady support foot stays
+ * fixed in world space. Speed changes deliberately ease through the rig.
+ */
+export function sampleGaitFoot(phase, stride, clearance, out) {
+  const cycle = ((phase / TAU) % 1 + 1) % 1;
+  out.support = cycle <= 0.5;
+  if (out.support) {
+    out.travel = stride * (1 - cycle * 4);
+    out.lift = 0;
+  } else {
+    const swing = (cycle - 0.5) * 2;
+    out.travel = stride * (-1 - 2 * swing + 12 * swing * swing - 8 * swing * swing * swing);
+    const arc = Math.sin(Math.PI * swing);
+    out.lift = clearance * arc * arc;
+  }
+  return out;
+}

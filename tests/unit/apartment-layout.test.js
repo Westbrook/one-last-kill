@@ -7,6 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Architecture, boxBounds, signYaw } from '../../src/world/architecture.js';
 import { BUILDING, BALCONY, APARTMENT_DOORS, OPENINGS } from '../../src/world/layout.js';
 import { createInteriorProps } from '../../src/world/interior-props.js';
+import { addCrtHousing } from '../../src/render/crt-housing.js';
 import { createDoorAssemblies } from '../../src/world/door-assemblies.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
 import { createBallisticWorld } from '../../src/core/ballistics.js';
@@ -53,7 +54,7 @@ function buildApartments({ withBalcony = false } = {}) {
     return mesh;
   }
   const bindings = {
-    THREE, World, MATS, _BG, BUILDING, BALCONY, APARTMENT_DOORS, Colliders, Ballistics, addBox, pushDecor, addWallZ, addSign, createInteriorProps, createDoorAssemblies,
+    THREE, World, MATS, _BG, BUILDING, BALCONY, APARTMENT_DOORS, Colliders, Ballistics, addBox, pushDecor, addWallZ, addSign, createInteriorProps, createDoorAssemblies, addCrtHousing,
     addDecor: (x, y, z, width, height, depth, material) => addBox(x, y, z, width, height, depth, material, { collide: false }),
     addFlickerLight() {}, makeSignTexture: () => new THREE.Texture(),
     Triggers: { add(id, min, max, enter, reset) { triggers.set(id, { min, max, enter, reset }); } },
@@ -162,7 +163,9 @@ test('new partitions create separate rooms with supported, sill-free doorways', 
 });
 
 test('furniture matches its collider, rests on supports and keeps detail batched', () => {
-  const { records, World, decorations } = buildApartments();
+  const { records, World, decorations, boxes } = buildApartments();
+  assert.equal(boxes.length, 74, 'artwork preserves the authored movement volume count');
+  assert.equal([...records.values()].filter(record => record.kind === 'furniture').length, 43);
   for (const record of records.values()) {
     if (record.kind !== 'furniture' && record.kind !== 'partition' && record.kind !== 'lintel') continue;
     const actual = new THREE.Box3().setFromObject(record.mesh);
@@ -181,6 +184,54 @@ test('furniture matches its collider, rests on supports and keeps detail batched
   assert.equal(lights, 5, 'room furnishing adds no point lights beyond the original lamps, CRT and two fires');
   assert.ok(decorations.length > 300, 'small furniture details use the shared batching path');
   assert.ok(decorations.every(mesh => !mesh.userData.collider), 'small decorative relief creates no invisible obstacles');
+});
+
+test('the pillow rests on the real mattress surface and rich furniture stays within its triangle budget', () => {
+  const { World } = buildApartments();
+  const pillow = World.getObjectByName('apartment-pillow'), mattress = World.getObjectByName('apartment-mattress');
+  const pillowBounds = new THREE.Box3().setFromObject(pillow), mattressBounds = new THREE.Box3().setFromObject(mattress);
+  near(pillowBounds.min.y, mattressBounds.max.y, 'pillow base meets mattress top');
+  const ray = new THREE.Raycaster(new THREE.Vector3(pillow.position.x, pillowBounds.min.y + 0.01, pillow.position.z), new THREE.Vector3(0, -1, 0));
+  const contact = ray.intersectObject(mattress)[0];
+  assert.ok(contact, 'the pillow is supported by a rendered triangle, not merely an overlapping bounding box');
+  near(contact.point.y, pillowBounds.min.y, 'pillow support triangle');
+  let triangles = 0;
+  World.traverse(mesh => {
+    if (mesh.isMesh) triangles += (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3;
+  });
+  assert.ok(triangles < 30000, `two complete authored apartment interiors stay below 30k triangles (${triangles})`);
+});
+
+test('upholstery piping remains partially seated in each actual cushion and bedding surface', () => {
+  const { World, decorations } = buildApartments();
+  const padding = [];
+  World.traverse(mesh => {
+    if (mesh.isMesh && mesh.geometry.type === 'FurnitureRoundedBoxGeometry') padding.push(mesh);
+  });
+  const loops = decorations.filter(mesh => mesh.geometry.userData.furnitureShape?.kind === 'piping');
+  assert.equal(loops.length, 12);
+  const ray = new THREE.Raycaster(), point = new THREE.Vector3(), direction = new THREE.Vector3();
+  for (const loop of loops) {
+    const backing = padding.filter(mesh => new THREE.Box3().setFromObject(mesh).containsPoint(loop.position));
+    assert.equal(backing.length, 1, 'each stitched loop has one physical upholstered backing');
+    const positions = loop.geometry.attributes.position, plane = loop.geometry.userData.furnitureShape.plane;
+    // Six vertices form one five-sided tube section, including its UV wrap.
+    for (let first = 0; first < positions.count; first += 6) {
+      let min = Infinity, max = -Infinity;
+      for (let side = 0; side < 6; side++) {
+        point.fromBufferAttribute(positions, first + side).applyMatrix4(loop.matrixWorld);
+        if (plane === 'xy') direction.set(0, 0, 1);
+        else direction.set(point.x - loop.position.x, 0, point.z - loop.position.z).normalize();
+        ray.ray.origin.copy(point).addScaledVector(direction, 0.1);
+        ray.ray.direction.copy(direction).negate();
+        const contact = ray.intersectObject(backing[0])[0];
+        assert.ok(contact, 'piping has a supporting surface along its normal');
+        const distance = point.clone().sub(contact.point).dot(direction);
+        min = Math.min(min, distance); max = Math.max(max, distance);
+      }
+      assert.ok(min < -0.0002 && max > 0.0002, `piping section is attached and visible: ${min}, ${max}`);
+    }
+  }
 });
 
 test('neighbor breach gate reuses its fire and debris across full resets', () => {

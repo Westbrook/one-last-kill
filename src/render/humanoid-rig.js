@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { HUMANOID_GEOMETRY, mergeRigGeometry } from './humanoid-geometry.js';
+import { HUMANOID_GEOMETRY } from './humanoid-geometry.js';
 import { createCorpsePoseState } from './corpse-pose.js';
 import { createBatAsset, BAT_DIMENSIONS } from './bat-asset.js';
-import { sampleBatMotion, NPC_BAT_RELAXED_GUARD } from './humanoid-motion.js';
+import { sampleBatMotion, NPC_BAT_RELAXED_GUARD, gaitStrideAmplitude, sampleGaitFoot } from './humanoid-motion.js';
+import { installHeroCharacter } from './hero-character.js';
+import { getNPCFirearmGeometry, getNPCFirearmMaterials } from './npc-firearms.js';
+export { getHumanoidVisualBounds } from './hero-character.js';
 
 const TAU = Math.PI * 2;
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -45,52 +47,31 @@ const DEFAULT_MATERIALS = {
   equipment: new THREE.MeshStandardMaterial({ color: 0x303933, roughness: 0.94 }),
 };
 
-const heldWeaponCache = new Map();
 const MUZZLE_Z = { pistol: 0.22, shotgun: 0.735, smg: 0.41, machinegun: 0.665 };
+// Metres in the weapon's existing grip-local frame. The pistol support cups
+// the primary hand; long-gun supports sit under their pump/forward receiver.
+const SUPPORT_GRIPS = {
+  pistol: [-0.039, -0.016, -0.012],
+  shotgun: [0, -0.028, 0.270],
+  smg: [0, -0.019, 0.184],
+  machinegun: [0, -0.019, 0.220],
+};
 
 /** Shared weapon geometry is authored in meters along the grip's +Z axis. */
 export function createHeldWeapon(type, material = DEFAULT_MATERIALS.equipment) {
   if (type === 'fists' || !['bat', 'pistol', 'shotgun', 'smg', 'machinegun'].includes(type)) return null;
   if (type === 'bat') return createBatAsset();
-  let geometry = heldWeaponCache.get(type);
-  if (!geometry) {
-    const parts = [];
-    const box = (w, h, length, x, y, z) => {
-      const part = new RoundedBoxGeometry(w, h, length, 1, Math.min(w, h, length) * 0.12);
-      part.translate(x, y, z); parts.push(part);
-    };
-    const barrel = (radius, length, y, z) => {
-      const part = new THREE.CylinderGeometry(radius, radius, length, 10);
-      part.rotateX(Math.PI / 2).translate(0, y, z); parts.push(part);
-    };
-    box(0.045, 0.115, 0.06, 0, -0.044, -0.015);
-    if (type === 'pistol') {
-      box(0.052, 0.05, 0.235, 0, 0.04, 0.056);
-      barrel(0.012, 0.105, 0.039, 0.166);
-    } else {
-      const long = type !== 'smg';
-      box(0.073, 0.094, long ? 0.34 : 0.3, 0, 0.038, 0.078);
-      box(0.062, 0.083, 0.22, 0, 0.022, -0.22);
-      barrel(type === 'shotgun' ? 0.02 : 0.016, type === 'shotgun' ? 0.59 : long ? 0.47 : 0.19,
-        0.041, type === 'shotgun' ? 0.43 : long ? 0.42 : 0.31);
-      if (type === 'shotgun') {
-        barrel(0.015, 0.4, 0.006, 0.34);
-        box(0.08, 0.057, 0.15, 0, 0.007, 0.285);
-      } else {
-        box(0.046, type === 'smg' ? 0.14 : 0.18, 0.074, 0, -0.092, 0.09);
-        box(0.034, 0.022, 0.045, 0, 0.098, 0.05);
-      }
-    }
-    geometry = mergeRigGeometry(parts);
-    heldWeaponCache.set(type, geometry);
-  }
-  const mesh = new THREE.Mesh(geometry, material);
+  const geometry = getNPCFirearmGeometry(type);
+  const mesh = new THREE.Mesh(geometry, getNPCFirearmMaterials(type, material));
   mesh.name = `weapon:${type}`; mesh.castShadow = true;
   mesh.userData.role = 'weapon'; mesh.userData.weaponType = type;
   if (MUZZLE_Z[type]) {
     const muzzle = new THREE.Object3D(); muzzle.name = 'anchor:weaponMuzzle';
     muzzle.position.set(0, 0.041, MUZZLE_Z[type]); mesh.add(muzzle);
     mesh.userData.muzzle = muzzle;
+    const supportHand = new THREE.Object3D(); supportHand.name = 'anchor:weaponSupportHand';
+    supportHand.position.fromArray(SUPPORT_GRIPS[type]); mesh.add(supportHand);
+    mesh.userData.anchors = { muzzle, supportHand };
   }
   return mesh;
 }
@@ -102,6 +83,8 @@ export function attachHeldWeapon(root, type, material) {
   if (weapon) {
     grip.add(weapon);
     if (weapon.userData.muzzle) root.userData.rig.anchors.weaponMuzzle = weapon.userData.muzzle;
+    root.userData.rig.ranged.weapon = weapon.userData.muzzle ? weapon : null;
+    if (weapon.userData.muzzle) root.userData.rig.anchors.weaponSupportHand = weapon.userData.anchors.supportHand;
     if (type === 'bat') {
       root.userData.rig.anchors.weaponTip = weapon.userData.anchors.tip;
       root.userData.rig.anchors.weaponStrikeCenter = weapon.userData.anchors.strikeCenter;
@@ -119,7 +102,7 @@ export function createHumanoidRig(config = {}, suppliedMaterials = {}) {
   root.name = `humanoid:${config.kind || 'adult'}`;
   const joints = {}, anchors = {}, bodyMeshes = [];
   function joint(name, parent, x, y, z = 0) {
-    const object = new THREE.Group(); object.name = `joint:${name}`;
+    const object = new THREE.Bone(); object.name = `joint:${name}`;
     object.position.set(x, y, z); parent.add(object); joints[name] = object;
     return object;
   }
@@ -195,10 +178,12 @@ export function createHumanoidRig(config = {}, suppliedMaterials = {}) {
   const rig = {
     version: 2, height: d.height, dimensions: d, joints, anchors, bodyMeshes, neutral,
     pose: { mode: 'idle', phase: 'idle', gait: 0, clock: 0 },
-    motion: { batReady: 0, stance: 0 },
+    motion: { batReady: 0, stance: 0, walk: 0, stride: 0 },
+    ranged: { weapon: null, aim: 0 },
     reset: () => resetHumanoidPose(root),
   };
-  rig.collapse = createCorpsePoseState(rig);
+  installHeroCharacter(root, rig, config);
+  rig.collapse = createCorpsePoseState({ ...rig, bodyMeshes: rig.visualBoundsProxies });
   root.userData = {
     config: { ...config, height: d.height }, rig,
     parts: { torso: chest, head, armL: joints.shoulderL, armR: joints.shoulderR, legL: joints.hipL, legR: joints.hipR },
@@ -217,7 +202,8 @@ export function resetHumanoidPose(root) {
     rest.object.scale.copy(rest.scale);
   }
   rig.pose.mode = 'idle'; rig.pose.phase = 'idle'; rig.pose.gait = 0; rig.pose.clock = 0;
-  rig.motion.batReady = 0; rig.motion.stance = 0;
+  rig.motion.batReady = 0; rig.motion.stance = 0; rig.motion.walk = 0; rig.motion.stride = 0;
+  rig.ranged.aim = 0;
   rig.collapse.active = false; rig.collapse.settled = false; rig.collapse.groundOffset = 0;
 }
 
@@ -226,11 +212,17 @@ const _target = new THREE.Vector3(), _direction = new THREE.Vector3(), _bend = n
 const _upper = new THREE.Vector3(), _lower = new THREE.Vector3();
 const _inverse = new THREE.Quaternion(), _combined = new THREE.Quaternion();
 const LEG_PHASES = [['L', 0], ['R', Math.PI]];
+const _gaitFoot = {}, _legTarget = new THREE.Vector3(), _hipsInverse = new THREE.Quaternion();
 const _batMotion = {}, _batGrip = new THREE.Vector3(), _supportGrip = new THREE.Vector3();
 const _batDirection = new THREE.Vector3(), _wristOffset = new THREE.Vector3();
 const _batRotation = new THREE.Quaternion(), _wristRotation = new THREE.Quaternion();
 const _batEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 const _gripInverse = new THREE.Quaternion(-Math.SQRT1_2, 0, 0, Math.SQRT1_2);
+const _gunGrip = new THREE.Vector3(), _gunSupportOffset = new THREE.Vector3();
+const _gunRotation = new THREE.Quaternion(), _gunEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+const _gunChestInverse = new THREE.Quaternion();
+const _reachR = new THREE.Vector3(), _reachL = new THREE.Vector3();
+const _reachAxis = new THREE.Vector3(), _reachCenter = new THREE.Vector3(), _reachRadial = new THREE.Vector3();
 
 // Two-bone IK keeps stance soles on the floor while hips lower and knees flex.
 function poseLeg(hip, knee, ankle, x, y, z, thighLength, shinLength) {
@@ -247,7 +239,8 @@ function poseLeg(hip, knee, ankle, x, y, z, thighLength, shinLength) {
   _lower.applyQuaternion(_inverse);
   knee.quaternion.setFromUnitVectors(DOWN, _lower);
   _combined.copy(hip.quaternion).multiply(knee.quaternion).invert();
-  ankle.quaternion.copy(_combined);
+  // The pelvis turns over the support leg, but a planted boot stays level.
+  ankle.quaternion.copy(_combined).multiply(_hipsInverse);
 }
 
 function rotateToward(joint, x, y, z, blend) {
@@ -296,6 +289,62 @@ function poseBatHands(j, d, ready) {
   poseArmToGrip(j.shoulderL, j.elbowL, j.wristL, _supportGrip, -1, d);
 }
 
+// Both wrist targets must be reachable before solving either arm. In terms
+// of the primary grip, each shoulder defines a sphere of possible positions.
+// Constrain to their intersection without scaling bones or traversing matrices.
+function constrainRangedGrip(j, d) {
+  const reach = (d.upperArmLength + d.forearmLength) * 0.97;
+  const foldedReach = Math.abs(d.upperArmLength - d.forearmLength) + 1e-4;
+  _wristOffset.set(0, -d.handLength * 0.43, d.handDepth * 0.06).applyQuaternion(_wristRotation);
+  _reachR.copy(j.shoulderR.position).add(_wristOffset);
+  _reachL.copy(j.shoulderL.position).add(_wristOffset).sub(_gunSupportOffset);
+  const rightDistance = _gunGrip.distanceToSquared(_reachR), leftDistance = _gunGrip.distanceToSquared(_reachL);
+  if (rightDistance <= reach * reach && leftDistance <= reach * reach
+    && rightDistance >= foldedReach * foldedReach && leftDistance >= foldedReach * foldedReach) return;
+  _reachAxis.subVectors(_reachR, _reachL);
+  const separation = _reachAxis.length();
+  _reachAxis.multiplyScalar(1 / Math.max(separation, 1e-6));
+  _reachCenter.copy(_reachR).add(_reachL).multiplyScalar(0.5);
+  _reachRadial.subVectors(_gunGrip, _reachCenter);
+  const originalAlong = _reachRadial.dot(_reachAxis);
+  const extent = Math.max(0, reach - separation / 2);
+  const along = clamp(originalAlong, -extent, extent);
+  _reachRadial.addScaledVector(_reachAxis, -originalAlong);
+  const radius = Math.sqrt(Math.max(0, reach * reach - (Math.abs(along) + separation / 2) ** 2));
+  _reachRadial.clampLength(0, radius);
+  _gunGrip.copy(_reachCenter).addScaledVector(_reachAxis, along).add(_reachRadial);
+  // Very short rigs cannot fold unequal upper/forearm lengths to zero.
+  if (_gunGrip.distanceToSquared(_reachR) < foldedReach * foldedReach) _gunGrip.copy(_reachR).addScaledVector(_reachAxis, -foldedReach);
+  if (_gunGrip.distanceToSquared(_reachL) < foldedReach * foldedReach) _gunGrip.copy(_reachL).addScaledVector(_reachAxis, foldedReach);
+}
+
+function poseRangedHands(rig, state, blend, moving) {
+  const { joints: j, dimensions: d, ranged, pose } = rig;
+  const targetAim = Number.isFinite(state.aim) ? clamp(state.aim, 0, 1) : 0;
+  ranged.aim = mix(ranged.aim, targetAim, blend);
+  const aim = ranged.aim, pistol = ranged.weapon.userData.weaponType === 'pistol';
+  const pitch = (pistol ? 0.76 : 0.50) * (1 - aim);
+  const yaw = (pistol ? -0.06 : -0.35) * (1 - aim);
+  _gunEuler.set(pitch, yaw, 0, 'YXZ');
+  _gunRotation.setFromEuler(_gunEuler);
+  // The actor's +Z is its aiming direction. Counter chest breathing/stride
+  // locally, so a level aimed barrel does not point across the shot direction.
+  _gunChestInverse.copy(j.hips.quaternion).multiply(j.spine.quaternion).multiply(j.chest.quaternion).invert();
+  _gunRotation.premultiply(_gunChestInverse);
+  _wristRotation.copy(_gunRotation).multiply(_gripInverse);
+  _gunGrip.set(
+    (pistol ? mix(0.08, 0.025, aim) : 0.078) * d.height,
+    (pistol ? mix(-0.015, 0.115, aim) : mix(0.055, 0.090, aim)) * d.height,
+    (pistol ? mix(0.125, 0.245, aim) : 0.105) * d.height,
+  );
+  _gunGrip.y += Math.sin(pose.gait * 2) * moving * (1 - aim) * d.height * 0.002;
+  _gunSupportOffset.copy(ranged.weapon.userData.anchors.supportHand.position).applyQuaternion(_gunRotation);
+  constrainRangedGrip(j, d);
+  _supportGrip.copy(_gunGrip).add(_gunSupportOffset);
+  poseArmToGrip(j.shoulderR, j.elbowR, j.wristR, _gunGrip, 1, d);
+  poseArmToGrip(j.shoulderL, j.elbowL, j.wristL, _supportGrip, -1, d);
+}
+
 const smooth = value => {
   const t = clamp(value, 0, 1);
   return t * t * (3 - 2 * t);
@@ -315,43 +364,71 @@ export function updateHumanoidPose(root, state = {}, dt = 1 / 60) {
   pose.phase = swing < 0 ? 'idle' : swing < 0.4 ? 'windup' : swing < 0.62 ? 'contact' : 'recovery';
   const melee = pose.mode === 'bat' || pose.mode === 'fist';
   const attacking = melee && swing >= 0;
-  const moving = attacking ? 0 : clamp(speed / 2.8, 0, 1);
+  const targetMoving = attacking ? 0 : clamp(speed / 3.6, 0, 1);
+  const targetStride = attacking ? 0 : gaitStrideAmplitude(speed, d.height);
+  motion.walk = attacking ? 0 : mix(motion.walk, targetMoving, blend);
+  motion.stride = attacking ? 0 : mix(motion.stride, targetStride, blend);
+  const moving = motion.walk;
   const alert = attacking ? 1 : clamp(state.alert || 0, 0, 1);
   const poseBlend = attacking ? 1 : blend;
-  if (speed > 0.05 && !attacking) pose.gait += step * (1 + speed * 0.34) * TAU;
+  if (targetStride > 1e-6 && !attacking) pose.gait += speed * step / (4 * targetStride) * TAU;
   motion.batReady = pose.mode === 'bat' && attacking ? 1 : mix(motion.batReady, pose.mode === 'bat' ? alert : 0, blend);
   motion.stance = attacking ? 1 : mix(motion.stance, melee ? alert * (1 - moving) : 0, blend);
   const batReady = pose.mode === 'bat' ? motion.batReady : 0;
   sampleBatMotion(swing < 0 ? 0 : swing, _batMotion);
   const extension = pose.mode !== 'fist' || swing < 0 ? 0
     : swing < 0.5 ? smooth((swing - 0.28) / 0.22) : 1 - smooth((swing - 0.58) / 0.42);
-  const stride = d.height * 0.12 * moving;
-  const sink = d.height * mix(0.009 + 0.021 * moving + motion.stance * 0.012 + extension * 0.01, _batMotion.sink, batReady);
-  const hipX = d.height * (batReady * _batMotion.hipX - extension * 0.012);
+  const stride = motion.stride;
+  const gaitSide = Math.sin(pose.gait) * moving;
+  const restingWeight = -0.009 * (1 - alert) * (1 - moving);
+  // The wider stride needs knee compression at double support. The body
+  // rises slightly as it passes over a foot, rather than bobbing arbitrarily.
+  const sink = d.height * mix(0.009 + 0.051 * moving + motion.stance * 0.012 + extension * 0.01, _batMotion.sink, batReady * (1 - moving));
+  const hipX = d.height * (batReady * _batMotion.hipX - extension * 0.012 - gaitSide * 0.008 + restingWeight);
   const hipZ = d.height * (batReady * _batMotion.hipZ + extension * 0.024);
-  j.hips.position.set(hipX, d.hipY - sink + Math.sin(pose.gait * 2) * moving * d.height * 0.003, hipZ);
-  const forward = state.forward === undefined ? 1 : clamp(state.forward, -1, 1);
-  const strafe = clamp(state.strafe || 0, -1, 1);
+  j.hips.position.set(hipX, d.hipY - sink - Math.cos(pose.gait * 2) * moving * d.height * 0.0035, hipZ);
+  rotateToward(j.hips, 0, gaitSide * 0.035, gaitSide * 0.014, poseBlend);
+  _hipsInverse.copy(j.hips.quaternion).invert();
+  const rawForward = state.forward === undefined ? 1 : clamp(state.forward, -1, 1);
+  const rawStrafe = clamp(state.strafe || 0, -1, 1);
+  const directionLength = Math.hypot(rawForward, rawStrafe);
+  const forward = directionLength > 1e-6 ? rawForward / directionLength : 1;
+  const strafe = directionLength > 1e-6 ? rawStrafe / directionLength : 0;
   for (const [side, offset] of LEG_PHASES) {
-    const phase = pose.gait + offset;
-    const travel = Math.sin(phase) * stride;
-    const lift = Math.max(0, Math.cos(phase)) * d.height * 0.039 * moving;
+    sampleGaitFoot(pose.gait + offset, stride, Math.min(0.09, d.height * 0.047 * moving), _gaitFoot);
+    const { travel, lift } = _gaitFoot;
     const stanceX = (side === 'L' ? -1 : 1) * d.height * 0.012 * motion.stance;
     const stanceZ = (side === 'L' ? 0.06 : -0.045) * d.height * motion.stance;
+    const hip = j[`hip${side}`];
+    _legTarget.set((side === 'L' ? -1 : 1) * d.hipSpacing + travel * strafe + stanceX,
+      d.ankleY + lift, travel * forward + stanceZ).sub(j.hips.position).applyQuaternion(_hipsInverse).sub(hip.position);
     poseLeg(j[`hip${side}`], j[`knee${side}`], j[`ankle${side}`],
-      travel * strafe + stanceX - hipX, d.ankleY + lift - j.hips.position.y, travel * forward + stanceZ - hipZ,
+      _legTarget.x, _legTarget.y, _legTarget.z,
       d.thighLength, d.shinLength);
   }
   const breathing = Math.sin(pose.clock * 2.1) * mix(0.009, 0.003, melee ? alert : 0);
   const chestYaw = batReady * _batMotion.chestYaw + extension * (state.swingSide === 'L' ? 0.17 : -0.17);
-  rotateToward(j.spine, 0.025 * moving + motion.stance * 0.015, Math.sin(pose.gait) * moving * 0.025, 0, poseBlend);
+  rotateToward(j.spine, 0.035 * moving + motion.stance * 0.015, -gaitSide * 0.055, -j.hips.rotation.z * 0.25, poseBlend);
   rotateToward(j.chest, breathing + (state.stagger ? -0.1 : 0) + extension * 0.065 + batReady * 0.022,
-    chestYaw, -hipX * 0.3, poseBlend);
-  rotateToward(j.head, -0.02 - breathing * 0.7 + motion.stance * 0.03,
-    Math.sin(pose.clock * 0.63) * 0.018 * (1 - alert) - chestYaw * 0.68, 0, poseBlend);
+    chestYaw - gaitSide * 0.015, -hipX * 0.3 - j.hips.rotation.z * 0.65, poseBlend);
+  // Share gaze stabilization between the neck and skull. This keeps the
+  // head settled over a turning chest without a rigid, single-joint swivel.
+  const upperPitch = j.spine.rotation.x + j.chest.rotation.x;
+  const upperYaw = j.hips.rotation.y + j.spine.rotation.y + j.chest.rotation.y;
+  const upperRoll = j.hips.rotation.z + j.spine.rotation.z + j.chest.rotation.z;
+  const headPitch = -0.02 - upperPitch * 0.76 + motion.stance * 0.03;
+  const headYaw = Math.sin(pose.clock * 0.63) * 0.018 * (1 - alert) - upperYaw * 0.68;
+  // The torso angles already ease above. Filtering their inverse again
+  // would delay the correction and make the head wag behind every step.
+  rotateToward(j.neck, headPitch * 0.38, headYaw * 0.38, -upperRoll * 0.32, 1);
+  rotateToward(j.head, headPitch * 0.62, headYaw * 0.62, -upperRoll * 0.52, 1);
 
-  const armSwing = Math.sin(pose.gait) * moving * 0.22;
-  let rx = armSwing, lx = -armSwing, re = -0.1, le = -0.1, rz = -0.055, lz = 0.055;
+  const armPhase = Math.cos(pose.gait);
+  const armSwing = -armPhase * moving * 0.30;
+  let rx = armSwing, lx = -armSwing;
+  let re = -0.13 - Math.max(0, armPhase) * moving * 0.13;
+  let le = -0.09 - Math.max(0, -armPhase) * moving * 0.13;
+  let rz = -0.055, lz = 0.055;
   if (pose.mode === 'ranged') {
     const aim = clamp(state.aim || 0, 0, 1);
     rx = mix(-0.28, -1.08, aim); re = mix(-0.43, -0.49, aim);
@@ -369,12 +446,16 @@ export function updateHumanoidPose(root, state = {}, dt = 1 / 60) {
   }
   if (pose.mode === 'bat') {
     poseBatHands(j, d, batReady);
+  } else if (pose.mode === 'ranged' && rig.ranged.weapon) {
+    poseRangedHands(rig, state, blend, moving);
   } else {
-    rotateToward(j.shoulderR, rx, 0, rz, poseBlend);
-    rotateToward(j.shoulderL, lx, 0, lz, poseBlend);
-    rotateToward(j.elbowR, re, 0, 0, poseBlend);
-    rotateToward(j.elbowL, le, 0, 0, poseBlend);
-    rotateToward(j.wristR, 0, 0, 0, poseBlend);
-    rotateToward(j.wristL, 0, 0, 0, poseBlend);
+    rig.ranged.aim = 0;
+    const armBlend = attacking ? 1 : 1 - Math.exp(-step * 30);
+    rotateToward(j.shoulderR, rx, 0, rz, armBlend);
+    rotateToward(j.shoulderL, lx, 0, lz, armBlend);
+    rotateToward(j.elbowR, re, 0, 0, armBlend);
+    rotateToward(j.elbowL, le, 0, 0, armBlend);
+    rotateToward(j.wristR, 0, 0, 0, armBlend);
+    rotateToward(j.wristL, 0, 0, 0, armBlend);
   }
 }
