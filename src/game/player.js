@@ -8,6 +8,7 @@ import { Colliders, capsuleHasClearance, moveCapsule } from '../core/collision.j
 import { Input } from '../core/input.js';
 import { Settings } from '../core/settings.js';
 import { Weapons } from './weapons.js';
+import { Rage } from './rage-rules.js';
 import { currentZone } from '../world/world.js';
 
 const Player = {
@@ -211,7 +212,10 @@ function playerUpdate(dt) {
     Player.footTimer = 0;
   }
 
-  if (active) Weapons.handleInput(inp, dt);
+  if (active) {
+    if (inp.tPressed && Rage.enter(Player)) HUD.setHealth(Player.health);
+    Weapons.handleInput(inp, dt);
+  }
 }
 
 export { Player, PlayerState, playerInit, playerUpdate, resetPlayerMotion };

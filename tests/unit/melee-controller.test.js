@@ -67,16 +67,51 @@ test('equip, drop, restore, explicit cancellation and death cancel pending playe
   }
 });
 
-test('off-hand melee preserves the carried firearm and ammunition', () => {
+test('off-hand melee visibly punches and restores each carried firearm without dropping it or consuming ammunition', () => {
+  for (const current of ['pistol', 'shotgun', 'smg', 'machinegun']) {
+    const { Weapons, WeaponDrops, calls, Player } = weaponHarness();
+    Weapons.init(); Weapons.restore({ current, loaded: 3, reserve: 11 });
+    const firearm = Weapons.vmGroup.children[0], snapshot = Weapons.snapshot();
+    Player.aiming = true;
+    Weapons.update(1);
+    assert.ok(Weapons.aimBlend > 0.99);
+    Weapons.handleInput({ vPressed: true }, 1 / 120);
+    assert.equal(Weapons.melee.owner, current);
+    assert.equal(Weapons.melee.type, 'fists');
+    assert.equal(Weapons.vmGroup.children[0], Weapons._vm('fists'));
+    assert.equal(firearm.parent, null);
+    assert.equal(calls.damage.length, 0);
+    Weapons.tick(0.14); Weapons.update(0.14);
+    assert.deepEqual(calls.damage, [WEAPON_DEFS.fists.dmg]);
+    assert.deepEqual(Weapons.vmGroup.position.toArray(), [0, 0, 0]);
+    assert.ok(Weapons.aimBlend < 0.15, 'punching releases aim instead of zooming the fist rig');
+    Weapons.tick(WEAPON_DEFS.fists.attackDuration); Weapons.update(0.14);
+    assert.equal(Weapons.vmGroup.children[0], firearm, 'the same cached firearm returns after recovery');
+    assert.deepEqual(Weapons.snapshot(), snapshot);
+    assert.equal(WeaponDrops.list.length, 0);
+    assert.equal(calls.shots.length, 0);
+    assert.equal(calls.damage.length, 1);
+    assert.ok(Weapons.aimBlend > 0.85, 'held aim resumes when the firearm returns');
+  }
+});
+
+test('a punch takes priority over simultaneous firearm input and finishes before held automatic fire resumes', () => {
   const { Weapons, calls } = weaponHarness();
-  Weapons.init(); Weapons.restore({ current: 'pistol', loaded: 3, reserve: 11 });
-  Weapons.handleInput({ vPressed: true }, 1 / 120);
-  assert.equal(Weapons.melee.owner, 'pistol');
-  assert.equal(Weapons.melee.type, 'fists');
-  assert.equal(calls.damage.length, 0);
-  Weapons.tick(0.14);
+  Weapons.init(); Weapons.restore({ current: 'smg', loaded: 3, reserve: 11 });
+  Weapons.handleInput({ vPressed: true, leftPressed: true, leftDown: true }, 1 / 120);
+  for (let frame = 0; frame < 33; frame++) {
+    Weapons.tick(0.01);
+    Weapons.handleInput({ leftDown: true }, 0.01);
+  }
   assert.deepEqual(calls.damage, [WEAPON_DEFS.fists.dmg]);
-  assert.equal(Weapons.current, 'pistol'); assert.equal(Weapons.loaded, 3); assert.equal(Weapons.reserve, 11);
+  assert.equal(calls.shots.length, 0);
+  assert.equal(Weapons.melee.sequence, 1);
+  assert.equal(Weapons.vmGroup.children[0], Weapons._vm('smg'));
+  Weapons.tick(0.02);
+  Weapons.handleInput({ leftDown: true }, 0.02);
+  assert.deepEqual(calls.damage, [WEAPON_DEFS.fists.dmg, WEAPON_DEFS.smg.dmg]);
+  assert.equal(calls.shots.length, 1);
+  assert.equal(Weapons.loaded, 2);
 });
 
 test('starting a valid reload cancels an off-hand windup before it can hit', () => {
@@ -85,12 +120,56 @@ test('starting a valid reload cancels an off-hand windup before it can hit', () 
   Weapons.handleInput({ vPressed: true }, 1 / 120);
   Weapons.tick(0.05);
   assert.equal(Weapons.startReload(), true);
+  assert.equal(Weapons.vmGroup.children[0], Weapons._vm('pistol'));
   Weapons.tick(0.1);
   assert.equal(calls.damage.length, 0); assert.equal(calls.sounds, 0);
   assert.equal(Weapons.melee.active, false);
   assert.equal(Weapons.loaded, 3); assert.equal(Weapons.reserve, 11);
+  Weapons.handleInput({ vPressed: true }, 1 / 120);
+  assert.equal(Weapons.melee.active, false, 'an active reload cannot overlap another punch');
   Weapons.tick(WEAPON_DEFS.pistol.reloadTime);
   assert.equal(Weapons.loaded, 12); assert.equal(Weapons.reserve, 2);
+});
+
+test('off-hand cancellation, equipment changes and death restore the appropriate held view model before contact', () => {
+  for (const [interrupt, expected] of [
+    [({ Weapons }) => Weapons.cancelAttack(), 'pistol'],
+    [({ Weapons }) => Weapons._equip('shotgun', 8), 'shotgun'],
+    [({ Weapons }) => Weapons.dropCurrent(), 'fists'],
+    [({ Weapons }) => Weapons.restore({ current: 'smg', loaded: 2, reserve: 7 }), 'smg'],
+    [({ PlayerState }) => { PlayerState.dead = true; }, 'pistol'],
+  ]) {
+    const fixture = weaponHarness(), { Weapons, calls } = fixture;
+    Weapons.init(); Weapons.restore({ current: 'pistol', loaded: 3, reserve: 11 });
+    Weapons.handleInput({ vPressed: true }, 1 / 120);
+    Weapons.tick(0.05); interrupt(fixture); Weapons.tick(1);
+    assert.equal(Weapons.melee.active, false);
+    assert.equal(calls.damage.length, 0);
+    assert.equal(Weapons.current, expected);
+    assert.equal(Weapons.vmGroup.children[0], Weapons._vm(expected));
+    if (expected !== 'fists') {
+      assert.deepEqual(Weapons.vmGroup.position.toArray(), Weapons.basePos.toArray(),
+        'the firearm anchor is restored before the next rendered frame');
+    }
+    if (fixture.PlayerState.dead) {
+      Weapons.handleInput({ leftPressed: true, gPressed: true }, 1 / 120);
+      assert.equal(Weapons.current, 'pistol');
+      assert.equal(calls.damage.length, 0);
+    }
+  }
+});
+
+test('paused presentation cannot advance or finish an off-hand punch', () => {
+  const { Weapons, calls } = weaponHarness();
+  Weapons.init(); Weapons.restore({ current: 'pistol', loaded: 3, reserve: 11 });
+  Weapons.handleInput({ vPressed: true }, 1 / 120);
+  Weapons.tick(0.05);
+  for (let frame = 0; frame < 10; frame++) { Weapons.tick(0); Weapons.update(0); }
+  assert.equal(Weapons.melee.elapsed, 0.05);
+  assert.equal(Weapons.vmGroup.children[0], Weapons._vm('fists'));
+  assert.equal(calls.damage.length, 0);
+  Weapons.tick(0.09);
+  assert.deepEqual(calls.damage, [WEAPON_DEFS.fists.dmg]);
 });
 
 test('holding a semi-automatic melee button cannot invent another swing', () => {

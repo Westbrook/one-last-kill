@@ -64,6 +64,108 @@ test('initial HUD describes fists and hides an inactive reload from accessibilit
   assert.match(markup, /id="reloadindicator" aria-hidden="true"/);
 });
 
+test('rage availability shows the current control and repeated frames do not rewrite its cue', () => {
+  const { hud, element } = fixture();
+  const ids = ['ragecue', 'ragelabel', 'ragekey', 'ragecountdown', 'ragehint'];
+  const cue = element('ragecue');
+  assert.equal(cue.hidden, true);
+  assert.equal(cue.getAttribute('aria-hidden'), 'true');
+  for (const [gamepad, key] of [[false, 'T'], [true, 'D-PAD UP']]) {
+    hud.setRage({ available: true, gamepad });
+    assert.equal(cue.hidden, false);
+    assert.equal(cue.dataset.state, 'available');
+    assert.equal(cue.getAttribute('aria-hidden'), 'false');
+    assert.equal(element('ragelabel').textContent, 'ENTER RAGE');
+    assert.equal(element('ragekey').textContent, key);
+    assert.equal(element('ragekey').hidden, false);
+    assert.equal(element('ragecountdown').hidden, true);
+    assert.equal(element('ragehint').textContent, 'DOUBLE YOUR CURRENT HEALTH');
+    const writes = ids.map(id => ({ ...element(id).writes }));
+    for (let frame = 0; frame < 120; frame++) hud.setRage({ available: true, gamepad });
+    assert.deepEqual(ids.map(id => ({ ...element(id).writes })), writes);
+  }
+  hud.setRage();
+  assert.equal(cue.hidden, true);
+  assert.equal(cue.getAttribute('aria-hidden'), 'true');
+  assert.equal(element('ragelabel').textContent, '');
+  assert.equal(element('ragehint').textContent, '');
+  const writes = ids.map(id => ({ ...element(id).writes }));
+  hud.setRage();
+  assert.deepEqual(ids.map(id => ({ ...element(id).writes })), writes);
+});
+
+test('active rage renders whole seconds without advancing or repeatedly announcing its clock', () => {
+  const { hud, element } = fixture();
+  hud.setRage({ available: true });
+  hud.setRage({ active: true, remaining: 10 });
+  assert.equal(element('ragecue').dataset.state, 'active');
+  assert.equal(element('ragelabel').textContent, 'RAGE');
+  assert.equal(element('ragekey').hidden, true);
+  assert.equal(element('ragecountdown').hidden, false);
+  assert.equal(element('ragecountdown').textContent, '10s');
+  assert.equal(element('ragehint').textContent, 'KILL TO KEEP BOOSTED HEALTH');
+  const ids = ['ragecue', 'ragelabel', 'ragekey', 'ragecountdown', 'ragehint'];
+  const writes = ids.map(id => ({ ...element(id).writes }));
+  for (let frame = 1; frame < 60; frame++) hud.setRage({ active: true, remaining: 10 - frame / 60 });
+  assert.deepEqual(ids.map(id => ({ ...element(id).writes })), writes, 'sub-second simulation updates do not mutate the DOM');
+  hud.setRage({ active: true, remaining: 8.75 });
+  assert.equal(element('ragecountdown').textContent, '9s');
+  assert.equal(element('ragecountdown').getAttribute('aria-label'), '9 seconds remaining');
+  assert.equal(element('ragecountdown').getAttribute('aria-live'), 'off');
+  hud.update(30);
+  assert.equal(hud.snapshot().rage.remaining, 8.75, 'the simulation owns the exact remaining gameplay time');
+  assert.equal(element('ragecountdown').textContent, '9s');
+  const snapshot = hud.snapshot();
+  snapshot.rage.active = false;
+  assert.equal(hud.snapshot().rage.active, true, 'inspection cannot mutate HUD state');
+});
+
+test('death, retry and feedback resets cannot preserve a stale rage prompt', () => {
+  const { hud, element } = fixture();
+  hud.setHealth(12);
+  hud.setRage({ active: true, remaining: 6 });
+  hud.showDeath(true);
+  assert.equal(element('ragecue').hidden, true);
+  assert.equal(hud.snapshot().rage.active, false);
+  hud.setRage({ available: true });
+  assert.equal(element('ragecue').hidden, true, 'late gameplay frames cannot paint over death');
+  hud.setRage({ active: true, remaining: 3 });
+  assert.equal(element('ragecue').hidden, true);
+  hud.showDeath(false);
+  hud.setRage({ available: true });
+  assert.equal(element('ragecue').hidden, false);
+  hud.clearFeedback();
+  assert.equal(element('ragecue').hidden, true);
+  assert.equal(element('ragecountdown').textContent, '');
+  assert.equal(element('ragecountdown').getAttribute('aria-label'), '');
+  assert.equal(element('ragehint').textContent, '');
+  assert.equal(hud.snapshot().rage.available, false);
+  assert.equal(hud.snapshot().health, 12, 'resetting a cue never changes health');
+});
+
+test('rage countdown rejects invalid time without inventing an expiry or health change', () => {
+  const { hud, element } = fixture();
+  for (const remaining of [NaN, Infinity, -10, undefined]) {
+    hud.setRage({ active: true, remaining });
+    assert.equal(element('ragecountdown').textContent, '0s');
+    assert.equal(hud.snapshot().rage.remaining, 0);
+    assert.equal(hud.snapshot().rage.active, true, 'only the simulation may end rage');
+    assert.equal(hud.snapshot().health, 100);
+  }
+});
+
+test('rage cue is accessible, bounded above vitals, and never animated', () => {
+  assert.match(markup, /id="ragecue"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="false"[^>]*aria-hidden="true"[^>]* hidden>/);
+  assert.match(markup, /id="ragecountdown"[^>]*role="timer"[^>]*aria-live="off"/);
+  const rule = styles.match(/#ragecue\s*\{([^}]+)\}/)?.[1];
+  assert.ok(rule);
+  assert.match(rule, /bottom:\s*calc\(100% \+ 16px\)/);
+  assert.match(rule, /max-width:\s*calc\(/);
+  assert.match(rule, /pointer-events:\s*none/);
+  assert.match(rule, /animation:\s*none/);
+  assert.match(rule, /transition:\s*none/);
+});
+
 test('low-health warning uses strict 40 and 20 percent boundaries, including fractional damage', () => {
   const { hud, element } = fixture();
   const vignette = element('healthvignette'), warning = element('healthwarning');

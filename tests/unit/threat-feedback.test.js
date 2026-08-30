@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
+import { createRageState } from '../../src/game/rage-rules.js';
 import { createOffscreenThreatTracker } from '../../src/game/offscreen-threats.js';
 
 const adapterSource = readFileSync(new URL('../../src/game/threat-feedback.js', import.meta.url), 'utf8')
@@ -73,7 +74,7 @@ function missionHarness() {
   };
   const checkpointStatus = { valid: true, foot: { x: -9, y: 4, z: -4 } };
   const bindings = {
-    ...h, checkpointSeed: checkpoint, checkpointStatus,
+    ...h, checkpointSeed: checkpoint, checkpointStatus, Rage: createRageState(),
     getCheckpointStatus: () => checkpointStatus,
     saveCheckpoint() { throw new Error('The fixture already provides a saved checkpoint'); },
     WaveDirector: { stop: record('waveStop'), reset: record('waveReset'), start: record('waveStart') },

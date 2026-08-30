@@ -29,6 +29,7 @@ import {
   CHECKPOINTS, saveCheckpoint, restartFromZone,
 } from './game/mission.js';
 import { CombatStats } from './game/combat-stats.js';
+import { Rage } from './game/rage-rules.js';
 import { ThreatFeedback } from './game/threat-feedback.js';
 import { initNavigation, updateNavigation } from './game/navigation.js';
 import { Blood, FX } from './render/effects.js';
@@ -93,6 +94,10 @@ function stepFrame(realDt) {
   let progressed = 0;
   for (let step = 0; step < steps && isPlaying(); step++) {
     GameTime.elapsed += clock.step;
+    // Expire rage before this step's attacks: a late kill cannot secure it.
+    const healthBeforeRage = Player.health;
+    Rage.update(clock.step, Player);
+    if (Player.health !== healthBeforeRage) HUD.setHealth(Player.health);
     Weapons.tick(clock.step);
     playerUpdate(clock.step);
     enemiesUpdate(clock.step);
@@ -102,6 +107,9 @@ function stepFrame(realDt) {
     StreetChoice.update(clock.step);
     Endings.update(clock.step);
     CombatStats.update(clock.step);
+    const rageOutcome = Rage.takeOutcome();
+    if (rageOutcome === 'secured') HUD.message('RAGE SECURED · BONUS HEALTH KEPT', 2.5);
+    else if (rageOutcome === 'expired') HUD.message('RAGE ENDED · HEALTH RESTORED TO STARTING VALUE', 2.5);
     HUD.update(clock.step);
     progressed += clock.step;
   }
@@ -113,6 +121,7 @@ function stepFrame(realDt) {
     Blood.update(progressed);
     FX.update(progressed);
     Weapons.update(progressed);
+    HUD.setRage({ ...Rage.snapshot(Player), gamepad: Input.gamepadConnected });
     if (isPlaying()) ThreatFeedback.update(progressed, Enemies.list);
     else ThreatFeedback.clear();
     ObjectiveBanner.update(GameTime.elapsed);

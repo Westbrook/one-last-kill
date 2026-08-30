@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
+import { createRageState } from '../../src/game/rage-rules.js';
 import { Colliders, capsuleHasClearance } from '../../src/core/collision.js';
 import { createEncounterSeedSource } from '../../src/game/encounter-session.js';
 import { EncounterSchedule, EncounterRouteProgress } from '../../src/game/encounter-rules.js';
@@ -50,7 +51,7 @@ const readThreatView = () => ({ position: camera.position, yaw: camera.rotation.
   fov: camera.fov, aspect: camera.aspect, zoom: camera.zoom });
 let mission;
 const bindings = {
-  THREE, camera, Architecture, Colliders, capsuleHasClearance, EncounterSeeds: seeds,
+  THREE, camera, Architecture, Colliders, capsuleHasClearance, EncounterSeeds: seeds, Rage: createRageState(),
   Player: ai.player, PlayerState: ai.playerState, Enemies: ai.Enemies,
   surfaceTopAt: ai.surfaceTopAt, isBlocked: ai.isBlocked, primeEnemyInvestigation: ai.primeEnemyInvestigation,
   EncounterSchedule, EncounterRouteProgress, selectEncounterSpawn, selectEncounterFrontPair,

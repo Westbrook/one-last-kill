@@ -23,6 +23,11 @@ const HUD = (() => {
   const vitals = byId('vitals');
   const healthVignette = byId('healthvignette');
   const healthWarningEl = byId('healthwarning');
+  const rageCue = byId('ragecue');
+  const rageLabel = byId('ragelabel');
+  const rageKey = byId('ragekey');
+  const rageCountdown = byId('ragecountdown');
+  const rageHint = byId('ragehint');
   const weaponbox = byId('weaponbox');
   const weaponname = byId('weaponname');
   const ammoEl = byId('ammo');
@@ -52,6 +57,7 @@ const HUD = (() => {
   let lastHeading = -1, lastOctant = -1;
   let threatPresentation = '', threatAngle = '', threatVisible = false;
   let healthWarning = 'normal';
+  const rageState = { available: false, active: false, remaining: 0, gamepad: false };
   const state = { health: 100, weapon: 'FISTS', ammo: '∞', kills: 0, shots: 0, hits: 0, headshots: 0, streak: 0, bestStreak: 0 };
 
   function syncHealthWarning() {
@@ -120,6 +126,7 @@ const HUD = (() => {
 
   function clearFeedback() {
     clearOffscreenThreat();
+    setRage();
     messageTimer = bloodOpacity = hitTimer = killTimer = directionTimer = 0;
     bloodEl.style.opacity = '0';
     messageEl.style.opacity = '0';
@@ -130,6 +137,30 @@ const HUD = (() => {
     reloadEl.classList.remove('show');
     pickupEl.setAttribute('aria-hidden', 'true');
     reloadEl.setAttribute('aria-hidden', 'true');
+  }
+
+  /** The simulation owns eligibility and the clock, including paused time. */
+  function setRage({ available = false, active = false, remaining = 0, gamepad = false } = {}) {
+    const alive = !deathEl.classList.contains('show');
+    rageState.active = alive && Boolean(active);
+    rageState.available = alive && !rageState.active && Boolean(available);
+    rageState.remaining = rageState.active ? nonNegative(remaining) : 0;
+    rageState.gamepad = Boolean(gamepad);
+    const mode = rageState.active ? 'active' : rageState.available ? 'available' : 'inactive';
+    const hidden = mode === 'inactive';
+    const key = gamepad ? 'D-PAD UP' : 'T';
+    const seconds = Math.ceil(rageState.remaining);
+    if (rageCue.dataset.state !== mode) rageCue.dataset.state = mode;
+    if (rageCue.hidden !== hidden) rageCue.hidden = hidden;
+    if (rageCue.getAttribute('aria-hidden') !== String(hidden)) rageCue.setAttribute('aria-hidden', String(hidden));
+    write(rageLabel, rageState.active ? 'RAGE' : rageState.available ? 'ENTER RAGE' : '');
+    write(rageKey, rageState.available ? key : '');
+    if (rageKey.hidden !== !rageState.available) rageKey.hidden = !rageState.available;
+    write(rageCountdown, rageState.active ? seconds + 's' : '');
+    if (rageCountdown.hidden !== !rageState.active) rageCountdown.hidden = !rageState.active;
+    const timerDescription = rageState.active ? seconds + ' seconds remaining' : '';
+    if (rageCountdown.getAttribute('aria-label') !== timerDescription) rageCountdown.setAttribute('aria-label', timerDescription);
+    write(rageHint, rageState.active ? 'KILL TO KEEP BOOSTED HEALTH' : rageState.available ? 'DOUBLE YOUR CURRENT HEALTH' : '');
   }
 
   return {
@@ -179,6 +210,7 @@ const HUD = (() => {
       directionTimer = 0.65;
     },
     setOffscreenThreat,
+    setRage,
     showDeath(on) {
       clearFeedback();
       deathEl.classList.toggle('show', Boolean(on));
@@ -258,7 +290,7 @@ const HUD = (() => {
       }
     },
     snapshot() {
-      return { ...state, healthWarning, accuracy: state.shots ? Math.round(clamp(state.hits / state.shots, 0, 1) * 100) : 0 };
+      return { ...state, healthWarning, rage: { ...rageState }, accuracy: state.shots ? Math.round(clamp(state.hits / state.shots, 0, 1) * 100) : 0 };
     },
     update(dt) {
       const delta = nonNegative(dt);

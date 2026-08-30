@@ -42,6 +42,10 @@
       <div id="message" role="status" aria-live="polite"></div>
 
       <div id="vitals" data-low="false" data-health-warning="normal">
+        <div id="ragecue" data-state="inactive" role="status" aria-live="polite" aria-atomic="false" aria-hidden="true" hidden>
+          <div class="rage-heading"><span id="ragelabel"></span><kbd id="ragekey" hidden></kbd><span id="ragecountdown" role="timer" aria-live="off" aria-label="" hidden></span></div>
+          <div id="ragehint"></div>
+        </div>
         <div class="vital-readout"><span class="vital-cross" aria-hidden="true">+</span><span id="healthtext">100</span><span class="vital-label">HEALTH</span></div>
         <div id="healthbar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100 percent health."><div id="healthfill"></div></div>
         <div id="healthwarning" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -151,12 +155,14 @@
           <div><dt>Fire / aim</dt><dd><kbd>LMB</kbd> <kbd>RMB</kbd></dd></div>
           <div><dt>Sprint / jump</dt><dd><kbd>SHIFT</kbd> <kbd>SPACE</kbd></dd></div>
           <div><dt>Crouch / melee</dt><dd><kbd>C</kbd> <kbd>V</kbd></dd></div>
+          <div><dt>Enter rage when available</dt><dd><kbd>T</kbd></dd></div>
           <div><dt>Pick up / reload</dt><dd><kbd>E</kbd> <kbd>R</kbd></dd></div>
           <div><dt>Drop weapon / pause</dt><dd><kbd>G</kbd> <kbd>P / ESC</kbd></dd></div>
           <div><dt>Mute / frame rate</dt><dd><kbd>M</kbd> <kbd>F</kbd></dd></div>
           <div><dt>Keyboard fire / toggle aim</dt><dd><kbd>J</kbd> <kbd>Q</kbd></dd></div>
         </dl>
-        <p class="controller-note" id="controllerhelp">Gamepad: sticks move/look · RT fire · LT aim · A jump · B crouch · X reload · Y pick up · RB melee · L3 sprint · D-pad down drop · Start pause. Arrow keys also turn the camera.</p>
+        <p class="controller-note" id="controllerhelp">Gamepad: sticks move/look · RT fire · LT aim · A jump · B crouch · X reload · Y pick up · RB / R3 melee · L3 sprint · D-pad up rage · D-pad down drop · Start pause. Arrow keys also turn the camera.</p>
+        <p class="controller-note">Melee keeps your firearm and ammunition. Rage unlocks below 30% health after 4 kills in the last 60 seconds. Press T or D-pad up to double current health. Kill within 10 seconds to keep the remaining boost; otherwise health returns to its starting value. Pausing freezes both clocks.</p>
         <div class="fieldnote-tip"><span>REMEMBER</span><p>The street gives you a choice. The consequences are yours.</p></div>
         <button class="button button-outline" type="button" data-close-panel>BACK TO MISSION <span aria-hidden="true">↗</span></button>
       </section>

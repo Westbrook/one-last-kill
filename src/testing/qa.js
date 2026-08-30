@@ -34,6 +34,7 @@ import {
 } from '../game/enemies.js';
 import { CORPSE_LIMIT, CORPSE_LIFETIME, isSegmentOccluded } from '../game/combat-rules.js';
 import { CombatStats } from '../game/combat-stats.js';
+import { Rage } from '../game/rage-rules.js';
 import { CHECKPOINT_COMMS } from '../game/checkpoint-comms.js';
 import { EncounterSeeds } from '../game/encounter-session.js';
 import { HEALTH_SUPPLIES, ROOF_HEALTH_ROUTES } from '../game/health-supply-data.js';
@@ -3689,6 +3690,49 @@ export function installQA(api) {
     } catch (error) { report('fail', error instanceof Error ? error.message : String(error)); }
   }
 
+  function inspectRage({ countdown = false } = {}) {
+    if (busy || disposed) return;
+    try {
+      freshApartment();
+      visualFixtureActive = true;
+      ui.select.value = 'apartment';
+      document.body.classList.add('qa-scene-inspection');
+      // Disclosed eligibility fixture: seed history without inventing actors
+      // or pretending a paused visual review performed any gameplay kills.
+      Player.health = 20;
+      for (let kill = 0; kill < 4; kill++) Rage.recordKill();
+      assert(Rage.available(Player), 'The seeded low-health fixture must offer rage');
+      if (countdown) {
+        assert(Rage.enter(Player), 'The real rage controller must accept eligible entry');
+        Rage.update(3, Player);
+      }
+      HUD.clearFeedback();
+      HUD.setHealth(Player.health);
+      HUD.setRage(Rage.snapshot(Player));
+      const before = { health: Player.health, rage: Rage.snapshot(Player), time: GameTime.elapsed };
+      pausedRender();
+      near(api.stepFrame(0.25), 0, 'A rage inspection cannot advance normal gameplay');
+      same({ health: Player.health, rage: Rage.snapshot(Player), time: GameTime.elapsed }, before,
+        'The rage inspection must hold its health and countdown while paused');
+      assert(!Input.active && !PlayerState.dead && Enemies.list.length === 0,
+        'A rage specimen must remain paused without live enemies');
+      report('ready', [
+        `RAGE INSPECTION · ${countdown ? '7-second countdown' : 'ready to enter'} · simulation paused`,
+        'Controlled fixture: seeded 20 HP and four credited kill-history entries directly in Rage; no enemies or gameplay kills simulated.',
+        countdown ? 'Real Rage.enter doubled 20 HP to 40 HP; only its controller clock advanced 3 seconds.'
+          : 'Real eligibility check exposes ENTER RAGE at 20 HP with four recent kill entries.',
+        `Actual health ${Player.health} · HUD ${document.getElementById('healthbar').getAttribute('aria-valuenow')} · recent kills ${before.rage.recentKills} · remaining ${before.rage.remaining}s`,
+        'Production HUD and controller state; the timer is frozen for review. Reset apartment or Return to game menu clears this fixture before play.',
+        'Audio locked off · no AudioContext',
+      ]);
+      assertSilent();
+    } catch (error) {
+      try { freshApartment(); ui.select.value = 'apartment'; }
+      catch { /* Preserve the original inspection failure. */ }
+      report('fail', error instanceof Error ? error.message : String(error));
+    }
+  }
+
   function inspectFurniture({ kitchen = false } = {}) {
     if (busy || disposed) return;
     try {
@@ -3997,6 +4041,53 @@ export function installQA(api) {
     } catch (error) {
       try { freshApartment(); ui.select.value = 'apartment'; }
       catch { /* Keep the original inspection error visible. */ }
+      report('fail', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function inspectOffhandPunch() {
+    if (busy || disposed) return;
+    try {
+      freshApartment();
+      controlledArea('balcony');
+      placeOnClearFloor({ x: 7, y: BALCONY.floorY, z: BALCONY.laneZ, yaw: Math.PI / 2 });
+      inspectedWeapon = { restoreWeapon: Weapons.snapshot() };
+      visualFixtureActive = true;
+      ui.select.value = 'balcony';
+      ui.heldType.value = 'pistol';
+      ui.heldPose.value = 'contact';
+      document.body.classList.add('qa-held-inspection');
+      ui.panel.dataset.mode = 'held-inspection';
+      Weapons.restore({ current: 'pistol', loaded: 3, reserve: 11 });
+      const before = Weapons.snapshot(), dropCount = WeaponDrops.list.length;
+      pausedRender();
+      Weapons.cooldown = 0;
+      Weapons.handleInput({ vPressed: true }, STEP);
+      Weapons.tick(meleeTiming('fists').contactAt);
+      const after = Weapons.snapshot();
+      same(after, before, 'The real off-hand punch must preserve the carried gun and ammunition');
+      near(WeaponDrops.list.length, dropCount, 'An off-hand punch must not drop the firearm');
+      assert(Weapons.melee.active && Weapons.melee.type === 'fists' && Weapons.melee.contactDelivered,
+        'The real melee clock must reach its single contact pose');
+      const elapsed = Weapons.melee.elapsed;
+      pausedRender();
+      near(api.stepFrame(0.25), 0, 'The off-hand specimen must not enter normal gameplay');
+      near(Weapons.melee.elapsed, elapsed, 'The punch contact pose must remain paused');
+      assert(!Input.active && Enemies.list.length === 0 && Weapons.vmGroup.children[0] === Weapons._vm('fists'),
+        'The paused fixture must show the real fist rig without live actors');
+      report('ready', [
+        'OFF-HAND PUNCH INSPECTION · pistol retained · contact pose · simulation paused',
+        'Controlled fixture: pistol seeded with 3 loaded / 11 reserve rounds; no enemies or combat kills simulated.',
+        'Real V input started the punch; only Weapons.tick advanced to the authored contact time.',
+        `Before: ${before.current} · ${before.loaded} loaded / ${before.reserve} reserve`,
+        `After: ${after.current} · ${after.loaded} loaded / ${after.reserve} reserve · drops ${dropCount} → ${WeaponDrops.list.length}`,
+        'Production fist rig is visible while the firearm remains equipped. Reset apartment or Return to game menu cancels and clears this fixture.',
+        'Audio locked off · no AudioContext',
+      ]);
+      assertSilent();
+    } catch (error) {
+      try { freshApartment(); ui.select.value = 'apartment'; }
+      catch { /* Preserve the original inspection failure. */ }
       report('fail', error instanceof Error ? error.message : String(error));
     }
   }
@@ -4387,9 +4478,12 @@ export function installQA(api) {
   ui.button(ui.actorActions, 'Advance pose', 'qa-npc-advance', () => inspectActor({ advance: true }));
   ui.button(ui.heldActions, 'Inspect held weapon', 'qa-held-inspect', () => inspectHeldWeapon());
   ui.button(ui.heldActions, 'Next attack pose', 'qa-held-next', () => inspectHeldWeapon({ next: true }));
+  ui.button(ui.heldActions, 'Inspect off-hand punch', 'qa-offhand-inspect', inspectOffhandPunch);
   ui.button(ui.objectActions, 'Inspect world object', 'qa-object-inspect', inspectWorldObject);
   ui.button(ui.healthActions, 'Inspect health warning', 'qa-health-inspect', inspectHealthWarning);
   ui.button(ui.healthActions, 'Preview health in current view', 'qa-health-current', () => inspectHealthWarning({ keepView: true }));
+  ui.button(ui.healthActions, 'Inspect rage ready', 'qa-rage-ready', () => inspectRage());
+  ui.button(ui.healthActions, 'Inspect rage countdown', 'qa-rage-countdown', () => inspectRage({ countdown: true }));
   ui.button(ui.actions, 'Run regression suite', 'qa-run', runSuite);
   ui.button(ui.actions, 'Benchmark 10 seconds', 'qa-benchmark', () => benchmark());
   ui.button(ui.actions, 'Benchmark camera sweep 10 seconds', 'qa-sweep-benchmark', () => benchmark({ sweep: true }));

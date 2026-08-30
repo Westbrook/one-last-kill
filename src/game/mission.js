@@ -9,6 +9,7 @@ import { World, currentZone, zoneChanged, onZoneChange, ZoneCull } from '../worl
 import { Enemies, isBlocked, primeEnemyInvestigation } from './enemies.js';
 import { Weapons, WeaponDrops } from './weapons.js';
 import { AmmoSupplies } from './ammo-supplies.js';
+import { Rage } from './rage-rules.js';
 import {
   CHECKPOINTS, ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS,
   createCheckpoint,
@@ -46,6 +47,8 @@ function playerDie() {
   if (PlayerState.dead) return;
   PlayerState.dead = true;
   Player.health = 0;
+  Rage.reset();
+  HUD.setRage?.({});
   Weapons.cancelAttack?.();
   HUD.setHealth(0);
   ThreatFeedback.clear();
@@ -102,6 +105,8 @@ function restartFromZone() {
   EndCard.hide();
   ThreatFeedback.clear();
   Audio.reset();
+  Rage.reset();
+  HUD.setRage?.({});
 
   PlayerState.dead = false;
   Player.health = 100;

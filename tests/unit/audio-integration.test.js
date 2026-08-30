@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
+import { createRageState } from '../../src/game/rage-rules.js';
 import { createAudioController } from '../../src/core/audio.js';
 import { createSettingsStore, audioMixFromSettings } from '../../src/core/settings.js';
 import { FixedStepClock } from '../../src/core/frame-budget.js';
@@ -170,7 +171,7 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
   const PlayerState = { dead: false }, camera = new THREE.PerspectiveCamera();
   camera.position.copy(Player.pos);
   const bindings = {
-    FixedStepClock, Settings, audioMixFromSettings, document, Input, Player, PlayerState, camera,
+    FixedStepClock, Settings, audioMixFromSettings, document, Input, Player, PlayerState, camera, Rage: createRageState(),
     Audio: { ...audio, tick(dt, state) {
       ticks.push({ dt, zone: state.zone, threat: state.threat, paused: state.paused, dead: state.dead,
         listenerPosition: state.listener.position, yaw: state.listener.yaw });
@@ -182,7 +183,8 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
     playerUpdate: record('player'), enemiesUpdate: record('enemy'), triggersUpdate: record('triggers'),
     WaveDirector: { update: record('wave') }, HealPickups: { update: record('heal') },
     StreetChoice: { update: record('choice') }, CombatStats: { update: record('stats'), snapshot: () => ({}) },
-    HUD: { update: record('hud') }, Blood: { update: record('blood') }, FX: { update: record('fx') },
+    HUD: { update: record('hud'), setRage: noOp, setHealth: noOp, message: noOp },
+    Blood: { update: record('blood') }, FX: { update: record('fx') },
     ThreatFeedback: { update: record('threat'), clear: record('threatClear') },
     ObjectiveBanner: { update: record('objective') }, updateNavigation,
     animateFires: noOp, animateFlickerLights: noOp, animateSmoke: noOp, updateEnvironment: noOp,

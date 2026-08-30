@@ -1,11 +1,11 @@
 const KEY_ACTIONS = Object.freeze({
-  KeyE: 'ePressed', KeyR: 'rPressed', KeyV: 'vPressed', KeyG: 'gPressed',
+  KeyE: 'ePressed', KeyR: 'rPressed', KeyV: 'vPressed', KeyG: 'gPressed', KeyT: 'tPressed',
 });
 const EDGE_ACTIONS = ['leftPressed', 'jumpPressed', ...Object.values(KEY_ACTIONS)];
 
 export const GAMEPLAY_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyQ', 'KeyJ',
-  'KeyE', 'KeyR', 'KeyV', 'KeyG', 'Space',
+  'KeyE', 'KeyR', 'KeyV', 'KeyG', 'KeyT', 'Space',
   'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight',
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
 ]);
@@ -35,6 +35,7 @@ export function createInputState() {
     rPressed: false,
     vPressed: false,
     gPressed: false,
+    tPressed: false,
     gamepadConnected: false,
     _mouseLeft: false,
     _mouseRight: false,
@@ -127,6 +128,7 @@ export function createInputState() {
       if (justPressed(3)) this.ePressed = true;
       if (justPressed(5) || justPressed(11)) this.vPressed = true;
       if (justPressed(13)) this.gPressed = true;
+      if (justPressed(12)) this.tPressed = true;
       this._padButtons = pressed;
       const axes = pad.axes ?? [];
       this._padMove = normalizeStick(axes[0], axes[1]);
@@ -151,6 +153,7 @@ export function createInputState() {
         rPressed: this.active && this.rPressed,
         vPressed: this.active && this.vPressed,
         gPressed: this.active && this.gPressed,
+        tPressed: this.active && this.tPressed,
         jumpPressed: this.active && this.jumpPressed,
         jumpDown: this.active && (this.keys.has('Space') || this._padButtons.has(0)),
         crouchDown: this.active && (this.keys.has('KeyC') || this.keys.has('ControlLeft') || this.keys.has('ControlRight') || this._padButtons.has(1)),

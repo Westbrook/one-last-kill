@@ -41,12 +41,17 @@ You begin with **fists and no ammunition**. Defeat a bat carrier or gunman and u
 | Pick up weapon or ammunition | E | Y / Triangle |
 | Reload | R | X / Square |
 | Melee | V | Right bumper / R1, or right-stick click / R3 |
+| Enter rage when available | T | D-pad up |
 | Drop weapon | G | D-pad down |
 | Pause | P or Escape | Start / Options |
 | Confirm / resume | Enter or the visible button | A / Cross, or Start / Options |
 | Audio preference, normal sessions only | M or the audio button | Not mapped |
 
 Gamepads must expose the browser's `standard` mapping. Stick dead zones and held-button suppression prevent drift and accidental actions when resuming. This is browser controller support, not console platform certification. Semi-automatic weapons require separate presses; automatic weapons repeat while fire is held.
+
+**Melee keeps your firearm.** Press V (or RB / R1 / R3) for a close attack without dropping your gun or losing loaded or reserve ammunition. Your firearm remains ready after the melee attack finishes.
+
+**Rage** becomes available while alive and below 30% health after at least four credited enemy kills in the preceding 60 seconds. The prompt appears above your health display: press T or D-pad up to double your **current** HP, without changing maximum HP. Kill an enemy within the next 10 gameplay seconds to keep the remaining boosted health; otherwise health returns to the HP you had when you entered rage. Taking damage still costs health, and rage cannot revive a dead player. Pausing freezes the kill window and the countdown. The eligibility window is configurable through `RAGE_CONFIG.killWindowSeconds` in `src/game/rage-rules.js`.
 
 The menu includes quality, sensitivity, field-of-view, reduced-motion, and audio settings. **Master, Effects, Ambience, Music, and Radio / Voice** each have a volume control; checkpoint voice can also be disabled separately. Preferences are stored locally when browser storage is available. Changing a level never unmutes the game. Checkpoints are held in memory for the current session, not saved across page reloads. F toggles the frame display; B starts the in-game benchmark display. Neither is a substitute for a recorded performance test.
 
@@ -97,6 +102,8 @@ The development QA helper is installed only when the Vite development server rec
 **Run regression suite** exercises the real scene, input, collision, mission and ending code with controlled fixtures, then restores the apartment. **Inspect area** pauses the simulation for visual review. Expand **Inspect an NPC on the balcony** to review actual pooled models, joints, poses and grips without AI or damage. The held-weapon inspector shows the bat, fists and knife at specific animation phases without applying damage. Five benchmark buttons separately measure a paused scene, a camera sweep, a street firefight, balcony melee, and the rooftop firefight. Combat fixtures replenish health and replace defeated enemies to sustain the workload. Reports disclose those conditions and check the audio lock on every sampled frame. These fixtures do not replace an uninterrupted human playthrough.
 
 **Inspect low-health feedback** provides exact threshold samples and a way to preview the cue in the current paused view. Use **Return to game menu** to restore normal health and clear visual fixtures before playing.
+
+That panel also offers **Inspect rage ready** and **Inspect rage countdown**, using disclosed 20-HP/four-kill fixtures. **Inspect off-hand punch** under the held-weapon panel freezes an actual punch at contact while preserving a pistol and its ammunition. These are paused visual checks, not earned combat results; reset before ordinary play.
 
 **Inspect world objects** adds a dropdown for the health case, each firearm/knife drop, sedan cabin, water tank, street barrier and **Full drop pool (16)**. The latter places sixteen actual machine-gun drops through the production path. These are paused fixtures with normal materials and halo selection, not gameplay or performance results; reset before ordinary play.
 

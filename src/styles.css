@@ -199,6 +199,13 @@ body:has(#deathscreen.show) #healthvignette, body:has(#deathscreen.show) #health
 #banner > span { font: 400 clamp(19px, 2vw, 29px) var(--display); letter-spacing: .05em; color: #e8e8d7; text-transform: uppercase; }
 #message { position: absolute; top: 74%; left: 50%; width: min(520px, 80vw); transform: translateX(-50%); text-align: center; color: #e6e4cf; font: 10px var(--mono); letter-spacing: .075em; text-shadow: 0 1px 6px #000; opacity: 0; transition: opacity .18s; }
 #vitals { position: absolute; bottom: 35px; left: var(--safe-x); width: 178px; text-shadow: 0 1px 6px #000; }
+#ragecue { position: absolute; bottom: calc(100% + 16px); left: 0; width: 224px; max-width: calc(100vw - 2 * var(--safe-x)); padding: 10px 12px; border: 1px solid rgb(226 167 102 / 48%); border-left: 2px solid #dba16b; background: rgb(29 24 18 / 88%); color: #f1c294; pointer-events: none; animation: none; transition: none; }
+#ragecue[data-state="active"] { border-color: rgb(232 140 106 / 65%); border-left-color: #e88c6a; color: #f1b095; }
+.rage-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#ragelabel { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; }
+#ragekey { flex: 0 0 auto; font-size: 8px; color: #f0dfc7; }
+#ragecountdown { font: 500 14px/1 var(--mono); font-variant-numeric: tabular-nums; color: #f8dfc9; }
+#ragehint { margin-top: 6px; font: 7px/1.5 var(--mono); letter-spacing: .06em; color: #d9c9b5; }
 .vital-readout { display: flex; align-items: baseline; gap: 10px; }
 .vital-cross { font: 21px var(--body); color: #bac6ac; align-self: center; }
 #healthtext { font: 33px var(--display); line-height: 1; letter-spacing: .01em; color: #efefdc; }

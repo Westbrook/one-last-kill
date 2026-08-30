@@ -1,10 +1,13 @@
-export function createCombatStats() {
+import { Rage } from './rage-rules.js';
+
+export function createCombatStats({ rage = null } = {}) {
   return {
     kills: 0, shots: 0, hits: 0, headshots: 0, streak: 0, streakRemaining: 0,
     recordShot(hit) { this.shots++; if (hit) this.hits++; },
     recordKill(headshot = false) {
       this.kills++; this.streak++; this.streakRemaining = 5;
       if (headshot) this.headshots++;
+      rage?.recordKill();
     },
     update(dt) {
       this.streakRemaining = Math.max(0, this.streakRemaining - Math.max(0, dt));
@@ -14,8 +17,11 @@ export function createCombatStats() {
       return { kills: this.kills, shots: this.shots, hits: this.hits, headshots: this.headshots,
         streak: this.streak, accuracy: this.shots ? Math.round(this.hits / this.shots * 100) : 0 };
     },
-    reset() { this.kills = this.shots = this.hits = this.headshots = this.streak = this.streakRemaining = 0; },
+    reset() {
+      this.kills = this.shots = this.hits = this.headshots = this.streak = this.streakRemaining = 0;
+      rage?.reset();
+    },
   };
 }
 
-export const CombatStats = createCombatStats();
+export const CombatStats = createCombatStats({ rage: Rage });

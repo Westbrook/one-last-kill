@@ -180,6 +180,7 @@ const Weapons = {
   melee: createMeleeState(),
   impactHold: 0,
   vmGroup: null, // THREE.Group attached to camera holding active view-model
+  vmType: null,  // off-hand punches temporarily show fists without changing the slot
   vmCache: {},
   basePos: new THREE.Vector3(0.22, -0.22, -0.36),
   aimBlend: 0,
@@ -201,11 +202,19 @@ const Weapons = {
   _setActiveVM(type) {
     while (this.vmGroup.children.length) this.vmGroup.remove(this.vmGroup.children[0]);
     this.vmGroup.add(this._vm(type));
+    this.vmType = type;
     if (type === 'fists' || type === 'bat') {
       this.vmGroup.position.set(0, 0, 0); this.vmGroup.rotation.set(0, 0, 0);
       this.vmGroup.scale.setScalar(1);
       if (type === 'fists') poseFirstPersonHands(this._vm(type));
       else poseFirstPersonBat(this._vm(type));
+    } else {
+      // Restore the firearm's camera-space anchor immediately: another fixed
+      // simulation step can fire before the next visual update runs.
+      this.vmGroup.position.set(lerp(this.basePos.x, 0, this.aimBlend),
+        lerp(this.basePos.y, -0.12, this.aimBlend), this.basePos.z);
+      this.vmGroup.rotation.copy(this.baseRot);
+      this.vmGroup.scale.setScalar(1);
     }
   },
   def() { return WEAPON_DEFS[this.current]; },
@@ -362,6 +371,7 @@ const Weapons = {
     cancelMelee(this.melee);
     this.impactHold = 0;
     this.swingT = 0;
+    if (this.vmGroup && this.vmType !== this.def().vm) this._setActiveVM(this.def().vm);
   },
   // Windup starts now; target, range and cover are evaluated only at contact.
   _swingMelee(type = this.current) {
@@ -371,6 +381,7 @@ const Weapons = {
     this.swingT = 1;
     this.impactHold = 0;
     if (type === 'fists') this.punchIndex = (this.punchIndex + 1) & 1;
+    if (this.vmGroup && this.vmType !== d.vm) this._setActiveVM(d.vm);
     Audio.meleeSwing({ weapon: type, intensity: type === 'bat' ? 1 : 0.65, environment: currentZone });
     return true;
   },
@@ -537,26 +548,28 @@ const Weapons = {
       if (advanceMelee(this.melee, dt)) this._commitMeleeContact();
       this.swingT = this.impactHold > 0 && this.melee.active
         ? 1 - WEAPON_DEFS[this.melee.type].contactPhase : meleeRemaining(this.melee);
+      if (!this.melee.active && this.vmGroup && this.vmType !== this.def().vm) this._setActiveVM(this.def().vm);
     } else if (this.swingT > 0) {
       const decay = this.current === 'fists' ? 1 / FIRST_PERSON_PUNCH_SECONDS : 5.5;
       this.swingT = Math.max(0, this.swingT - dt * decay);
     }
   },
   update(dt) {
-    const targetAim = Player.aiming && this.def().kind === 'ranged' && this.reloading <= 0 ? 1 : 0;
+    const targetAim = Player.aiming && this.def().kind === 'ranged' && this.reloading <= 0 && !this.melee.active ? 1 : 0;
     this.aimBlend = lerp(this.aimBlend, targetAim, 1 - Math.exp(-dt * 14));
     const fov = Settings.get('fov') - this.aimBlend * 20;
     if (Math.abs(camera.fov - fov) > 0.02) { camera.fov = fov; camera.updateProjectionMatrix(); }
     document.getElementById('crosshair')?.classList.toggle('aiming', this.aimBlend > 0.7);
     // View-model bob is visual only and respects reduced-motion preferences.
     if (this.vmGroup) {
-      if (this.current === 'fists' || this.current === 'bat') {
+      const viewType = this.melee.active ? this.melee.type : this.current;
+      if (viewType === 'fists' || viewType === 'bat') {
         // Hands are authored in camera space. The legacy gun offset/scale
         // would move them towards the near plane and enlarge them again.
         this.vmGroup.position.set(0, 0, 0); this.vmGroup.rotation.set(0, 0, 0);
         this.vmGroup.scale.setScalar(1);
         const movement = clamp(Math.hypot(Player.vel.x, Player.vel.z) / Player.speedSprint, 0, 1);
-        if (this.current === 'fists') {
+        if (viewType === 'fists') {
           poseFirstPersonHands(this._vm('fists'), this.swingT, this.punchIndex, GameTime.elapsed, movement, Settings.get('reducedMotion'));
         } else {
           poseFirstPersonBat(this._vm('bat'), this.swingT, GameTime.elapsed, movement, Settings.get('reducedMotion'));
@@ -592,6 +605,7 @@ const Weapons = {
   },
   // Wired from playerUpdate(): consumes already-extracted input flags.
   handleInput(inp, dt) {
+    if (PlayerState.dead) return;
     if (inp.ePressed) {
       const near = this.findNearestPickup(1.8);
       if (near) this.pickup(near);
@@ -611,7 +625,7 @@ const Weapons = {
     // repeat on leftDown.
     const d = this.def();
     const wantsFire = d.full ? inp.leftDown : inp.leftPressed;
-    if (wantsFire && this.cooldown <= 0 && this.reloading <= 0) {
+    if (wantsFire && this.cooldown <= 0 && this.reloading <= 0 && !this.melee.active) {
       if (d.kind === 'ranged') {
         if (this.loaded > 0) {
           this._fireRanged();
