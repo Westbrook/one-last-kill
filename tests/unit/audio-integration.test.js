@@ -192,7 +192,7 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
     Enemies: { list: [] }, currentZone: 'roof', GameTime: { elapsed: 0 },
     Weapons: { tick: record('weapon'), update: record('viewmodel'), def: () => ({ kind: 'ranged' }) },
     playerUpdate: record('player'), enemiesUpdate: record('enemy'), triggersUpdate: record('triggers'),
-    WaveDirector: { update: record('wave') }, HealPickups: { update: record('heal') },
+    WaveDirector: { update: record('wave') }, HealPickups: { update: record('heal') }, ArmorPickups: { update: record('armor') },
     StreetChoice: { update: record('choice') }, CombatStats: { update: record('stats'), snapshot: () => ({}) },
     HUD: { update: record('hud'), setRage: noOp, setHealth: noOp, message: noOp },
     Blood: { update: record('blood') }, FX: { update: record('fx') },
@@ -272,7 +272,7 @@ function playerHarness(audio, zone = 'neighbor') {
       return ballistics.raycast(origin, direction, distance, channel, out);
     } },
     Settings: { get: key => key === 'reducedMotion' ? false : 1 },
-    HUD: { setHealth: noOp }, Weapons: { handleInput: noOp },
+    HUD: { setHealth: noOp, setArmor: noOp }, Weapons: { handleInput: noOp },
     Audio: {
       footstep(value) { events.push({ event: 'footstep', time: clock.elapsed, ...value }); audio.footstep(value); },
       movement(value) { events.push({ event: 'movement', time: clock.elapsed, ...value }); audio.movement(value); },

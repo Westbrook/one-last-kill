@@ -22,7 +22,7 @@ const Player = {
   isCrouching: false, onGround: false,
   isSprinting: false, aiming: false,
   speedWalk: 4.2, speedSprint: 7.0, jumpVel: 5.6,
-  health: 100,
+  health: 100, armor: 0,
   footTimer: 0,
   cameraMotion: 0.6,
   _eyeH: 1.72, _bodyH: 1.84,
@@ -76,6 +76,7 @@ function resetPlayerMotion() {
 function playerInit() {
   resetPlayerMotion();
   HUD.setHealth(Player.health);
+  HUD.setArmor(Player.armor);
 }
 
 function updateStance(dt, wantsCrouch) {

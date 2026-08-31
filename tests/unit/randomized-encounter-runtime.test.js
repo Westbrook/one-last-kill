@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { createRageState } from '../../src/game/rage-rules.js';
+import { clampArmor } from '../../src/game/armor-rules.js';
 import { Colliders, capsuleHasClearance } from '../../src/core/collision.js';
 import { createEncounterSeedSource } from '../../src/game/encounter-session.js';
 import { EncounterSchedule, EncounterRouteProgress } from '../../src/game/encounter-rules.js';
@@ -51,7 +52,7 @@ const readThreatView = () => ({ position: camera.position, yaw: camera.rotation.
   fov: camera.fov, aspect: camera.aspect, zoom: camera.zoom });
 let mission;
 const bindings = {
-  THREE, camera, Architecture, Colliders, capsuleHasClearance, EncounterSeeds: seeds, Rage: createRageState(),
+  THREE, camera, Architecture, Colliders, capsuleHasClearance, EncounterSeeds: seeds, Rage: createRageState(), clampArmor,
   Player: ai.player, PlayerState: ai.playerState, Enemies: ai.Enemies,
   surfaceTopAt: ai.surfaceTopAt, isBlocked: ai.isBlocked, primeEnemyInvestigation: ai.primeEnemyInvestigation,
   EncounterSchedule, EncounterRouteProgress, selectEncounterSpawn, selectEncounterFrontPair,
@@ -59,9 +60,10 @@ const bindings = {
   currentZone: 'apartment',
   Weapons: { snapshot: () => ({ ...weapon }), restore(value) { weapon = { ...value }; } },
   AmmoSupplies: ai.supplies, HealPickups: { setZone: noOp, restoreZone: noOp },
+  ArmorPickups: { clearAll: noOp, setZone: noOp },
   WeaponDrops: { clearAll: noOp }, Input: { reset: noOp }, Audio: { reset: noOp },
   ThreatFeedback: { clear: noOp }, ZoneCull: { setHidden: noOp },
-  HUD: { setHealth: noOp, setObjective: noOp, showDeath: noOp, message: (...values) => messages.push(values) },
+  HUD: { setHealth: noOp, setArmor: noOp, setObjective: noOp, showDeath: noOp, message: (...values) => messages.push(values) },
   EndCard: { hide: noOp, show: noOp }, ObjectiveBanner: { show: noOp },
   StreetChoice: {
     reset: noOp, dismiss: noOp, arm: noOp, isPresented: () => false,

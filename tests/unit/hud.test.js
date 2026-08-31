@@ -66,6 +66,69 @@ test('initial HUD describes fists and hides an inactive reload from accessibilit
   assert.match(markup, /id="reloadindicator" aria-hidden="true"/);
 });
 
+test('armor frames health independently and preserves fractional protection in the readout', () => {
+  const { hud, element } = fixture();
+  assert.equal(hud.snapshot().armor, 0);
+  assert.equal(element('armorbar').getAttribute('aria-valuetext'), 'No armor equipped.');
+  assert.equal(element('armorreadout').hidden, true);
+  hud.setHealth(19);
+  const healthWrites = ['healthbar', 'healthfill', 'healthtext', 'healthwarning'].map(id => ({ ...element(id).writes }));
+  for (const armor of [100, 50, 46.25, 0.25]) {
+    hud.setArmor(armor);
+    assert.equal(hud.snapshot().armor, armor);
+    assert.equal(element('armorbar').style.getPropertyValue('--armor-remaining'), armor + '%');
+    assert.equal(element('armorbar').getAttribute('aria-valuenow'), String(armor));
+    assert.equal(element('armorbar').getAttribute('aria-valuetext'), armor + ' percent armor. Absorbs damage before health.');
+    assert.equal(element('armortext').textContent, String(Math.ceil(armor)));
+    assert.equal(element('armorreadout').hidden, false);
+  }
+  assert.equal(hud.snapshot().health, 19);
+  assert.equal(hud.snapshot().healthWarning, 'critical');
+  assert.deepEqual(['healthbar', 'healthfill', 'healthtext', 'healthwarning'].map(id => ({ ...element(id).writes })), healthWrites);
+  hud.setArmor(0);
+  assert.equal(element('armorbar').style.getPropertyValue('--armor-remaining'), '0%');
+  assert.equal(element('armorbar').getAttribute('aria-valuetext'), 'No armor equipped.');
+  assert.equal(element('armorreadout').hidden, true);
+});
+
+test('armor clamps invalid values and unchanged frames do not repaint its border', () => {
+  const { hud, element } = fixture();
+  hud.setArmor(500);
+  assert.equal(hud.snapshot().armor, 100);
+  for (const armor of [100, 50, 0]) {
+    hud.setArmor(armor);
+    const ids = ['armorbar', 'armortext', 'armorreadout'];
+    const writes = ids.map(id => ({ ...element(id).writes }));
+    for (let frame = 0; frame < 120; frame++) {
+      hud.setArmor(armor);
+      hud.update(1 / 120);
+    }
+    assert.deepEqual(ids.map(id => ({ ...element(id).writes })), writes);
+  }
+  for (const invalid of [-1, NaN, Infinity, undefined]) {
+    hud.setArmor(50);
+    hud.setArmor(invalid);
+    assert.equal(hud.snapshot().armor, 0);
+    assert.equal(element('armorreadout').hidden, true);
+  }
+  hud.setArmor(50);
+  hud.clearFeedback();
+  const snapshot = hud.snapshot();
+  snapshot.armor = 0;
+  assert.equal(hud.snapshot().armor, 50, 'gameplay owns armor, independent of feedback and snapshots');
+});
+
+test('health and armor are separate accessible meters with an outer armor border', () => {
+  assert.match(markup, /id="armorbar" role="progressbar" aria-label="Armor" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"/);
+  assert.match(markup, /id="armorfill" aria-hidden="true"><\/div><\/div>\s*<div id="healthbar" role="progressbar"/);
+  assert.match(markup, /id="armorreadout" aria-hidden="true" hidden>/);
+  const frame = styles.match(/#armorfill\s*\{([^}]+)\}/)?.[1];
+  assert.match(frame, /border:\s*3px solid/);
+  assert.match(frame, /clip-path:\s*inset\(0 calc\(100% - var\(--armor-remaining\)\) 0 0\)/);
+  assert.match(styles, /#armorbar\s*\{[^}]*--armor-remaining:\s*0%/);
+  assert.match(styles, /#healthbar\s*\{[^}]*inset:\s*6px/);
+});
+
 test('rage availability shows the current control and repeated frames do not rewrite its cue', () => {
   const { hud, element } = fixture();
   const ids = ['ragecue', 'ragelabel', 'ragekey', 'ragecountdown', 'ragehint'];

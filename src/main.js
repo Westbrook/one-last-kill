@@ -25,6 +25,7 @@ import { Input } from './core/input.js';
 import { HUD, IntroCard, EndCard, ObjectiveBanner, FPSMeter } from './ui/hud.js';
 import { Weapons, WeaponDrops, WEAPON_DEFS } from './game/weapons.js';
 import { AmmoSupplies } from './game/ammo-supplies.js';
+import { ArmorPickups } from './game/armor-pickups.js';
 import { Enemies, EnemyPool, enemiesUpdate } from './game/enemies.js';
 import {
   initMission, WaveDirector, HealPickups, StreetChoice, Endings,
@@ -114,6 +115,7 @@ function stepFrame(realDt) {
     WaveDirector.update(clock.step);
     triggersUpdate();
     HealPickups.update(clock.step);
+    ArmorPickups.update(clock.step);
     StreetChoice.update(clock.step);
     Endings.update(clock.step);
     CombatStats.update(clock.step);
@@ -232,6 +234,14 @@ async function boot() {
   // The opening starts empty-handed. Weapons are earned from defeated foes.
   Weapons._equip('fists', 0);
   AmmoSupplies.init({ world: World, player: Player, canInteract: isPlaying });
+  ArmorPickups.init({
+    world: World, player: Player, canCollect: isPlaying,
+    onCollect(pickup) {
+      HUD.setArmor(Player.armor);
+      HUD.message('VEST EQUIPPED · ' + Math.round(Player.armor) + '% ARMOR', 1.6);
+      Audio.pickupChime({ kind: 'armor', environment: pickup.zone ?? currentZone });
+    },
+  });
   // Build once from final world triangles, before NPC rigs and pickup halos.
   // Generous movement barriers must never fill visible gaps between railings.
   Ballistics.rebuild(World);

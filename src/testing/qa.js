@@ -28,6 +28,7 @@ import { Player, PlayerState, resetPlayerMotion } from '../game/player.js';
 import { Weapons, WeaponDrops, WEAPON_DEFS } from '../game/weapons.js';
 import { placeWeaponDrop } from '../game/drop-placement.js';
 import { AmmoSupplies } from '../game/ammo-supplies.js';
+import { ArmorPickups } from '../game/armor-pickups.js';
 import { AMMO_SUPPLY_CACHES, AMMO_SUPPLY_COSTS, AMMO_RESERVE_LIMITS } from '../game/ammo-supply-rules.js';
 import {
   ENEMY_TYPES, Enemies, EnemyPool, EnemyNavigation, damageEnemy, killEnemy, enemyAttackPlayer, enemiesUpdate, raycastEnemies,
@@ -744,7 +745,8 @@ function createPanel() {
   objectTitle.textContent = 'Inspect world objects';
   objectPanel.append(objectTitle);
   const objectType = inspectionSelect(objectPanel, 'qa-object-type', 'World object', [
-    ['health', 'Health case'], ['pistol', 'Dropped pistol'], ['shotgun', 'Dropped shotgun'],
+    ['health', 'Health case'], ['armor', 'Intact armor vest · 100%'], ['armor-damaged', 'Damaged armor vest · 50%'],
+    ['pistol', 'Dropped pistol'], ['shotgun', 'Dropped shotgun'],
     ['smg', 'Dropped SMG'], ['machinegun', 'Dropped machine gun'], ['knife', 'Dropped knife'],
     ['car', 'Sedan cabin'], ['tank', 'Water tank'], ['barrier', 'Street barrier'],
     ['drops', 'Full drop pool (16)'],
@@ -761,6 +763,16 @@ function createPanel() {
   ]);
   const healthActions = document.createElement('div');
   healthActions.className = 'qa-row'; healthPanel.append(healthActions);
+  const armorPanel = document.createElement('details');
+  const armorTitle = document.createElement('summary');
+  armorTitle.textContent = 'Inspect armor around the health bar';
+  armorPanel.append(armorTitle);
+  const armorSample = inspectionSelect(armorPanel, 'qa-armor-sample', 'Armor remaining', [
+    ['100', '100% · intact vest'], ['50', '50% · damaged vest'], ['25', '25% · worn vest'],
+    ['1', '1% · almost depleted'], ['0', '0% · no armor'],
+  ]);
+  const armorActions = document.createElement('div');
+  armorActions.className = 'qa-row'; armorPanel.append(armorActions);
   const note = document.createElement('p');
   note.className = 'qa-note';
   note.textContent = 'Tests reset the mission. Scene inspection is paused. Combat benchmark uses a controlled live fixture. Audio is locked off.';
@@ -771,7 +783,7 @@ function createPanel() {
   report.setAttribute('aria-live', 'polite');
   report.tabIndex = 0;
   report.textContent = 'READY · No tests have run.\nUse Run regression suite to test the real game.';
-  body.append(graphicsRow, label, inspectionRow, directions, actorPanel, heldPanel, objectPanel, healthPanel, actions, note, report);
+  body.append(graphicsRow, label, inspectionRow, directions, actorPanel, heldPanel, objectPanel, healthPanel, armorPanel, actions, note, report);
   panel.append(header, body);
   document.body.append(panel);
 
@@ -782,7 +794,7 @@ function createPanel() {
     toggle.textContent = body.hidden ? 'Show QA panel' : 'Hide QA panel';
     toggle.setAttribute('aria-expanded', String(!body.hidden));
   });
-  const controls = [select, quality, renderScale, surfaceMode, interiorLight, interiorReflection, heroFace, focusedShadow, roofTaskLight, actorType, actorPose, actorFraming, heldType, heldPose, heldSide, heldAim, objectType, healthSample];
+  const controls = [select, quality, renderScale, surfaceMode, interiorLight, interiorReflection, heroFace, focusedShadow, roofTaskLight, actorType, actorPose, actorFraming, heldType, heldPose, heldSide, heldAim, objectType, healthSample, armorSample];
   function button(parent, text, id, onClick) {
     const element = document.createElement('button');
     element.type = 'button';
@@ -795,7 +807,7 @@ function createPanel() {
   }
   return { panel, report, select, quality, renderScale, surfaceMode, interiorLight, interiorReflection, heroFace, focusedShadow, roofTaskLight, controls, button, inspectionRow, directions, actions,
     actorType, actorPose, actorFraming, actorActions, heldType, heldPose, heldSide, heldAim, heldActions,
-    objectType, objectActions, healthSample, healthActions,
+    objectType, objectActions, healthSample, healthActions, armorSample, armorActions,
     dispose() { panel.remove(); style.remove(); } };
 }
 
@@ -900,6 +912,11 @@ export function installQA(api) {
     FX.update(1);
     GameTime.elapsed = 0;
     CombatStats.reset();
+    // Worn armor is checkpoint inventory. Clear a preview before either reset
+    // path can save it into the new apartment checkpoint.
+    Player.armor = 0;
+    HUD.setArmor(0);
+    ArmorPickups.clearAll();
     if (api.resetToApartment) {
       assert(api.resetToApartment() !== false, 'Could not reset the apartment');
     } else {
@@ -911,7 +928,10 @@ export function installQA(api) {
     const state = getMissionState();
     assert(state.zone === 'apartment' && state.checkpoint?.zone === 'apartment' && !state.checkpoint.branch,
       'A fresh reset must restore the apartment checkpoint with no ending branch');
+    near(state.checkpoint.armor, 0, 'The first checkpoint must not save worn fixture armor');
     assert(!PlayerState.dead && Player.health === 100, 'Fresh apartment must restore full health');
+    near(Player.armor, 0, 'Fresh apartment must not retain worn fixture armor');
+    near(ArmorPickups.list.length, 0, 'Fresh apartment must clear dropped fixture vests');
     same(Weapons.snapshot(), STARTING_WEAPON, 'Fresh apartment restores fists with no loaded or spare ammunition');
     assert(Enemies.list.length === 0 && pooledSlots().every(slot => !slot.inUse && slot.owner === null),
       'Fresh apartment must release all previous encounter rigs');
@@ -923,7 +943,12 @@ export function installQA(api) {
     pauseSilently();
     setNPCInspection(false);
     inspectedActor = null;
+    if (visualFixtureActive) {
+      Player.armor = 0;
+      HUD.setArmor(0);
+    }
     visualFixtureActive = false;
+    ArmorPickups.clearAll();
     saveCheckpoint(zone);
     assert(restartFromZone(), `${ZONE_LABELS[zone]} checkpoint cannot be restored`);
     api.setInspection(true);
@@ -976,6 +1001,7 @@ export function installQA(api) {
     StreetChoice.reset();
     Endings.reset();
     Enemies.clearAll();
+    ArmorPickups.clearAll();
   }
   function controlledStreet() { controlledArea('street'); }
 
@@ -1434,6 +1460,91 @@ export function installQA(api) {
     near(after.kills, before.kills, 'Fixture damage must not fabricate player kill credit');
     near(after.shots, before.shots, 'Ending fixture must not fabricate player shots');
     near(after.hits, before.hits, 'Ending fixture must not fabricate player hits');
+  }
+
+  function checkArmor() {
+    near(Player.armor, 0, 'The armor check starts without a free vest');
+    near(getMissionState().checkpoint.armor, 0, 'The first apartment checkpoint starts without armor');
+    controlledStreet();
+    const inventory = Weapons.snapshot(), stats = CombatStats.snapshot();
+    const anchor = DISTRICT.street.qa.benchmark[1];
+    function defeatBruiser(firstPart, finalPart = firstPart) {
+      const before = ArmorPickups.list.length;
+      const enemy = spawnFixtureEnemy('bruiser', anchor);
+      near(enemy.armorStrength, 100, 'A new shotgun carrier wears an intact vest');
+      const opening = damageEnemy(enemy, 1, firstPart);
+      assert(opening && !opening.killed, 'The opening fixture hit must leave the carrier alive');
+      near(ArmorPickups.list.length, before, 'A living carrier cannot drop its armor early');
+      const result = damageEnemy(enemy, enemy.health, finalPart);
+      assert(result?.killed && !enemy.alive, 'The actual damage path must defeat the shotgun carrier');
+      near(ArmorPickups.list.length, before + 1, 'One carrier death creates exactly one vest');
+      const pickup = ArmorPickups.list.at(-1);
+      assert(pickup.active && pickup.mesh.visible && pickup.zone === 'street', 'The death creates an available vest in the current zone');
+      assert(!killEnemy(enemy) && damageEnemy(enemy, 1, finalPart) === null,
+        'A corpse cannot be killed or damaged for a duplicate vest');
+      near(ArmorPickups.list.length, before + 1, 'Repeated death calls must not duplicate the vest');
+      return pickup;
+    }
+    function standAt(pickup) {
+      placePlayer({ x: pickup.mesh.position.x, y: anchor.y, z: pickup.mesh.position.z });
+    }
+    const intact = defeatBruiser('head');
+    near(intact.amount, 100, 'Head-only damage preserves an intact vest');
+    standAt(intact);
+    ArmorPickups.update(STEP);
+    near(Player.armor, 0, 'A paused player cannot collect nearby armor');
+    assert(intact.active, 'Paused inspection preserves its vest');
+    startSimulation();
+    simulateStep();
+    near(Player.armor, 100, 'The active game frame automatically equips the intact vest');
+    assert(!intact.active && !ArmorPickups.list.includes(intact), 'The collected vest cannot be collected twice');
+
+    const damaged = defeatBruiser('body', 'head');
+    near(damaged.amount, 50, 'A headshot finish cannot repair earlier body damage');
+    standAt(damaged);
+    simulateStep();
+    near(Player.armor, 100, 'A weaker nearby vest cannot replace stronger worn armor');
+    assert(damaged.active, 'The weaker vest remains available for later');
+    applyPlayerDamage(40);
+    near(Player.armor, 70, 'Forty damage wears armor by thirty points');
+    near(Player.health, 100, 'Armor absorbs damage before health');
+    near(Number(document.getElementById('armorbar').getAttribute('aria-valuenow')), 70,
+      'The production HUD follows exact remaining armor');
+    simulateStep();
+    assert(damaged.active, 'Half-strength armor cannot top up a stronger worn vest');
+    applyPlayerDamage(100);
+    near(Player.armor, 0, 'A hit can exhaust the remaining armor');
+    near(Player.health, 100 - (100 - 70 / 0.75), 'Only the unabsorbed portion of a breaking hit reaches health');
+    simulateStep();
+    near(Player.armor, 50, 'The preserved damaged vest becomes collectible after armor breaks');
+    assert(!damaged.active, 'The damaged vest is consumed once');
+
+    const spare = defeatBruiser('body');
+    near(spare.amount, 50, 'A body-shot kill leaves a half-strength vest');
+    standAt(spare);
+    simulateStep();
+    near(Player.armor, 50, 'Two damaged vests cannot stack into full armor');
+    assert(spare.active, 'An equal-strength spare remains available');
+    const beforeUnarmored = ArmorPickups.list.length;
+    const gunman = spawnFixtureEnemy('gunman', DISTRICT.street.qa.benchmark[0]);
+    assert(damageEnemy(gunman, gunman.health, 'body')?.killed, 'The unarmored comparison uses a real enemy death');
+    near(ArmorPickups.list.length, beforeUnarmored, 'An unarmored pistol carrier cannot create a vest');
+    saveCheckpoint('street');
+    near(getMissionState().checkpoint.armor, 50, 'The checkpoint records the actually collected worn vest');
+    applyPlayerDamage(80);
+    near(Player.armor, 0, 'A second breaking hit exhausts the damaged vest');
+    near(Player.health, 80, 'Both breaking hits preserve the correct total health remainder');
+    applyPlayerDamage(20);
+    near(Player.health, 60, 'Unarmored damage consumes health at its normal rate');
+    assert(restartFromZone(), 'The real checkpoint retry must succeed after the armor exchange');
+    near(Player.armor, 50, 'Retry restores the saved armor strength');
+    near(Player.health, 100, 'Retry restores full health independently of saved armor');
+    near(ArmorPickups.list.length, 0, 'Retry clears uncollected corpse vests');
+    near(Number(document.getElementById('armorbar').getAttribute('aria-valuenow')), 50,
+      'The production armor HUD follows checkpoint restoration');
+    same(Weapons.snapshot(), inventory, 'Automatic armor pickup does not collect dropped weapons or change ammunition');
+    same(CombatStats.snapshot(), stats, 'Disclosed fixture damage does not fabricate player shots or kill credit');
+    return 'Actual enemy damage/death creates 100% head-only and 50% body-damaged vests; active frames collect once, paused frames preserve them, weaker/equal vests never stack. 40 damage removes 30 armor; breaking hits spill only their unabsorbed damage into health. Retry restores collected 50% armor and clears spare drops. Four directly damaged enemy fixtures; no player-shot or kill credit fabricated.';
   }
 
   const tests = [
@@ -3297,6 +3408,7 @@ export function installQA(api) {
       same(Weapons.snapshot(), expected, 'Checkpoint retry preserves the earned firearm and exact ammunition');
       return `${count} actual fist hits → real ${expected.current} drop → E pickup with ${dropAmmo} total rounds; no free gun, direct damage or health refill`;
     }],
+    ['Dropped armor follows hit locations, collection, damage and checkpoint retry', checkArmor],
     ['Headshot multiplier applies exactly once', () => {
       const enemy = Enemies.spawn('bruiser', -6, -8, 4.02);
       assert(enemy, 'Headshot check requires a real pooled bruiser');
@@ -3646,6 +3758,37 @@ export function installQA(api) {
     }
   }
 
+  function runArmorCheck() {
+    if (busy || disposed) return;
+    const lines = ['RUNNING · armor integration check · audio locked off'];
+    let failed = false;
+    try {
+      setBusy(true);
+      api.setTesting(true);
+      report('running', lines);
+      freshApartment();
+      lines.push(`PASS · ${checkArmor()}`);
+      assertSilent();
+    } catch (error) {
+      failed = true;
+      lines.push(`FAIL · ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      try {
+        freshApartment();
+        ui.select.value = 'apartment';
+        pausedRender();
+        lines.push('RESTORED · Fresh apartment · 100 health · 0 armor · no fixture drops · starting loadout');
+      } catch (error) {
+        failed = true;
+        lines.push(`FAIL · Final reset: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      api.setTesting(false);
+      setBusy(false);
+      lines[0] = `${failed ? 'FAILED' : 'PASSED'} · armor integration check`;
+      report(failed ? 'fail' : 'pass', lines);
+    }
+  }
+
   function inspect() {
     if (busy || disposed) return;
     try {
@@ -3688,6 +3831,42 @@ export function installQA(api) {
       ]);
       assertSilent();
     } catch (error) { report('fail', error instanceof Error ? error.message : String(error)); }
+  }
+
+  function inspectArmor() {
+    if (busy || disposed) return;
+    try {
+      const armor = Number(ui.armorSample.value);
+      assert([100, 50, 25, 1, 0].includes(armor), 'Choose an explicit armor sample');
+      const zone = ui.select.value;
+      freshApartment();
+      controlledArea(zone);
+      visualFixtureActive = true;
+      document.body.classList.add('qa-scene-inspection');
+      Player.armor = armor;
+      HUD.setArmor(armor);
+      HUD.clearFeedback();
+      pausedRender();
+      const armorbar = document.getElementById('armorbar');
+      assert(armorbar && armorbar.getAttribute('aria-valuenow') === String(armor),
+        'The production armor meter must expose the selected sample');
+      near(api.stepFrame(0.25), 0, 'A paused armor inspection cannot advance the simulation');
+      near(Player.armor, armor, 'The armor preview remains frozen while paused');
+      report('ready', [
+        `ARMOR INSPECTION · ${armor}% · simulation paused`,
+        `Actual armor ${Player.armor} · HUD ${armorbar.getAttribute('aria-valuenow')} · health ${Player.health}`,
+        'Production border around the health bar; the matching armor readout hides when no armor remains.',
+        'Explicit armor fixture only; no enemy kills or collection simulated. Use Test armor for the actual drop, pickup and damage path.',
+        'Use Preview health in current view to inspect this border with low-health feedback.',
+        'Reset apartment or Return to game menu clears the fixture and its checkpoint before ordinary play.',
+        'Audio locked off · no AudioContext',
+      ]);
+      assertSilent();
+    } catch (error) {
+      try { freshApartment(); ui.select.value = 'apartment'; }
+      catch { /* Preserve the original inspection failure. */ }
+      report('fail', error instanceof Error ? error.message : String(error));
+    }
   }
 
   function inspectRage({ countdown = false } = {}) {
@@ -3797,6 +3976,16 @@ export function installQA(api) {
         Player.pos.set(specimen.position.x + 0.39, specimen.position.y + 0.35, specimen.position.z + 0.46);
         pointCameraAt(specimen.position);
         details.push('Actual authored health supply; paused hover at its base height and zero yaw for comparison. No collection or health change.');
+      } else if (type === 'armor' || type === 'armor-damaged') {
+        const strength = type === 'armor' ? 100 : 50;
+        const pickup = ArmorPickups.spawn(-12, ROOF.floorY, -5, strength, zone);
+        assert(pickup?.active && pickup.mesh.visible, 'The production armor drop path must create a visible vest');
+        specimen = pickup.mesh;
+        specimen.rotation.y = Math.PI / 6;
+        const target = new Box3().setFromObject(specimen).getCenter(new Vector3());
+        Player.pos.set(target.x + 0.48, target.y + 0.2, target.z + 0.9);
+        pointCameraAt(target);
+        details.push(`Actual ${strength}% vest geometry and production hover height; deterministic heading for inspection. No collection or worn armor granted.`);
       } else if (['pistol', 'shotgun', 'smg', 'machinegun', 'knife'].includes(type)) {
         const anchor = { x: -12, y: ROOF.floorY, z: -5 };
         const drop = WeaponDrops.spawn(anchor.x, anchor.y, anchor.z, type, 12);
@@ -4484,6 +4673,8 @@ export function installQA(api) {
   ui.button(ui.healthActions, 'Preview health in current view', 'qa-health-current', () => inspectHealthWarning({ keepView: true }));
   ui.button(ui.healthActions, 'Inspect rage ready', 'qa-rage-ready', () => inspectRage());
   ui.button(ui.healthActions, 'Inspect rage countdown', 'qa-rage-countdown', () => inspectRage({ countdown: true }));
+  ui.button(ui.armorActions, 'Inspect armor HUD', 'qa-armor-inspect', inspectArmor);
+  ui.button(ui.armorActions, 'Test armor', 'qa-armor-test', runArmorCheck);
   ui.button(ui.actions, 'Run regression suite', 'qa-run', runSuite);
   ui.button(ui.actions, 'Benchmark 10 seconds', 'qa-benchmark', () => benchmark());
   ui.button(ui.actions, 'Benchmark camera sweep 10 seconds', 'qa-sweep-benchmark', () => benchmark({ sweep: true }));

@@ -9,6 +9,8 @@ import { World, currentZone, zoneChanged, onZoneChange, ZoneCull } from '../worl
 import { Enemies, isBlocked, primeEnemyInvestigation } from './enemies.js';
 import { Weapons, WeaponDrops } from './weapons.js';
 import { AmmoSupplies } from './ammo-supplies.js';
+import { ArmorPickups } from './armor-pickups.js';
+import { applyArmorDamage, clampArmor } from './armor-rules.js';
 import { Rage } from './rage-rules.js';
 import {
   CHECKPOINTS, ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS,
@@ -32,9 +34,10 @@ const routePlayerFoot = { x: 0, y: 0, z: 0 };
 
 function applyPlayerDamage(amount, source = null, attacker = null) {
   if (PlayerState.dead || !Number.isFinite(amount) || amount <= 0) return;
-  Player.health = Math.max(0, Player.health - amount);
+  const healthDamage = applyArmorDamage(Player, amount);
+  HUD.setArmor(Player.armor);
   HUD.setHealth(Player.health);
-  HUD.bloodFlash(Math.min(1, 0.35 + amount / 25));
+  if (healthDamage > 0) HUD.bloodFlash(Math.min(1, 0.35 + healthDamage / 25));
   if (source) {
     const angle = Math.atan2(source.x - Player.pos.x, -(source.z - Player.pos.z)) + Player.yaw;
     HUD.damageDirection?.(angle);
@@ -47,6 +50,8 @@ function playerDie() {
   if (PlayerState.dead) return;
   PlayerState.dead = true;
   Player.health = 0;
+  Player.armor = 0;
+  HUD.setArmor(0);
   Rage.reset();
   HUD.setRage?.({});
   Weapons.cancelAttack?.();
@@ -66,6 +71,7 @@ function saveCheckpoint(zone, branch = null) {
     // Inventory and cache state form one checkpoint transaction. Restoring
     // ammunition without this ledger would refill already-collected supplies.
     ammoSupplies: AmmoSupplies.snapshot(),
+    armor: clampArmor(Player.armor),
   });
   const anchor = checkpoint.anchor;
   // Retain this public field for the existing player/debugging interface.
@@ -101,6 +107,7 @@ function restartFromZone() {
   StreetChoice.reset();
   Enemies.clearAll();
   WeaponDrops.clearAll();
+  ArmorPickups.clearAll();
   Input.reset();
   EndCard.hide();
   ThreatFeedback.clear();
@@ -110,6 +117,7 @@ function restartFromZone() {
 
   PlayerState.dead = false;
   Player.health = 100;
+  Player.armor = clampArmor(saved.armor);
   Player.pos.set(status.foot.x, status.foot.y + Player.eyeHeight, status.foot.z);
   Player.yaw = saved.anchor.yaw;
   Player.pitch = 0;
@@ -117,8 +125,10 @@ function restartFromZone() {
   Weapons.restore(saved.weapon);
   AmmoSupplies.restore(saved.ammoSupplies);
   HUD.setHealth(100);
+  HUD.setArmor(Player.armor);
   HUD.showDeath(false);
   HealPickups.restoreZone(saved.zone);
+  ArmorPickups.setZone(saved.zone);
   AmmoSupplies.setZone(saved.zone);
 
   // zoneChanged owns the live zone binding, lighting and objective banner.
@@ -482,6 +492,7 @@ function handleZoneChange(zone) {
   }
   saveCheckpoint(zone);
   HealPickups.setZone(zone);
+  ArmorPickups.setZone(zone);
   AmmoSupplies.setZone(zone);
   WaveDirector.start(zone);
   StreetChoice.reset();
@@ -645,6 +656,7 @@ const Endings = (() => {
     const key = 'final-' + branch;
     saveCheckpoint(zone, branch);
     HealPickups.setZone(zone);
+    ArmorPickups.setZone(zone);
     AmmoSupplies.setZone(zone);
     StreetChoice.dismiss();
     for (let index = 0; index < config.waveCount; index++) spawnCursors.set(key + ':' + index, 0);
@@ -774,6 +786,7 @@ function getMissionState() {
       anchor: { ...checkpoint.anchor },
       weapon: { ...checkpoint.weapon },
       ammoSupplies: checkpoint.ammoSupplies,
+      armor: checkpoint.armor,
     } : null,
     wave: {
       ...waveStatus,

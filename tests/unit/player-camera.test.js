@@ -26,7 +26,7 @@ function fixture(reducedMotion) {
     THREE, lerp, clamp, camera, Colliders: { list: colliders }, capsuleHasClearance, moveCapsule, Input,
     Ballistics: { raycast: () => null }, createBallisticHit, currentZone: 'roof',
     Settings: { get: key => key === 'reducedMotion' ? reducedMotion : 1 },
-    Audio: { footstep() {}, movement() {} }, HUD: { setHealth() {} }, Weapons: { handleInput() {} },
+    Audio: { footstep() {}, movement() {} }, HUD: { setHealth() {}, setArmor() {} }, Weapons: { handleInput() {} },
   }, { filename: 'player.js' });
   return { ...api, camera, Input, floorY };
 }

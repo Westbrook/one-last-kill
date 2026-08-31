@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import * as Navigation from '../../../src/game/enemy-navigation.js';
 import * as Combat from '../../../src/game/combat-rules.js';
+import * as ArmorRules from '../../../src/game/armor-rules.js';
 import * as StairPursuit from '../../../src/game/stair-pursuit.js';
 import { lerp, smoothstep } from '../../../src/core/math.js';
 import { BUILDING, BALCONY, ROOF } from '../../../src/world/layout.js';
@@ -25,7 +26,7 @@ export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
   const fixture = buildWorldSurfaceFixture();
   const clock = { elapsed: 0 };
   const player = { pos: new THREE.Vector3(), _eyeH: 1.72, _bodyH: 1.84, radius: 0.32, health: 1000 };
-  const playerState = { dead: false }, damage = [], drops = [];
+  const playerState = { dead: false }, damage = [], drops = [], armorDrops = [];
   const supplies = createAmmoSupplies();
   supplies.init({ world: fixture.World, player, canInteract: () => false });
   resolveSurfaceOwnership(fixture.records.values());
@@ -41,7 +42,7 @@ export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
   const silentEffects = new Proxy({}, { get: () => () => {} });
   const deterministicMath = Object.create(Math); deterministicMath.random = () => 0.5;
   const api = runInNewContext(`${source}\n;({ ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, enemyTick, enemyAttackPlayer, hasLineOfSight, isBlocked, primeEnemyInvestigation, raycastEnemies, damageEnemy, killEnemy });`, {
-    THREE, lerp, smoothstep, ...Navigation, ...Combat, ...StairPursuit,
+    THREE, lerp, smoothstep, ...Navigation, ...Combat, ...ArmorRules, ...StairPursuit,
     GameTime: clock, Player: player, PlayerState: playerState,
     scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera(), renderer: { compile() {} },
     World: fixture.World, Colliders, resolveCapsuleAABB, Ballistics: fixture.ballistics, createBallisticHit, BUILDING, BALCONY, ROOF, DISTRICT,
@@ -50,6 +51,7 @@ export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
     beginHumanoidCollapse() {}, updateHumanoidCollapse: () => true,
     ...humanoids,
     WeaponDrops: { _mat: () => null, spawn(...args) { drops.push(args); } }, Audio: audio ?? silentEffects, Blood: silentEffects, FX: silentEffects,
+    ArmorPickups: { spawn(...args) { armorDrops.push(args); } },
     applyPlayerDamage(amount, origin, attacker) { damage.push({ time: clock.elapsed, amount, origin: origin.clone(), attacker }); return true; },
   }, { filename: 'src/game/enemies.js' });
   api.EnemyPool.init();
@@ -58,7 +60,7 @@ export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
     player.pos.set(point.x, point.y + player._eyeH, point.z);
   }
   function reset(goal) {
-    api.Enemies.clearAll(); clock.elapsed = 0; damage.length = 0; drops.length = 0;
+    api.Enemies.clearAll(); clock.elapsed = 0; damage.length = 0; drops.length = 0; armorDrops.length = 0;
     player.health = 1000; playerState.dead = false;
     if (goal) placePlayer(goal);
   }
@@ -73,5 +75,5 @@ export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
     clock.elapsed += dt;
     api.enemiesUpdate(dt);
   }
-  return { ...api, fixture, ballistics: fixture.ballistics, colliders: Colliders.list, clock, player, playerState, damage, drops, supplies, surfaceTopAt, placePlayer, reset, spawn, step };
+  return { ...api, fixture, ballistics: fixture.ballistics, colliders: Colliders.list, clock, player, playerState, damage, drops, armorDrops, supplies, surfaceTopAt, placePlayer, reset, spawn, step };
 }

@@ -56,7 +56,11 @@
           <div id="ragehint"></div>
         </div>
         <div class="vital-readout"><span class="vital-cross" aria-hidden="true">+</span><span id="healthtext">100</span><span class="vital-label">HEALTH</span></div>
-        <div id="healthbar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100 percent health."><div id="healthfill"></div></div>
+        <div class="vital-meter">
+          <div id="armorbar" role="progressbar" aria-label="Armor" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="No armor equipped."><div id="armorfill" aria-hidden="true"></div></div>
+          <div id="healthbar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100 percent health."><div id="healthfill"></div></div>
+        </div>
+        <div id="armorreadout" aria-hidden="true" hidden><span id="armortext">0</span> ARMOR</div>
         <div id="healthwarning" role="status" aria-live="polite" aria-atomic="true"></div>
         <div id="playerstatus">STAY MOVING. FIND A WAY OUT.</div>
       </div>

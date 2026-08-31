@@ -213,8 +213,12 @@ body:has(#deathscreen.show) #healthvignette, body:has(#deathscreen.show) #health
 .vital-cross { font: 21px var(--body); color: #bac6ac; align-self: center; }
 #healthtext { font: 33px var(--display); line-height: 1; letter-spacing: .01em; color: #efefdc; }
 .vital-label { font: 8px var(--mono); letter-spacing: .12em; color: #aab79b; }
-#healthbar { width: 100%; height: 3px; margin: 12px 0 10px; background: rgb(239 239 218 / 18%); }
+.vital-meter { position: relative; width: 100%; height: 15px; margin: 12px 0 10px; }
+#armorbar { --armor-remaining: 0%; position: absolute; inset: 0; pointer-events: none; }
+#armorfill { width: 100%; height: 100%; border: 3px solid #7fc7d6; clip-path: inset(0 calc(100% - var(--armor-remaining)) 0 0); }
+#healthbar { position: absolute; inset: 6px; background: rgb(239 239 218 / 18%); }
 #healthfill { width: 100%; height: 100%; background: #d2d7be; transition: width .15s; }
+#armorreadout { margin: -3px 0 6px; color: #a6d9e3; font: 8px/1.5 var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .09em; }
 #vitals[data-low="true"] #healthfill { background: #b94a36; }
 #vitals[data-low="true"] .vital-cross, #vitals[data-low="true"] .vital-label { color: #d6755e; }
 #vitals[data-health-warning="critical"] #healthfill { background: #ef755f; }

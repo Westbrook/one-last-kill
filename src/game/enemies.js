@@ -12,6 +12,8 @@ import { World } from '../world/world.js';
 import { BUILDING, BALCONY, ROOF } from '../world/layout.js';
 import { DISTRICT } from '../world/district-layout.js';
 import { WeaponDrops } from './weapons.js';
+import { ArmorPickups } from './armor-pickups.js';
+import { MAX_ARMOR, armorStrengthAfterHit } from './armor-rules.js';
 import { Blood, FX } from '../render/effects.js';
 import { applyPlayerDamage, surfaceTopAt } from './mission.js';
 import { ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS } from './mission-data.js';
@@ -50,7 +52,7 @@ const ENEMY_TYPES = {
     weaponType: 'pistol', ammo: 9, holdDistance: 9,
   },
   bruiser: {
-    label: 'bruiser', maxHealth: 110,
+    label: 'bruiser', maxHealth: 110, armor: MAX_ARMOR,
     visual: { skin: '#b78a72', shirt: '#51483b', shirtAccent: '#766957',
       pants: '#34342e', hair: '#1a0e08', height: 1.94, build: 1.32, kind: 'bruiser' },
     speed: 2.6, alertRange: 22, attackRange: 9, attack: 'hitscan',
@@ -198,6 +200,7 @@ const Enemies = {
       height: def.visual.height || 1.8,
       yaw: mesh.rotation.y,
       health: def.maxHealth,
+      armorStrength: def.armor ?? 0,
       state: 'idle', stateTime: 0,
       attackTimer: 0, swingTimer: 0, burstLeft: 0, burstDelayT: 0,
       windupRemaining: -1, aimCommitted: false,
@@ -790,6 +793,7 @@ function damageEnemy(enemy, dmg, hitPart, hitPos) {
   const damage = damageForHit(dmg, hitPart);
   if (damage <= 0) return null;
   const applied = Math.min(enemy.health, damage);
+  enemy.armorStrength = armorStrengthAfterHit(enemy.armorStrength, hitPart);
   enemy.health = Math.max(0, enemy.health - damage);
   enemy.staggerTime = Math.max(enemy.staggerTime, 0.18);
   cancelAttack(enemy);
@@ -815,6 +819,9 @@ function killEnemy(enemy, hitPos) {
   // retain the last known floor, matching the live support fallback.
   const support = surfaceTopAt(enemy.pos.x, enemy.pos.y + 0.20, enemy.pos.z, SUPPORT_LOOKDOWN);
   if (Number.isFinite(support)) enemy.floorY = support;
+  if (enemy.armorStrength > 0) {
+    ArmorPickups.spawn(enemy.pos.x, enemy.floorY, enemy.pos.z, enemy.armorStrength, enemy.zone);
+  }
   const fallAxis = enemy.zone === 'balcony'
     ? enemy.pos.z >= BALCONY.wrap.z1 ? 'x' : 'z'
     : null;

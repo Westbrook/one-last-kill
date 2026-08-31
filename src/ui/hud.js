@@ -20,6 +20,9 @@ const HUD = (() => {
   const healthfill = byId('healthfill');
   const healthtext = byId('healthtext');
   const healthbar = byId('healthbar');
+  const armorbar = byId('armorbar');
+  const armortext = byId('armortext');
+  const armorReadout = byId('armorreadout');
   const vitals = byId('vitals');
   const healthVignette = byId('healthvignette');
   const healthWarningEl = byId('healthwarning');
@@ -58,7 +61,7 @@ const HUD = (() => {
   let threatPresentation = '', threatAngle = '', threatVisible = false;
   let healthWarning = 'normal';
   const rageState = { available: false, active: false, remaining: 0, gamepad: false };
-  const state = { health: 100, weapon: 'FISTS', ammo: '∞', kills: 0, shots: 0, hits: 0, headshots: 0, streak: 0, bestStreak: 0 };
+  const state = { health: 100, armor: 0, weapon: 'FISTS', ammo: '∞', kills: 0, shots: 0, hits: 0, headshots: 0, streak: 0, bestStreak: 0 };
 
   function syncHealthWarning() {
     const level = state.health > 0 && !deathEl.classList.contains('show')
@@ -178,6 +181,19 @@ const HUD = (() => {
       const description = Math.round(health * 100) / 100 + ' percent health'
         + (healthWarning === 'critical' ? '. Critical health.' : healthWarning === 'low' ? '. Low health.' : '.');
       if (healthbar.getAttribute('aria-valuetext') !== description) healthbar.setAttribute('aria-valuetext', description);
+    },
+    setArmor(value) {
+      const armor = clamp(nonNegative(value), 0, 100);
+      if (state.armor === armor && armorbar.getAttribute('aria-valuenow') === String(armor)) return;
+      state.armor = armor;
+      armorbar.style.setProperty('--armor-remaining', armor + '%');
+      armorbar.setAttribute('aria-valuenow', String(armor));
+      armorbar.setAttribute('aria-valuetext', armor > 0
+        ? Math.round(armor * 100) / 100 + ' percent armor. Absorbs damage before health.'
+        : 'No armor equipped.');
+      // A fractional last point still provides protection, so do not label it 0.
+      write(armortext, Math.ceil(armor));
+      if (armorReadout.hidden !== (armor === 0)) armorReadout.hidden = armor === 0;
     },
     setWeapon(name, ammoString) {
       state.weapon = String(name);

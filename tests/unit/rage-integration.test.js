@@ -9,6 +9,7 @@ import { capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
 import { createBallisticHit } from '../../src/core/ballistics.js';
 import { lerp, clamp } from '../../src/core/math.js';
 import { createRageState } from '../../src/game/rage-rules.js';
+import { applyArmorDamage, clampArmor } from '../../src/game/armor-rules.js';
 import { createCombatStats } from '../../src/game/combat-stats.js';
 import { WEAPON_DEFS } from '../../src/game/weapon-data.js';
 
@@ -31,7 +32,7 @@ function fixture(options) {
   const Rage = createRageState(options), CombatStats = createCombatStats({ rage: Rage });
   const Input = createInputState(), clock = new FixedStepClock(), GameTime = { elapsed: 0 };
   Input.activate();
-  const calls = { health: [], rage: [], messages: [], attacks: 0, audioTime: [], touchContexts: [] };
+  const calls = { health: [], armor: [], rage: [], messages: [], attacks: 0, audioTime: [], touchContexts: [] };
   Input.setTouchContext = value => calls.touchContexts.push({ ...value });
   const noop = () => {}, hooks = { attack: noop, enemy: noop, input: noop };
   const conditions = { intro: false, ending: false };
@@ -39,12 +40,13 @@ function fixture(options) {
     weapon: { current: 'pistol', loaded: 4, reserve: 12 }, ammoSupplies: { collected: [] } };
   const HUD = {
     setHealth(value) { calls.health.push(value); },
+    setArmor(value) { calls.armor.push(value); },
     setRage(value) { calls.rage.push({ ...value }); },
     message(value) { calls.messages.push(value); },
     bloodFlash: noop, showDeath: noop, update: noop,
   };
   const bindings = {
-    THREE, lerp, clamp, Rage, CombatStats, Input, clock, GameTime, HUD,
+    THREE, lerp, clamp, Rage, CombatStats, Input, clock, GameTime, HUD, applyArmorDamage, clampArmor,
     camera: new THREE.PerspectiveCamera(82, 16 / 9, 0.05, 300),
     Colliders: { list: [new THREE.Box3(new THREE.Vector3(-100, -1, -100), new THREE.Vector3(100, 0, 100))] },
     capsuleHasClearance, moveCapsule, createBallisticHit, Ballistics: { raycast: () => null },
@@ -60,6 +62,7 @@ function fixture(options) {
     Enemies: { list: [], clearAll: noop },
     WaveDirector: { update: noop, stop: noop, reset: noop, start: noop },
     HealPickups: { update: noop, restoreZone: noop },
+    ArmorPickups: { update: noop, clearAll: noop, setZone: noop },
     StreetChoice: { update: noop, dismiss: noop, reset: noop, arm: noop },
     Endings: { update: noop, reset: noop, isResolved: () => conditions.ending },
     IntroCard: { isOpen: () => conditions.intro },
@@ -90,6 +93,28 @@ function fixture(options) {
     pressRage() { Input.keyUp('KeyT'); Input.keyDown('KeyT'); api.stepFrame(clock.step); },
   };
 }
+
+test('mission damage consumes armor before health and keeps the HUD and checkpoint retry synchronized', () => {
+  const h = fixture();
+  assert.equal(h.Player.armor, 0, 'new missions start without armor');
+  h.Player.armor = 30;
+  h.applyPlayerDamage(20);
+  assert.equal(h.Player.armor, 15); assert.equal(h.Player.health, 100);
+  h.applyPlayerDamage(40);
+  assert.equal(h.Player.armor, 0); assert.equal(h.Player.health, 80);
+  assert.equal(h.calls.armor.at(-1), 0); assert.equal(h.calls.health.at(-1), 80);
+  h.bindings.checkpointSeed.armor = 62.5;
+  let clears = 0;
+  h.bindings.ArmorPickups.clearAll = () => clears++;
+  h.applyPlayerDamage(100);
+  assert.equal(h.PlayerState.dead, true); assert.equal(h.Player.armor, 0);
+  h.restartFromZone();
+  assert.equal(h.Player.armor, 62.5); assert.equal(h.calls.armor.at(-1), 62.5);
+  assert.equal(h.Player.health, 100); assert.equal(clears, 1);
+  delete h.bindings.checkpointSeed.armor;
+  h.restartFromZone();
+  assert.equal(h.Player.armor, 0, 'a checkpoint without armor cannot grant it');
+});
 
 test('the main loop exposes sights only for a held firearm and refreshes availability after a weapon change', () => {
   const h = fixture();

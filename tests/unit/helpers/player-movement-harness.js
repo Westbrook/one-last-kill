@@ -58,7 +58,7 @@ export function createPlayerMovementHarness(world, { dt = 1 / 120, reducedMotion
       footstep(options) { audio.push({ kind: 'footstep', ...options }); },
       movement(options) { audio.push({ kind: 'movement', ...options }); },
     },
-    HUD: { setHealth() {} }, Weapons: { handleInput() {} },
+    HUD: { setHealth() {}, setArmor() {} }, Weapons: { handleInput() {} },
   }, { filename: 'src/game/player.js:movement-input-fixture' });
   const { Player } = api;
   function feet() { return new THREE.Vector3(Player.pos.x, Player.pos.y - Player._eyeH, Player.pos.z); }

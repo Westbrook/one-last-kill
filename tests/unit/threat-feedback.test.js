@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { createRageState } from '../../src/game/rage-rules.js';
+import { applyArmorDamage, clampArmor } from '../../src/game/armor-rules.js';
 import { createOffscreenThreatTracker } from '../../src/game/offscreen-threats.js';
 
 const adapterSource = readFileSync(new URL('../../src/game/threat-feedback.js', import.meta.url), 'utf8')
@@ -32,11 +33,12 @@ function feedbackHarness() {
   camera.position.set(0, 1.72, 0); camera.rotation.order = 'YXZ';
   const PlayerState = { dead: false };
   const Player = { pos: new THREE.Vector3(0, 1.72, 0), health: 100, yaw: 0, pitch: 0, eyeHeight: 1.72 };
-  const calls = { threats: [], health: [], blood: [], directions: [], hitSources: [], lifecycle: [] };
+  const calls = { threats: [], health: [], armor: [], blood: [], directions: [], hitSources: [], lifecycle: [] };
   const record = name => (...args) => { calls.lifecycle.push([name, ...args]); };
   const HUD = {
     setOffscreenThreat(value) { calls.threats.push(value ? { ...value } : null); },
     setHealth(value) { calls.health.push(value); },
+    setArmor(value) { calls.armor.push(value); },
     bloodFlash(value) { calls.blood.push(value); },
     damageDirection(value) { calls.directions.push(value); },
     showDeath: record('showDeath'), message: record('message'),
@@ -74,7 +76,7 @@ function missionHarness() {
   };
   const checkpointStatus = { valid: true, foot: { x: -9, y: 4, z: -4 } };
   const bindings = {
-    ...h, checkpointSeed: checkpoint, checkpointStatus, Rage: createRageState(),
+    ...h, checkpointSeed: checkpoint, checkpointStatus, Rage: createRageState(), applyArmorDamage, clampArmor,
     getCheckpointStatus: () => checkpointStatus,
     saveCheckpoint() { throw new Error('The fixture already provides a saved checkpoint'); },
     WaveDirector: { stop: record('waveStop'), reset: record('waveReset'), start: record('waveStart') },
@@ -86,6 +88,7 @@ function missionHarness() {
     Audio: { clearRadio: record('radioClear'), reset: record('audioReset') },
     Weapons: { cancelAttack: record('cancelAttack'), restore: record('weaponRestore') },
     AmmoSupplies: { restore: record('ammoRestore'), setZone: record('ammoZone') },
+    ArmorPickups: { clearAll: record('armorClear'), setZone: record('armorZone') },
     HealPickups: { restoreZone: record('healRestore') }, ZoneCull: { setHidden: record('zoneCull') },
     zoneChanged: record('zoneChanged'), resetPlayerMotion: record('motionReset'),
   };
