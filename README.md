@@ -42,7 +42,7 @@ For a phone or tablet, enable **Settings → On-screen touch controls** before s
 
 **SIGHTS** is the firearm aim toggle: it brings the weapon to its sights, narrows the field of view, and tightens shot spread. It appears only when carrying a firearm; swiping still turns the camera. **RAGE** appears only while the player is eligible to enter rage. Both controls clear their touch state when they become unavailable.
 
-Repeated taps do not trigger page zoom: the document uses `touch-action: manipulation`, while the game canvas and touch controls use `touch-action: none`. Native menu scrolling and pinch zoom remain available outside the game surface. See [WebKit’s touch-action guidance](https://webkit.org/blog/5610/more-responsive-tapping-on-ios/). Embedded `iframe` elements are fixed at the bottom center of the window, with placement rules marked `!important` to override ordinary inline styles.
+Repeated taps are game input, never a page-zoom command. The viewport requests a fixed scale, every element has an explicit `touch-action`, and an independent startup script cancels native touch zoom even on Safari versions that ignore the CSS alone. Game-surface releases stay with Pointer Events; repeated menu taps retain their button actions, and menu scrolling and sliders remain usable. Embedded `iframe` elements are fixed at the bottom center of the window and hidden during active gameplay; parent-page gesture rules cannot control a third-party frame's contents.
 
 You begin with **fists and no ammunition**. Defeat a bat carrier or gunman and use E, gamepad Y, or touch **USE** to take their weapon. New missions never grant a starter gun; checkpoint retries preserve only the weapon and ammunition you actually reached that checkpoint with.
 

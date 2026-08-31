@@ -19,8 +19,7 @@ body:has(#overlay:not(.hidden)) #touch-controls,
 body:has(#introcard.show) #touch-controls,
 body:has(#endcard.show) #touch-controls,
 body:has(#deathscreen.show) #touch-controls { display: none; }
-body[data-touch-controls="true"] #game { touch-action: none; }
-#touch-controls [data-touch] { touch-action: none; pointer-events: auto; }
+#touch-controls [data-touch] { pointer-events: auto; }
 .touch-look { position: absolute; inset: 76px 0 0 40%; }
 .touch-look-hint { position: absolute; top: 28%; right: 20%; font: 8px var(--mono); letter-spacing: .18em; color: rgb(235 231 220 / 48%); text-shadow: 0 1px 6px #000; pointer-events: none; }
 .touch-look[data-pressed="true"] .touch-look-hint { opacity: 0; }

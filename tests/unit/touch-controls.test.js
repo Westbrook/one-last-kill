@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { createInputState } from '../../src/core/input-state.js';
 import { createTouchControls } from '../../src/ui/touch-controls.js';
 import { weaponHarness } from './helpers/weapon-harness.js';
@@ -54,6 +56,8 @@ class Element extends EventTarget {
   }
   contains(element) { return element === this || this.children.some(child => child.contains(element)); }
   matches(selector) {
+    if (selector.includes(',')) return selector.split(',').some(part => this.matches(part.trim()));
+    if (selector.startsWith('#')) return this.id === selector.slice(1);
     if (selector.startsWith('.')) return this.getAttribute('class')?.split(' ').includes(selector.slice(1));
     if (selector === '[data-touch]') return this.attributes.has('data-touch');
     if (selector === 'button[data-touch]') return this.tagName === 'button' && this.attributes.has('data-touch');
@@ -86,8 +90,9 @@ class Element extends EventTarget {
 
 function fixture(t, { enabled = true, active = true, context } = {}) {
   const viewport = new EventTarget();
-  const doc = { body: new Element('body'), createElement: name => new Element(name) };
-  doc.body.parentNode = viewport;
+  const doc = Object.assign(new EventTarget(), { body: new Element('body'), createElement: name => new Element(name) });
+  doc.body.parentNode = doc;
+  doc.parentNode = viewport;
   const input = createInputState();
   input.activate();
   let pauses = 0;
@@ -298,6 +303,35 @@ test('a completed fire tap tolerates small jitter and emits exactly one pulse on
     f.click('fire', 1);
     assert.deepEqual(transitions, [true, false], 'stale release and compatibility click cannot replay the tap');
     assertReleased(f.input);
+  }
+});
+
+test('native zoom cancellation preserves every rapid fire tap, including with a second thumb held', t => {
+  const zoomSource = readFileSync(new URL('../../src/core/touch-zoom.js', import.meta.url), 'utf8');
+  for (const moving of [false, true]) {
+    const f = fixture(t);
+    runInNewContext(zoomSource, { document: f.doc });
+    const fire = f.elements.get('fire');
+    const move = { identifier: 1, clientX: 180, clientY: 140 };
+    if (moving) {
+      f.down('move', 1, move);
+      emit(f.elements.get('move'), 'touchstart', { touches: [move], timeStamp: 0 });
+    }
+    for (let index = 0; index < 6; index++) {
+      const contact = { identifier: index + 2, clientX: 600, clientY: 300 };
+      const down = f.down('fire', contact.identifier, { ...contact, timeStamp: 100 + index * 100 });
+      emit(fire, 'touchstart', { touches: moving ? [move, contact] : [contact], timeStamp: down.timeStamp });
+      assert.equal(f.input.consumeFrame().leftPressed, false, 'contact alone cannot fire');
+      const up = f.end(contact.identifier, 'pointerup', { timeStamp: down.timeStamp + 40 });
+      const end = emit(fire.querySelector('span'), 'touchend', {
+        touches: moving ? [move] : [], changedTouches: [contact], timeStamp: up.timeStamp, cancelable: true,
+      });
+      assert.equal(end.defaultPrevented, true, 'every game release must cancel native zoom');
+      assert.equal(end.stopped, false, 'touch events can still reach other listeners');
+      assert.equal(f.input.consumeFrame().leftPressed, true, 'each completed tap still fires');
+      assert.equal(f.input.consumeFrame().leftPressed, false, 'the zoom guard cannot replay an attack');
+      if (moving) assert.ok(f.input.consumeFrame().moveY > 0, 'the other thumb keeps moving');
+    }
   }
 });
 
