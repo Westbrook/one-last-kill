@@ -6,6 +6,8 @@ import * as Navigation from '../../../src/game/enemy-navigation.js';
 import * as Combat from '../../../src/game/combat-rules.js';
 import * as ArmorRules from '../../../src/game/armor-rules.js';
 import * as StairPursuit from '../../../src/game/stair-pursuit.js';
+import { DIFFICULTY_LEVELS, getDifficultyProfile, scaleEncounter } from '../../../src/game/difficulty.js';
+import { DifficultyLootLedger } from '../../../src/game/difficulty-loot-rules.js';
 import { lerp, smoothstep } from '../../../src/core/math.js';
 import { BUILDING, BALCONY, ROOF } from '../../../src/world/layout.js';
 import { DISTRICT } from '../../../src/world/district-layout.js';
@@ -22,7 +24,7 @@ import { buildWorldSurfaceFixture } from './world-surface-fixture.js';
  * sinks are replaced; no browser, renderer or audio device is constructed.
  * A focused integration test can supply the real DOM-free humanoid functions.
  */
-export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
+export function createEnemyAIHarness({ audio = null, humanoids = null, difficulty = 'average' } = {}) {
   const fixture = buildWorldSurfaceFixture();
   const clock = { elapsed: 0 };
   const player = { pos: new THREE.Vector3(), _eyeH: 1.72, _bodyH: 1.84, radius: 0.32, health: 1000 };
@@ -41,8 +43,10 @@ export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
   assert.doesNotMatch(source, /^import\s/m);
   const silentEffects = new Proxy({}, { get: () => () => {} });
   const deterministicMath = Object.create(Math); deterministicMath.random = () => 0.5;
-  const api = runInNewContext(`${source}\n;({ ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, enemyTick, enemyAttackPlayer, hasLineOfSight, isBlocked, primeEnemyInvestigation, raycastEnemies, damageEnemy, killEnemy });`, {
+  const runSettings = { profile: getDifficultyProfile(difficulty) };
+  const api = runInNewContext(`${source}\n;({ ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, enemyTick, enemyAttackPlayer, hasLineOfSight, isBlocked, primeEnemyInvestigation, raycastEnemies, damageEnemy, killEnemy, resetDifficultyLoot, snapshotDifficultyLoot, restoreDifficultyLoot });`, {
     THREE, lerp, smoothstep, ...Navigation, ...Combat, ...ArmorRules, ...StairPursuit,
+    RunSettings: runSettings, DifficultyLootLedger, DIFFICULTY_LEVELS, scaleEncounter,
     GameTime: clock, Player: player, PlayerState: playerState,
     scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera(), renderer: { compile() {} },
     World: fixture.World, Colliders, resolveCapsuleAABB, Ballistics: fixture.ballistics, createBallisticHit, BUILDING, BALCONY, ROOF, DISTRICT,
@@ -61,6 +65,7 @@ export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
   }
   function reset(goal) {
     api.Enemies.clearAll(); clock.elapsed = 0; damage.length = 0; drops.length = 0; armorDrops.length = 0;
+    api.resetDifficultyLoot();
     player.health = 1000; playerState.dead = false;
     if (goal) placePlayer(goal);
   }
@@ -75,5 +80,5 @@ export function createEnemyAIHarness({ audio = null, humanoids = null } = {}) {
     clock.elapsed += dt;
     api.enemiesUpdate(dt);
   }
-  return { ...api, fixture, ballistics: fixture.ballistics, colliders: Colliders.list, clock, player, playerState, damage, drops, armorDrops, supplies, surfaceTopAt, placePlayer, reset, spawn, step };
+  return { ...api, fixture, ballistics: fixture.ballistics, colliders: Colliders.list, clock, player, playerState, runSettings, damage, drops, armorDrops, supplies, surfaceTopAt, placePlayer, reset, spawn, step };
 }

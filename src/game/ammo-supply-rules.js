@@ -57,15 +57,22 @@ export function ammoSupplyAmount(weapon, remainingUnits) {
 /** Stateful inventory only; no clock, renderer, input, weapon mutation or audio. */
 export class AmmoSupplyLedger {
   constructor(caches = AMMO_SUPPLY_CACHES) {
-    this.capacities = new Map(caches.map(cache => [cache.id, cache.units]));
-    if (this.capacities.size !== caches.length || caches.some(cache => !cache.id || !Number.isSafeInteger(cache.units) || cache.units < 0)) {
+    this.baseCapacities = new Map(caches.map(cache => [cache.id, cache.units]));
+    if (this.baseCapacities.size !== caches.length || caches.some(cache => !cache.id || !Number.isSafeInteger(cache.units) || cache.units < 0)) {
       throw new RangeError('Ammo supplies require unique ids and finite integer budgets');
     }
     this.remaining = new Map();
     this.reset();
   }
 
-  reset() { this.remaining = new Map(this.capacities); }
+  reset(ammoMultiplier = 1) {
+    if (!Number.isFinite(ammoMultiplier) || ammoMultiplier < 0) throw new RangeError('Ammo supply multiplier must be finite and nonnegative');
+    const capacities = new Map([...this.baseCapacities].map(([id, units]) => [id, Math.round(units * ammoMultiplier)]));
+    if ([...capacities.values()].some(units => !Number.isSafeInteger(units))) throw new RangeError('Ammo supply budgets must remain finite integers');
+    this.capacities = capacities;
+    this.remaining = new Map(capacities);
+  }
+  capacity(id) { return this.capacities.get(id) ?? 0; }
   units(id) { return this.remaining.get(id) ?? 0; }
   available(id, weapon) { return ammoSupplyAmount(weapon, this.units(id)); }
 

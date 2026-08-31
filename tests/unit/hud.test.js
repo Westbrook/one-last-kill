@@ -66,6 +66,18 @@ test('initial HUD describes fists and hides an inactive reload from accessibilit
   assert.match(markup, /id="reloadindicator" aria-hidden="true"/);
 });
 
+test('restored run statistics replace a failed attempt best streak', () => {
+  const { hud } = fixture();
+  hud.setCombat({ kills: 12, streak: 12, bestStreak: 12 });
+  assert.equal(hud.snapshot().bestStreak, 12);
+  hud.setCombat({ kills: 4, streak: 2, bestStreak: 3 });
+  assert.equal(hud.snapshot().bestStreak, 3);
+  hud.setCombat({ kills: 5, streak: 3, bestStreak: 3 });
+  assert.equal(hud.snapshot().bestStreak, 3);
+  hud.setCombat({ kills: 0, streak: 0, bestStreak: 0 });
+  assert.equal(hud.snapshot().bestStreak, 0);
+});
+
 test('armor frames health independently and preserves fractional protection in the readout', () => {
   const { hud, element } = fixture();
   assert.equal(hud.snapshot().armor, 0);

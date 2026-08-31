@@ -6,6 +6,7 @@ import { HEALTH_SUPPLIES } from '../../../src/game/health-supply-data.js';
 import { ZONE_WAVE_CONFIG } from '../../../src/game/mission-data.js';
 import { createHealthPickupModel } from '../../../src/render/health-pickup-model.js';
 import { createFireHazards } from '../../../src/game/fire-hazards.js';
+import { createRunSettings } from '../../../src/game/run-settings.js';
 
 const missionSource = readFileSync(new URL('../../../src/game/mission.js', import.meta.url), 'utf8');
 
@@ -26,7 +27,9 @@ assert.match(initializationSource, /HealPickups\.spawn\(/);
  * mission services and presentation are explicit recording sinks: this creates
  * no browser, renderer, audio context, event listeners or live input handlers.
  */
-export function createHealthPickupHarness() {
+export function createHealthPickupHarness({ difficulty = 'average' } = {}) {
+  const RunSettings = createRunSettings();
+  RunSettings.configure({ difficulty }); RunSettings.start();
   const World = new THREE.Group();
   const Player = { pos: new THREE.Vector3(0, 5.72, 0), _eyeH: 1.72, health: 100 };
   const PlayerState = { dead: false }, GameTime = { elapsed: 0 };
@@ -42,7 +45,7 @@ export function createHealthPickupHarness() {
   };
   const api = runInNewContext(`let initialized = false;\n${pickupSource}\n${initializationSource}\n`
     + ';({ HealPickups, initMission });', {
-    THREE, World, Player, PlayerState, GameTime, Math: deterministicMath, HEALTH_SUPPLIES, ZONE_WAVE_CONFIG, createHealthPickupModel,
+    THREE, World, Player, PlayerState, GameTime, RunSettings, Math: deterministicMath, HEALTH_SUPPLIES, ZONE_WAVE_CONFIG, createHealthPickupModel,
     FireHazards: null, createFireHazards, WorldState: { fires: [] }, Colliders: { list: [] },
     HUD: {
       setHealth(value) { calls.health.push(value); },
@@ -59,5 +62,5 @@ export function createHealthPickupHarness() {
     restartFromZone() { calls.restartRequests++; return true; },
     engageLock() { calls.pointerLockRequests++; },
   }, { filename: 'src/game/mission.js:health-pickups' });
-  return { ...api, World, Player, PlayerState, GameTime, calls };
+  return { ...api, World, Player, PlayerState, GameTime, RunSettings, calls };
 }

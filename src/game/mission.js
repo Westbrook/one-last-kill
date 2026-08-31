@@ -5,8 +5,8 @@ import { Input, engageLock } from '../core/input.js';
 import { Colliders, capsuleHasClearance } from '../core/collision.js';
 import { Player, PlayerState, resetPlayerMotion } from './player.js';
 import { HUD, ObjectiveBanner, EndCard } from '../ui/hud.js';
-import { World, WorldState, currentZone, zoneChanged, onZoneChange, ZoneCull } from '../world/world.js';
-import { Enemies, isBlocked, primeEnemyInvestigation } from './enemies.js';
+import { World, WorldState, Triggers, currentZone, zoneChanged, onZoneChange, ZoneCull } from '../world/world.js';
+import { Enemies, isBlocked, primeEnemyInvestigation, resetDifficultyLoot, snapshotDifficultyLoot, restoreDifficultyLoot } from './enemies.js';
 import { Weapons, WeaponDrops } from './weapons.js';
 import { AmmoSupplies } from './ammo-supplies.js';
 import { ArmorPickups } from './armor-pickups.js';
@@ -26,6 +26,12 @@ import { readThreatView, ThreatFeedback } from './threat-feedback.js';
 import { DISTRICT } from '../world/district-layout.js';
 import { Architecture } from '../world/architecture.js';
 import { createHealthPickupModel } from '../render/health-pickup-model.js';
+import { RunSettings } from './run-settings.js';
+import { scaleEncounter } from './difficulty.js';
+import { HealthRegeneration } from './health-regeneration.js';
+import { CombatStats } from './combat-stats.js';
+import { DefenseDirector } from './defense-director.js';
+import { DefenseSupplies } from './defense-supplies.js';
 
 let checkpoint = null;
 let initialized = false;
@@ -36,6 +42,9 @@ const routePlayerFoot = { x: 0, y: 0, z: 0 };
 
 function applyPlayerDamage(amount, source = null, attacker = null, { kind = 'attack', feedback = true } = {}) {
   if (PlayerState.dead || !Number.isFinite(amount) || amount <= 0) return;
+  if (kind !== 'fire') amount *= RunSettings.profile.enemyDamage;
+  HealthRegeneration.damaged();
+  DefenseDirector.recordDamage(amount);
   // A ballistic vest does not absorb contact with open flames.
   const healthDamage = kind === 'fire' ? Math.min(Player.health, amount) : applyArmorDamage(Player, amount);
   if (kind === 'fire') Player.health -= healthDamage;
@@ -67,7 +76,7 @@ function playerDie() {
   HUD.showDeath(true);
   Input.pause({ showOverlay: false });
   Audio.clearRadio();
-  HUD.message('DOWN — RESTART FROM CHECKPOINT', 4);
+  HUD.message(RunSettings.snapshot().mode === 'defense' ? 'DOWN — RETRY DEFENSE FROM WAVE 1' : 'DOWN — RESTART FROM CHECKPOINT', 4);
 }
 
 function saveCheckpoint(zone, branch = null) {
@@ -77,6 +86,9 @@ function saveCheckpoint(zone, branch = null) {
     // ammunition without this ledger would refill already-collected supplies.
     ammoSupplies: AmmoSupplies.snapshot(),
     armor: clampArmor(Player.armor),
+    combatStats: CombatStats.snapshot(),
+    difficultyLoot: snapshotDifficultyLoot(),
+    run: RunSettings.snapshot(),
   });
   const anchor = checkpoint.anchor;
   // Retain this public field for the existing player/debugging interface.
@@ -97,6 +109,11 @@ function getCheckpointStatus(zone) {
 }
 
 function restartFromZone() {
+  if (RunSettings.isStarted() && RunSettings.snapshot().mode === 'defense') {
+    startRun();
+    HUD.message('DEFENSE RESTARTED · WAVE 1', 2);
+    return true;
+  }
   if (!checkpoint) saveCheckpoint('apartment');
   const saved = checkpoint;
   const status = getCheckpointStatus(saved.zone);
@@ -118,6 +135,10 @@ function restartFromZone() {
   ThreatFeedback.clear();
   Audio.reset();
   Rage.reset();
+  HealthRegeneration.reset();
+  if (saved.combatStats) CombatStats.restore(saved.combatStats);
+  if (saved.difficultyLoot) restoreDifficultyLoot(saved.difficultyLoot);
+  HUD.setCombat?.(CombatStats.snapshot());
   HUD.setRage?.({});
 
   FireHazards?.reset();
@@ -289,10 +310,18 @@ function spawnScheduled(key, zone, schedule, counts, progress = 0) {
       primeEnemyInvestigation(enemy, Player.pos, playerFootPosition().y);
       enemy.spawnGrace = Math.max(enemy.spawnGrace, spawn.graceSeconds);
     }
+    if (RunSettings.snapshot().mode === 'defense') {
+      primeEnemyInvestigation(enemy, Player.pos, playerFootPosition().y);
+      enemy.spawnGrace = Math.max(enemy.spawnGrace, 1);
+    }
     entry.type = spawn.type;
   }
   function announce(entry, firstForWave) {
     if (firstForWave) {
+      if (key.startsWith('defense-')) {
+        HUD.message('DEFEND · WAVE ' + (entry.waveIndex + 1) + ' / ' + schedule.config.waveCount, 2);
+        return;
+      }
       const label = schedule.config.stages?.[entry.waveIndex]?.label;
       const incoming = schedule.reinforcementsActive ? 'REINFORCEMENTS' : (zone === 'balcony' ? 'CLOSE CONTACTS' : 'CONTACTS');
       HUD.message(incoming + ' · ' + (label || (entry.waveIndex + 1) + ' / ' + schedule.config.waveCount), 1.8);
@@ -366,7 +395,7 @@ function spawnPending(zone, types, config, key = zone) {
 }
 
 function recoverAfterContacts() {
-  const gained = Math.max(0, Math.min(25, 100 - Player.health));
+  const gained = Math.max(0, Math.min(Math.round(25 * RunSettings.profile.health), 100 - Player.health));
   Player.health += gained;
   HUD.setHealth(Player.health);
   return gained > 0 ? ' · +' + gained + ' HP' : '';
@@ -412,7 +441,8 @@ const WaveDirector = {
 
   start(zone) {
     if (this.finalLocked) return;
-    const config = ZONE_WAVE_CONFIG[zone];
+    const authored = ZONE_WAVE_CONFIG[zone];
+    const config = authored && scaleEncounter(authored, RunSettings.profile);
     if (!config) { this.stop(); return; }
     this.zone = zone;
     this.active = true;
@@ -486,6 +516,7 @@ const WaveDirector = {
 
 function handleZoneChange(zone) {
   if (restoringCheckpoint || !CHECKPOINTS[zone]) return;
+  if (RunSettings.snapshot().mode === 'defense') return;
   // Once a branch starts, entering the other arena cannot erase its enemies,
   // reset its timer, or replace the checkpoint with the wrong ending.
   if (Endings.isCommitted()) { Endings.refreshObjective(); return; }
@@ -538,7 +569,7 @@ const HealPickups = (() => {
       halo.userData.zone = zone;
       halo.position.copy(mesh.position);
       halo.position.y += 0.05;
-      const pickup = { id, mesh, halo, amount, zone, active: true, baseY: mesh.position.y, phase: Math.random() * Math.PI * 2 };
+      const pickup = { id, mesh, halo, amount, baseAmount: amount, zone, active: true, baseY: mesh.position.y, phase: Math.random() * Math.PI * 2 };
       list.push(pickup);
       syncVisibility(pickup);
       World.add(mesh, halo);
@@ -547,6 +578,13 @@ const HealPickups = (() => {
     setZone(zone) {
       activeZone = zone;
       for (const pickup of list) syncVisibility(pickup);
+    },
+    reset() {
+      for (const pickup of list) {
+        pickup.amount = Math.max(1, Math.round(pickup.baseAmount * RunSettings.profile.health));
+        pickup.active = true;
+        syncVisibility(pickup);
+      }
     },
     restoreZone(zone) {
       for (const pickup of list) if (pickup.zone === zone) pickup.active = true;
@@ -567,7 +605,7 @@ const HealPickups = (() => {
         const gained = Math.min(pickup.amount, 100 - Player.health);
         Player.health += gained;
         HUD.setHealth(Player.health);
-        HUD.message('+' + gained + ' HP', 1.2);
+        HUD.message('+' + Math.round(gained) + ' HP', 1.2);
         Audio.pickupChime({ kind: 'health', environment: pickup.zone ?? activeZone });
         pickup.active = false;
         syncVisibility(pickup);
@@ -645,9 +683,9 @@ const Endings = (() => {
   let objectiveTimer = 0;
 
   function begin(branch) {
-    if (mode) return;
+    if (mode || RunSettings.snapshot().mode === 'defense') return;
     mode = branch;
-    const config = FINAL_ENCOUNTERS[branch];
+    const config = scaleEncounter(FINAL_ENCOUNTERS[branch], RunSettings.profile);
     bakeryDeadline = config.deadlineSeconds;
     schedule = new EncounterSchedule(config, { seed: EncounterSeeds.next() });
     counts = createEncounterCounts(config);
@@ -788,6 +826,8 @@ function getMissionState() {
   const stageIndex = WaveDirector.wavePending ? WaveDirector.waveIndex - 1 : WaveDirector.waveIndex;
   return {
     initialized,
+    run: RunSettings.snapshot(),
+    defense: DefenseDirector.snapshot(),
     zone: currentZone,
     checkpoint: checkpoint ? {
       zone: checkpoint.zone,
@@ -801,7 +841,7 @@ function getMissionState() {
       ...waveStatus,
       zone: WaveDirector.zone,
       index: WaveDirector.waveIndex,
-      total: ZONE_WAVE_CONFIG[WaveDirector.zone]?.waveCount ?? 0,
+      total: WaveDirector.schedule?.config.waveCount ?? 0,
       totalContacts: waveStatus.total,
       active: WaveDirector.active,
       cleared: WaveDirector.cleared,
@@ -817,10 +857,107 @@ function getMissionState() {
   };
 }
 
+/** Called once the setup is confirmed; retries retain the locked run settings. */
+function startRun() {
+  if (!RunSettings.isStarted()) return false;
+  const run = RunSettings.snapshot();
+  const zone = run.mode === 'defense' ? run.arena : 'apartment';
+  const anchor = CHECKPOINTS[zone];
+  Input.reset();
+  Triggers.reset();
+  WaveDirector.reset();
+  DefenseDirector.reset();
+  Endings.reset();
+  StreetChoice.reset();
+  Enemies.clearAll();
+  WeaponDrops.clearAll();
+  ArmorPickups.clearAll();
+  AmmoSupplies.reset();
+  CombatStats.reset();
+  resetDifficultyLoot();
+  HealthRegeneration.reset();
+  FireHazards?.reset();
+  ThreatFeedback.clear();
+  Audio.reset();
+  EndCard.hide();
+  PlayerState.dead = false;
+  Player.health = 100;
+  Player.armor = 0;
+  Player.pos.set(anchor.x, anchor.y + Player.eyeHeight + 0.02, anchor.z);
+  Player.yaw = anchor.yaw;
+  Player.pitch = 0;
+  resetPlayerMotion();
+  Weapons.restore({ current: 'fists', loaded: 0, reserve: 0 });
+  HealPickups.reset();
+  HealPickups.setZone(zone);
+  ArmorPickups.setZone(zone);
+  AmmoSupplies.setZone(zone);
+  HUD.showDeath(false);
+  HUD.setHealth(100);
+  HUD.setArmor(0);
+  HUD.setRage?.({});
+  HUD.setCombat?.(CombatStats.snapshot());
+  restoringCheckpoint = true;
+  try { zoneChanged(zone); } finally { restoringCheckpoint = false; }
+  saveCheckpoint(zone);
+
+  if (run.mode === 'defense') {
+    DefenseSupplies.init({
+      world: World, player: Player, weapons: Weapons,
+      canCollect: () => Input.active && !PlayerState.dead,
+      floorAt: point => surfaceTopAt(point.x, point.y, point.z, 0.35, 0.16),
+      blocked: point => !capsuleHasClearance({ ...point, y: point.y + 0.03 }, Player.radius, Player.bodyHeight, Colliders.list),
+      spawnWeapon: ({ type, ammo, position }) => {
+        const drop = WeaponDrops.spawn(position.x, position.y, position.z, type, ammo);
+        if (drop) drop.defenseSupply = true;
+        return drop;
+      },
+      clearWeapons: () => {
+        for (const drop of [...WeaponDrops.list]) if (drop.defenseSupply) WeaponDrops.remove(drop);
+      },
+      onCollect(pickup) {
+        HUD.setHealth(Player.health);
+        HUD.setArmor(Player.armor);
+        HUD.message(pickup.kind === 'ammo' ? 'RESERVE AMMO RESTOCKED · RELOAD WHEN READY' : 'FIELD ' + pickup.kind.toUpperCase() + ' COLLECTED', 1.5);
+        Audio.pickupChime({ kind: pickup.kind, environment: zone });
+      },
+    });
+    DefenseDirector.init({
+      nextSeed: () => EncounterSeeds.next(),
+      playerFoot: playerFootPosition,
+      isDead: () => PlayerState.dead,
+      isGrounded: () => Player.onGround,
+      returnPlayer(foot) {
+        Player.pos.set(foot.x, foot.y + Player.eyeHeight, foot.z);
+        resetPlayerMotion();
+      },
+      stats: () => CombatStats.snapshot(),
+      supplies: DefenseSupplies,
+      createCounts: createEncounterCounts,
+      countEnemies: collectEncounterCounts,
+      spawn: spawnScheduled,
+      message: (message, duration) => HUD.message(message, duration),
+      objective: (message, progress) => {
+        HUD.setObjective(message);
+        HUD.setStatus({ chapter: RunSettings.profile.label + ' · WAVES CLEARED', progress, progressLabel: 'Defense waves cleared' });
+      },
+      onWin(result) {
+        EndCard.show('— DEFENSE COMPLETE —', 'YOU HELD THE LINE',
+          `You defended the ${zone === 'roof' ? 'rooftop' : 'street'} through all ${run.waves} waves.\nThe last attackers are down. The ground is yours.`,
+          CombatStats.snapshot(), result);
+      },
+    });
+    ObjectiveBanner.show(zone, 'HOLD THE ' + (zone === 'roof' ? 'ROOFTOP' : 'STREET') + ' · ' + run.waves + ' WAVES');
+    DefenseDirector.start(run);
+  } else WaveDirector.start(zone);
+  return true;
+}
+
 export {
   initMission, getMissionState, getCheckpointStatus, saveCheckpoint, CHECKPOINTS,
   applyPlayerDamage, playerDie, restartFromZone,
   ZONE_WAVE_CONFIG, WaveDirector, surfaceTopAt, hasGroundBelow,
   pickSafeSpawn, countAliveInZone, spawnGnucciBodyguards, spawnBakeryRaiders,
   HealPickups, StreetChoice, Endings, FireHazards,
+  startRun, DefenseDirector,
 };

@@ -11,6 +11,8 @@ import { lerp, clamp } from '../../src/core/math.js';
 import { createRageState } from '../../src/game/rage-rules.js';
 import { applyArmorDamage, clampArmor } from '../../src/game/armor-rules.js';
 import { createCombatStats } from '../../src/game/combat-stats.js';
+import { createRunSettings } from '../../src/game/run-settings.js';
+import { createHealthRegeneration } from '../../src/game/health-regeneration.js';
 import { WEAPON_DEFS } from '../../src/game/weapon-data.js';
 import { createFireHazards } from '../../src/game/fire-hazards.js';
 
@@ -31,11 +33,13 @@ function actualFunction(source, name) {
 // Real input, Player, rage, CombatStats, fixed simulation loop and mission
 // damage/restart functions. Rendering, audio and unrelated encounter services
 // are quiet sinks; attacks can credit a kill at an exact simulation step.
-function fixture(options) {
+function fixture(options, run = { difficulty: 'average' }) {
   const Rage = createRageState(options), CombatStats = createCombatStats({ rage: Rage });
+  const RunSettings = createRunSettings(), HealthRegeneration = createHealthRegeneration();
+  RunSettings.configure(run); RunSettings.start();
   const Input = createInputState(), clock = new FixedStepClock(), GameTime = { elapsed: 0 };
   Input.activate();
-  const calls = { health: [], armor: [], rage: [], messages: [], blood: [], attacks: 0, audioTime: [], touchContexts: [] };
+  const calls = { health: [], armor: [], rage: [], messages: [], blood: [], damageTracked: [], attacks: 0, audioTime: [], touchContexts: [] };
   Input.setTouchContext = value => calls.touchContexts.push({ ...value });
   const noop = () => {}, hooks = { attack: noop, enemy: noop, input: noop };
   const conditions = { intro: false, ending: false };
@@ -49,7 +53,7 @@ function fixture(options) {
     bloodFlash(value) { calls.blood.push(value); }, showDeath: noop, update: noop,
   };
   const bindings = {
-    THREE, lerp, clamp, Rage, CombatStats, Input, clock, GameTime, HUD, applyArmorDamage, clampArmor,
+    THREE, lerp, clamp, Rage, CombatStats, RunSettings, HealthRegeneration, Input, clock, GameTime, HUD, applyArmorDamage, clampArmor,
     createFireHazards, WorldState: { fires: [] },
     camera: new THREE.PerspectiveCamera(82, 16 / 9, 0.05, 300),
     Colliders: { list: [new THREE.Box3(new THREE.Vector3(-100, -1, -100), new THREE.Vector3(100, 0, 100))] },
@@ -65,13 +69,15 @@ function fixture(options) {
     enemiesUpdate(dt) { hooks.enemy(dt); },
     Enemies: { list: [], clearAll: noop },
     WaveDirector: { update: noop, stop: noop, reset: noop, start: noop },
+    DefenseDirector: { isResolved: () => false, containPlayer: noop, update: noop,
+      recordDamage: value => calls.damageTracked.push(value) },
     FireHazards: { update: noop, reset: noop },
     HealPickups: { update: noop, restoreZone: noop },
     ArmorPickups: { update: noop, clearAll: noop, setZone: noop },
     StreetChoice: { update: noop, dismiss: noop, reset: noop, arm: noop },
     Endings: { update: noop, reset: noop, isResolved: () => conditions.ending },
     IntroCard: { isOpen: () => conditions.intro },
-    document: { hidden: false }, contextLost: false,
+    document: { hidden: false }, contextLost: false, controlledTest: false,
     triggersUpdate: noop, animateFires: noop, animateFlickerLights: noop, animateSmoke: noop,
     updateEnvironment: noop, Blood: { update: noop }, FX: { update: noop },
     ThreatFeedback: { update: noop, clear: noop }, ObjectiveBanner: { update: noop },
@@ -92,7 +98,7 @@ function fixture(options) {
   api.Player.pos.set(0, api.Player.eyeHeight, 0);
   api.playerInit(); calls.health.length = 0;
   return {
-    ...api, Rage, CombatStats, Input, clock, GameTime, HUD, calls, hooks, conditions, bindings,
+    ...api, Rage, CombatStats, RunSettings, HealthRegeneration, Input, clock, GameTime, HUD, calls, hooks, conditions, bindings,
     kills(count = 4) { for (let i = 0; i < count; i++) CombatStats.recordKill(); },
     steps(count = 1) { for (let i = 0; i < count; i++) api.stepFrame(clock.step); },
     pressRage() { Input.keyUp('KeyT'); Input.keyDown('KeyT'); api.stepFrame(clock.step); },
@@ -119,6 +125,63 @@ test('mission damage consumes armor before health and keeps the HUD and checkpoi
   delete h.bindings.checkpointSeed.armor;
   h.restartFromZone();
   assert.equal(h.Player.armor, 0, 'a checkpoint without armor cannot grant it');
+});
+
+test('actual damage applies the selected enemy strength once and reports defense damage consistently', () => {
+  for (const difficulty of ['very-easy', 'easy', 'average', 'hard', 'very-hard']) {
+    const h = fixture(undefined, { difficulty });
+    const attackDamage = 20 * h.RunSettings.profile.enemyDamage;
+    h.applyPlayerDamage(20);
+    assert.equal(h.Player.health, 100 - attackDamage);
+    assert.deepEqual(h.calls.damageTracked, [attackDamage]);
+    h.applyPlayerDamage(20, null, null, { kind: 'fire' });
+    assert.equal(h.Player.health, 80 - attackDamage, 'environmental fire retains its authored contact damage');
+    assert.deepEqual(h.calls.damageTracked, [attackDamage, 20]);
+  }
+});
+
+test('the real gameplay clock regenerates health below Average at the configured rate and caps it at 100', () => {
+  for (const difficulty of ['very-easy', 'easy', 'average', 'hard', 'very-hard']) {
+    const h = fixture(undefined, { difficulty });
+    const profile = h.RunSettings.profile;
+    h.Player.health = 50;
+    h.steps(10 * 120);
+    const expected = Math.min(100, 50 + profile.regen * (10 - profile.regenDelay));
+    assert.ok(Math.abs(h.Player.health - expected) < 1e-8, difficulty);
+    if (profile.regen) {
+      assert.equal(h.calls.health.at(-1), h.Player.health);
+      h.Player.health = 99.9;
+      h.steps(120);
+      assert.equal(h.Player.health, 100, 'regeneration cannot grant bonus health');
+      h.Player.health = 120;
+      h.steps(120);
+      assert.equal(h.Player.health, 120, 'other mechanics retain health already above the regeneration cap');
+    }
+  }
+});
+
+test('regeneration discards paused time, restarts its delay on damage and cannot revive a dead player', () => {
+  const h = fixture(undefined, { difficulty: 'easy' });
+  h.Player.health = 50;
+  h.steps(4 * 120);
+  h.Input.pause();
+  assert.equal(h.stepFrame(30), 0);
+  assert.equal(h.Player.health, 50);
+  h.Input.activate();
+  h.steps(120);
+  assert.ok(Math.abs(h.Player.health - 50) < 1e-8, 'wall time does not complete the recovery delay');
+  h.steps(120);
+  assert.ok(Math.abs(h.Player.health - 52) < 1e-8);
+  h.applyPlayerDamage(10);
+  const afterDamage = h.Player.health;
+  h.steps(5 * 120);
+  assert.ok(Math.abs(h.Player.health - afterDamage) < 1e-8, 'damage starts a complete new delay');
+  h.steps(120);
+  assert.ok(Math.abs(h.Player.health - afterDamage - 2) < 1e-8);
+  h.applyPlayerDamage(1000);
+  assert.equal(h.PlayerState.dead, true);
+  assert.equal(h.stepFrame(30), 0);
+  assert.equal(h.Player.health, 0);
 });
 
 function addContactFire(h) {

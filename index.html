@@ -82,7 +82,7 @@
         <div class="eyebrow">THE FIGHT ISN’T OVER</div>
         <h2 id="deathtitle">GET BACK UP.</h2>
         <p id="deathhint">Return to your last checkpoint. Make the next move count.</p>
-        <button id="restartbutton" class="button button-primary" type="button">RETRY CHECKPOINT <span aria-hidden="true">↗</span></button>
+        <button id="restartbutton" class="button button-primary" type="button"><span id="restartlabel">RETRY CHECKPOINT</span><span aria-hidden="true">↗</span></button>
       </section>
     </div>
 
@@ -101,21 +101,70 @@
       </div>
     </div>
 
+    <section id="runsetup" role="dialog" aria-modal="true" aria-labelledby="runsetuptitle" aria-describedby="runsetupdescription" aria-hidden="true" tabindex="-1">
+      <div class="runsetup-content">
+        <div class="runsetup-heading">
+          <div class="eyebrow">BEFORE THE FIRST SHOT</div>
+          <h2 id="runsetuptitle">CHOOSE<br>YOUR FIGHT.</h2>
+          <div class="rule"></div>
+          <p id="runsetupdescription">Choose a difficulty before you begin. Your game mode and difficulty stay fixed for the entire run, including retries.</p>
+          <p class="runsetup-progression">Weapon tiers follow the same progression on every difficulty.</p>
+          <button id="runsetupback" class="button-text" type="button">← BACK TO MENU</button>
+        </div>
+        <form id="runsetupform" class="runsetup-form">
+          <div class="setting-row">
+            <label for="runmode">Game mode</label>
+            <select id="runmode" name="mode" aria-describedby="runmodehelp"><option value="campaign">Story campaign</option><option value="defense">Tower defense</option></select>
+            <p id="runmodehelp">Fight your way through Little Sicily and choose how the night ends.</p>
+          </div>
+          <fieldset id="rundefenseoptions" class="runsetup-defense" hidden disabled>
+            <legend>HOLD YOUR GROUND</legend>
+            <div class="setting-row">
+              <label for="runarena">Defend</label>
+              <select id="runarena" name="arena"><option value="roof">Rooftop</option><option value="street">Street</option></select>
+            </div>
+            <div class="setting-row">
+              <label for="runwaves">Waves to survive</label>
+              <select id="runwaves" name="waves"><option value="10">10 waves</option><option value="20">20 waves</option><option value="50">50 waves</option><option value="100">100 waves</option></select>
+            </div>
+            <p>Fresh supplies arrive near you between waves. Their contents reflect your remaining health, armor and ammunition, and your chosen difficulty.</p>
+          </fieldset>
+          <div class="setting-row runsetup-difficulty">
+            <label for="rundifficulty">Difficulty level <span>REQUIRED</span></label>
+            <select id="rundifficulty" name="difficulty" required aria-describedby="rundifficultydescription runsetuplock"><option value="" disabled selected>Choose a difficulty</option></select>
+            <p id="rundifficultydescription" role="status">Difficulty controls enemy numbers, their weapons and damage, time between waves, and supplies. Below Average, health regenerates automatically.</p>
+          </div>
+          <p id="runsetuplock" class="runsetup-lock">LOCKS WHEN YOU BEGIN</p>
+          <p class="runsetup-controller">Controller: ↑↓ choose · ←→ change · A confirm · B back</p>
+          <p id="runsetuperror" class="runsetup-error" role="alert" hidden></p>
+          <button id="runsetupconfirm" class="button button-primary" type="submit" disabled><span id="runsetupconfirmlabel">BEGIN MISSION</span><span aria-hidden="true">↗</span></button>
+        </form>
+      </div>
+    </section>
+
     <section id="introcard" role="dialog" aria-modal="true" aria-labelledby="introtitle" aria-describedby="introbody" aria-hidden="true">
       <div class="briefing-number" aria-hidden="true">01</div>
       <div class="briefing-content">
-        <div class="eyebrow">NEW YORK CITY / LITTLE SICILY</div>
+        <div class="eyebrow" id="introlocation">NEW YORK CITY / LITTLE SICILY</div>
         <div class="clock">6:47 <span>PM</span></div>
         <div class="rule"></div>
         <h2 id="introtitle">THEY CAME TO<br>FINISH THE JOB.</h2>
         <div class="body" id="introbody">
-          <p>The first bottle came through the window. Then the gunfire.</p>
-          <p>Gnucci’s men have the building surrounded. The stairwell, the fire escape, the roof — every way out is a fight.</p>
-          <p>The family in the bakery downstairs never asked for any of this.</p>
-          <p class="briefing-order">You start with your fists. Take a weapon from the men sent to kill you. Get out, and decide who makes it through the night.</p>
+          <div id="introcampaigncopy">
+            <p>The first bottle came through the window. Then the gunfire.</p>
+            <p>Gnucci’s men have the building surrounded. The stairwell, the fire escape, the roof — every way out is a fight.</p>
+            <p>The family in the bakery downstairs never asked for any of this.</p>
+            <p class="briefing-order">You start with your fists. Take a weapon from the men sent to kill you. Get out, and decide who makes it through the night.</p>
+          </div>
+          <div id="introdefensecopy" hidden>
+            <p id="introdefenseobjective"></p>
+          <p>Clear every attacker to earn a break. Walk over field supplies to collect health, armor and reserve ammo for your carried gun. Use your pickup control to take weapons.</p>
+            <p class="briefing-order">Enemy weapons grow stronger as the defense continues. Make your ammunition count, use cover, and hold your ground.</p>
+          </div>
         </div>
-        <button id="introcontinue" class="button button-primary" type="button">ENTER LITTLE SICILY <span aria-hidden="true">↗</span></button>
-        <div class="skip">CHECKPOINTS AT EACH NEW AREA</div>
+        <div id="introrunsummary" class="run-summary"></div>
+        <button id="introcontinue" class="button button-primary" type="button"><span id="introcontinuelabel">ENTER LITTLE SICILY</span><span aria-hidden="true">↗</span></button>
+        <div class="skip" id="introskip">CHECKPOINTS AT EACH NEW AREA</div>
       </div>
     </section>
 
@@ -125,13 +174,27 @@
         <h2 class="title" id="endtitle">ONE LAST KILL.</h2>
         <div class="rule"></div>
         <div class="body" id="endbody"></div>
+        <dl class="end-run-details">
+          <div><dt>DIFFICULTY LEVEL</dt><dd id="enddifficulty">—</dd></div>
+          <div><dt>GAME MODE</dt><dd id="endmode">—</dd></div>
+          <div id="endwavesdetail" hidden><dt>WAVES SURVIVED</dt><dd id="endwaves">—</dd></div>
+        </dl>
         <dl class="end-stats">
           <div><dt>HOSTILES DOWN</dt><dd id="endkills">00</dd></div>
-          <div><dt>ACCURACY</dt><dd id="endaccuracy">—</dd></div>
+          <div><dt>FIREARM HIT %</dt><dd id="endaccuracy">—</dd></div>
           <div><dt>BEST STREAK</dt><dd id="endstreak">00</dd></div>
         </dl>
+        <div class="end-favorite"><span>FAVORITE WEAPON <span>(MOST USED)</span></span><strong id="endfavorite">—</strong></div>
+        <div class="weapon-stats-scroll" role="region" aria-label="Weapon by weapon statistics" tabindex="0">
+          <table class="weapon-stats" aria-describedby="endweaponsnote">
+            <caption>YOUR ARSENAL</caption>
+            <thead><tr><th scope="col">Weapon</th><th scope="col">Attacks</th><th scope="col">Hits</th><th scope="col">Hit %</th><th scope="col">Kills</th><th scope="col">Headshot kills</th><th scope="col">Damage</th></tr></thead>
+            <tbody id="endweaponstats"></tbody>
+          </table>
+        </div>
+        <p id="endweaponsnote" class="end-weapon-note">Hit % counts attacks that connected. Each trigger pull or melee swing counts once, including shotgun blasts.</p>
         <button class="restart button button-primary" id="endrestart" type="button">PLAY AGAIN <span aria-hidden="true">↗</span></button>
-        <p class="end-note">A different choice. A different ending.</p>
+        <p class="end-note" id="endnote">A different choice. A different ending.</p>
       </div>
     </section>
 
@@ -144,6 +207,7 @@
         <div class="menu-kicker"><span class="status-dot" aria-hidden="true"></span><span id="menustatus">SOME WARS FOLLOW YOU HOME.</span></div>
         <h1 id="title" aria-label="The Punisher: One Last Kill"><span class="title-eyebrow">THE PUNISHER</span><span class="title-line">ONE LAST</span><span class="title-line">KILL<span class="title-period">.</span></span></h1>
         <p class="menu-description">They came for you.<br>The people downstairs didn’t ask to be part of it.</p>
+        <p id="menurunsummary" class="menu-run-summary" hidden></p>
         <div id="start">
           <button id="startbutton" class="button button-primary" type="button" disabled><span>PREPARING MISSION</span><span aria-hidden="true">↗</span></button>
           <div class="menu-secondary">
@@ -188,6 +252,7 @@
         <div class="panel-top"><span class="eyebrow">02 / PREFERENCES</span><button class="close-panel" type="button" data-close-panel aria-label="Close settings">✕</button></div>
         <h2 id="settingstitle">MAKE IT<br>YOUR FIGHT.</h2>
         <p class="panel-intro">Changes apply immediately. Preferences save when device storage is available.</p>
+        <p id="settingsrunsummary" class="settings-run-summary">Choose your difficulty when you begin. It stays fixed throughout the run.</p>
         <form id="settingsform">
           <fieldset class="settings-group">
             <legend>TOUCH CONTROLS</legend>

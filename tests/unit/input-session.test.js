@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { createInputState, GAMEPLAY_KEYS } from '../../src/core/input-state.js';
+import { createRunSettings } from '../../src/game/run-settings.js';
 
 const source = readFileSync(new URL('../../src/core/input.js', import.meta.url), 'utf8')
   .replace(/^import .*;\s*$/gm, '')
@@ -44,7 +45,8 @@ function element(id) {
 // Run the real session module and input state without constructing a renderer,
 // audio device or touch DOM. The touch adapter records its public lifecycle.
 function session({ touchEnabled = false } = {}) {
-  const calls = { requests: 0, exits: 0, focus: 0, resumes: 0, suspends: 0, ambient: 0, briefings: 0, messages: [], states: [] };
+  const calls = { requests: 0, exits: 0, focus: 0, resumes: 0, suspends: 0, ambient: 0,
+    setups: 0, briefings: 0, starts: [], messages: [], states: [] };
   const elements = new Map(['overlay', 'startbutton', 'audiotoggle', 'endcard', 'deathscreen'].map(id => [id, element(id)]));
   const viewport = eventTarget();
   const document = {
@@ -53,6 +55,7 @@ function session({ touchEnabled = false } = {}) {
     exitPointerLock() { calls.exits++; this.pointerLockElement = null; },
   };
   document.addEventListener('playstatechange', event => calls.states.push({ ...event.detail }));
+  document.addEventListener('game:runstart', event => calls.starts.push({ ...event.detail }));
   const canvas = {
     ...element('canvas'),
     focus() { calls.focus++; },
@@ -71,7 +74,18 @@ function session({ touchEnabled = false } = {}) {
     reset() { this.resets++; },
     get visible() { return this.enabled && this.active; },
   };
-  let api, briefingOpen = false;
+  let api, briefingOpen = false, setupOpen = false;
+  const RunSettings = createRunSettings();
+  const RunSetup = {
+    isOpen: () => setupOpen,
+    present() { calls.setups++; setupOpen = true; },
+    hide() { setupOpen = false; },
+    pollGamepad() {},
+    configure(configuration = { difficulty: 'average' }) {
+      RunSettings.configure(configuration);
+      document.emit('run:configured');
+    },
+  };
   const IntroCard = {
     isOpen: () => briefingOpen,
     present() { calls.briefings++; briefingOpen = true; },
@@ -83,7 +97,7 @@ function session({ touchEnabled = false } = {}) {
     },
   };
   api = runInNewContext(source + '\n;({ Input, engageLock });', {
-    createInputState, GAMEPLAY_KEYS, canvas, document, Settings, IntroCard,
+    createInputState, GAMEPLAY_KEYS, canvas, document, Settings, IntroCard, RunSetup, RunSettings,
     addEventListener: viewport.addEventListener,
     navigator: { getGamepads: () => [] },
     CustomEvent: class { constructor(type, { detail }) { this.type = type; this.detail = detail; } },
@@ -97,10 +111,12 @@ function session({ touchEnabled = false } = {}) {
   }, { filename: 'src/core/input.js' });
   const overlay = elements.get('overlay'), start = elements.get('startbutton');
   return {
-    ...api, canvas, document, viewport, Settings, IntroCard, controls, calls, overlay, start,
+    ...api, canvas, document, viewport, Settings, IntroCard, RunSetup, RunSettings, controls, calls, overlay, start,
     startPlaying() {
       start.click();
-      assert.equal(IntroCard.isOpen(), true, 'the first engagement presents the briefing');
+      assert.equal(RunSetup.isOpen(), true, 'the first engagement requires run setup');
+      RunSetup.configure();
+      assert.equal(IntroCard.isOpen(), true, 'the configured run presents the briefing');
       IntroCard.dismiss();
       assert.equal(api.Input.active, true);
     },
@@ -137,6 +153,9 @@ test('opted-in touch play passes through the briefing and never requests pointer
   assert.equal(h.controls.enabled, true);
   assert.equal(h.controls.visible, false);
   h.start.click();
+  assert.equal(h.RunSetup.isOpen(), true);
+  assert.equal(h.IntroCard.isOpen(), false);
+  h.RunSetup.configure();
   assert.equal(h.IntroCard.isOpen(), true);
   assert.equal(h.Input.active, false);
   assert.equal(h.controls.visible, false);
@@ -153,6 +172,42 @@ test('opted-in touch play passes through the briefing and never requests pointer
   h.canvas.click();
   assert.equal(h.calls.requests, 0, 'a gameplay tap cannot enter mouse capture mode');
   assert.deepEqual(h.calls.messages, []);
+});
+
+test('gameplay requires an explicit difficulty and locks the selected run through briefing and pause', () => {
+  const h = session({ touchEnabled: true });
+  assert.equal(h.RunSettings.isConfigured(), false);
+  h.start.click();
+  h.canvas.click();
+  h.engageLock();
+  h.document.emit('run:configured');
+  assert.equal(h.RunSetup.isOpen(), true);
+  assert.equal(h.Input.active, false);
+  assert.equal(h.calls.setups, 1, 'repeated engagement cannot bypass or duplicate setup');
+  assert.equal(h.calls.briefings, 0);
+  assert.deepEqual(h.calls.starts, []);
+  assert.throws(() => h.RunSetup.configure({ mode: 'defense', arena: 'street', waves: 20 }),
+    /difficulty/i, 'a mode and wave budget do not substitute for choosing a difficulty');
+
+  h.RunSetup.configure({ difficulty: 'hard', mode: 'defense', arena: 'street', waves: 20 });
+  const configured = h.RunSettings.snapshot();
+  assert.equal(configured.locked, true);
+  assert.equal(h.RunSetup.isOpen(), false);
+  assert.equal(h.IntroCard.isOpen(), true);
+  assert.equal(h.Input.active, false, 'configuration still requires dismissing the briefing');
+  assert.deepEqual(h.calls.starts, [{ difficulty: 'hard', mode: 'defense', arena: 'street', waves: 20, locked: true }]);
+  assert.throws(() => h.RunSettings.configure({ difficulty: 'very-easy' }), /locked/);
+  h.document.emit('run:configured');
+  assert.equal(h.calls.starts.length, 1, 'a repeated submit cannot restart the run');
+
+  h.IntroCard.dismiss();
+  h.Input.pause();
+  h.start.click();
+  assert.equal(h.Input.active, true);
+  assert.equal(h.RunSettings.snapshot(), configured);
+  assert.equal(h.calls.setups, 1);
+  assert.equal(h.calls.briefings, 1);
+  assert.throws(() => h.RunSettings.configure({ waves: 100 }), /locked/);
 });
 
 test('the on-screen pause entry point returns to the menu and clears touch state before resume', () => {

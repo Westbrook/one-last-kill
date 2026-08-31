@@ -1,6 +1,6 @@
 # Architecture and extension guide
 
-The game is a Vite application using JavaScript ES modules and Three.js. It builds one connected world at startup and runs one local campaign. The refactor separates reusable rules and data from browser-facing systems, but the runtime still uses shared singleton objects and several circular imports. Treat this document as a map of the current implementation, not a claim that it is a general-purpose game engine.
+The game is a Vite application using JavaScript ES modules and Three.js. It builds one connected world at startup and runs either the local campaign or finite rooftop/street defense. The refactor separates reusable rules and data from browser-facing systems, but the runtime still uses shared singleton objects and several circular imports. Treat this document as a map of the current implementation, not a claim that it is a general-purpose game engine.
 
 ## Startup and frame ownership
 
@@ -28,6 +28,9 @@ The gamepad is polled even while menus are open so a controller can resume play.
 | `core/audio-samples.js`, `local-speech.js` | Local sample cache and optional local-device speech fallback | Cancellation, resource limits and explicit playback permission |
 | `game/player.js` | Eye/feet conversion, movement, stance, camera, health state | Input, collision, settings, weapons, HUD |
 | `game/weapon-data.js`, `weapon-rules.js`, `combat-stats.js` | Balance data, ammo/snapshot rules, combat counters | Browser-independent logic |
+| `game/run-settings.js`, `difficulty.js`, `difficulty-loot-rules.js` | Explicit run setup, immutable difficulty, progression-preserving encounter scaling and finite loot budgets | Pure rules; separate from persistent display/audio preferences |
+| `game/health-regeneration.js` | Below-Average healing and damage recovery delay | Shared gameplay clock; no wall-clock timer |
+| `game/defense-rules.js`, `defense-director.js`, `defense-supplies.js` | Finite arena waves, containment, per-wave supply budgets and pooled collectibles | Existing encounter schedule, injected mission services and safe geometry probes |
 | `game/weapons.js` | Equipped weapon, firing/reload behavior, view model, dropped weapons | Player, enemies, collision, effects, audio, HUD |
 | `game/melee-rules.js` | Reusable player attack timeline, contact event and cancellation | Pure weapon data; never retains a target or applies damage |
 | `game/rage-rules.js` | Configurable rolling kill history, low-health eligibility and conditional health boost | Pure simulation state; credited kills from combat stats, time from main, reset by mission |
@@ -81,6 +84,8 @@ The gamepad is polled even while menus are open so a controller can resume play.
 | `ui/hud.js` | Visible feedback, persistent health tint, cards, objective banners and frame display | DOM; input engagement for menu actions |
 
 Pure data/rule modules should remain leaves of the dependency graph: they must not import HUD, DOM input, scene construction, or renderer initialization. They are the preferred location for new state transitions that can be tested independently.
+
+Run setup confirms an explicit difficulty before the briefing and locks all run choices. `startRun` applies those values before any gameplay step. Campaign retries restore weapon statistics, best streak, ammunition and loot guarantees together. Defense retries reset to wave 1 with the same locked choices. Defense attackers pursue the defender as an arena objective; actual sight, attack windups and projectile cover still govern attacks. Campaign observation memory is unchanged. See [difficulty and defense](difficulty-and-defense.md) for balance factors and fixed weapon unlock stages.
 
 Runtime imports are not a strict hierarchy. Notable cycles include input/HUD, player/weapons, enemies/mission/weapons, and world/zone builders. Boot-time calls currently resolve these dependencies after module evaluation. Avoid reading a cyclic import's state during module initialization. Prefer an injected callback or a narrow event subscription, as with `onZoneChange`, when adding a new relationship. Extracting these remaining singleton dependencies is future work.
 

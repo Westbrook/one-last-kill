@@ -3,7 +3,8 @@ import { canvas } from './renderer.js';
 import { createInputState, GAMEPLAY_KEYS } from './input-state.js';
 import { Settings } from './settings.js';
 import { createTouchControls } from '../ui/touch-controls.js';
-import { HUD, IntroCard, FPSMeter } from '../ui/hud.js';
+import { HUD, IntroCard, RunSetup, FPSMeter } from '../ui/hud.js';
+import { RunSettings } from '../game/run-settings.js';
 
 const Input = createInputState();
 const touchControls = createTouchControls({ input: Input });
@@ -22,7 +23,7 @@ let fallbackNotified = false;
 let previousPadMenu = false, previousPadConfirm = false;
 
 function cardOpen(id) { return document.getElementById(id)?.classList.contains('show') ?? false; }
-function modalOpen() { return IntroCard.isOpen() || cardOpen('endcard') || cardOpen('deathscreen'); }
+function modalOpen() { return RunSetup.isOpen() || IntroCard.isOpen() || cardOpen('endcard') || cardOpen('deathscreen'); }
 function editableTarget(target) {
   return Boolean(target?.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"], #touch-controls button'));
 }
@@ -73,11 +74,11 @@ function requestPointer() {
 function engageLock({ pointerLock = true } = {}) {
   if (document.hidden || overlayEl?.classList.contains('is-panel-open') || startButton?.disabled
     || cardOpen('endcard') || cardOpen('deathscreen')) return false;
-  if (firstEngage) {
-    firstEngage = false;
+  if (RunSetup.isOpen()) return false;
+  if (firstEngage || !RunSettings.isStarted()) {
     pauseSession({ showOverlay: false });
     overlayEl?.classList.add('hidden');
-    IntroCard.present();
+    RunSetup.present();
     return false;
   }
   if (IntroCard.isOpen()) return false;
@@ -91,6 +92,16 @@ function engageLock({ pointerLock = true } = {}) {
   if (pointerLock && !touchEnabled && !Input.locked) requestPointer();
   return true;
 }
+document.addEventListener('run:configured', () => {
+  if (RunSettings.isStarted() || !RunSettings.isConfigured() || startButton?.disabled) return;
+  RunSettings.start();
+  firstEngage = false;
+  RunSetup.hide();
+  overlayEl?.classList.add('hidden');
+  document.dispatchEvent(new CustomEvent('game:runstart', { detail: RunSettings.snapshot() }));
+  document.dispatchEvent(new CustomEvent('run:started', { detail: RunSettings.snapshot() }));
+  IntroCard.present();
+});
 function engageFromMenu({ gamepad = false } = {}) {
   if (document.hidden || overlayEl?.classList.contains('is-panel-open') || startButton?.disabled) return;
   if (cardOpen('endcard')) { document.getElementById('endrestart')?.click(); return; }
@@ -199,6 +210,10 @@ Input.pollGamepad = function () {
   previousPadConfirm = confirm;
   const wasActive = Input.active;
   Input.setGamepad(pad);
+  if (RunSetup.isOpen()) {
+    RunSetup.pollGamepad(pad);
+    return;
+  }
   if (menuPressed) {
     if (Input.active) pauseSession();
     else engageFromMenu({ gamepad: true });

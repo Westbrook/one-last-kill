@@ -5,6 +5,7 @@ import { HEALTH_SUPPLIES } from '../../src/game/health-supply-data.js';
 import { ZONE_WAVE_CONFIG } from '../../src/game/mission-data.js';
 import { createLightBudget } from '../../src/render/lighting.js';
 import { createHealthPickupHarness } from './helpers/health-pickup-harness.js';
+import { DIFFICULTY_LEVELS } from '../../src/game/difficulty.js';
 
 const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) < 1e-8,
   `${label}: ${actual} != ${expected}`);
@@ -75,6 +76,26 @@ test('actual mission initialization creates each authored record once with its e
   assert.equal(h.calls.chimes, 0, 'initialization does not collect any supply');
 });
 
+test('starting a configured run scales finite health supplies once and retries preserve their scaled value', () => {
+  for (const profile of DIFFICULTY_LEVELS) {
+    const h = createHealthPickupHarness({ difficulty: profile.id });
+    h.initMission();
+    const objects = [...h.World.children];
+    h.HealPickups.reset(); h.HealPickups.reset();
+    for (const [index, supply] of HEALTH_SUPPLIES.entries()) {
+      const pickup = h.HealPickups.list[index];
+      const expected = Math.max(1, Math.round(supply.amount * profile.health));
+      assert.equal(pickup.baseAmount, supply.amount);
+      assert.equal(pickup.amount, expected);
+      pickup.active = false;
+      h.HealPickups.restoreZone(supply.zone);
+      assert.equal(pickup.active, true);
+      assert.equal(pickup.amount, expected, 'retries cannot compound difficulty scaling');
+    }
+    assert.deepEqual(h.World.children, objects, 'difficulty changes availability without duplicating caches');
+  }
+});
+
 test('full health leaves a nearby pack active through repeated animation updates', () => {
   const h = isolated();
   for (let tick = 0; tick < 120; tick++) advance(h);
@@ -108,7 +129,8 @@ test('collection grants exactly the needed health, clamps at 100 and consumes th
     advance(h);
     assert.equal(h.Player.health, expected);
     assert.deepEqual(h.calls.health, [expected]);
-    assert.deepEqual(h.calls.messages, [[`+${expected - initial} HP`, 1.2]]);
+    assert.deepEqual(h.calls.messages, [[`+${Math.round(expected - initial)} HP`, 1.2]],
+      'The HUD rounds fractional recovery while actual health preserves the exact gain');
     assert.equal(h.calls.chimes, 1, 'the audio service is a counter only');
     assert.equal(h.pickup.active, false);
     assert.equal(h.pickup.mesh.visible, false);

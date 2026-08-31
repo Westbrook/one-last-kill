@@ -14,6 +14,9 @@ import { DISTRICT } from '../world/district-layout.js';
 import { WeaponDrops } from './weapons.js';
 import { ArmorPickups } from './armor-pickups.js';
 import { MAX_ARMOR, armorStrengthAfterHit } from './armor-rules.js';
+import { RunSettings } from './run-settings.js';
+import { DIFFICULTY_LEVELS, scaleEncounter } from './difficulty.js';
+import { DifficultyLootLedger } from './difficulty-loot-rules.js';
 import { Blood, FX } from '../render/effects.js';
 import { applyPlayerDamage, surfaceTopAt } from './mission.js';
 import { ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS } from './mission-data.js';
@@ -80,6 +83,10 @@ const ENEMY_TYPES = {
 };
 
 const SUPPORT_LOOKDOWN = 2.5; // Match live movement and one-time death support probes.
+const difficultyLoot = new DifficultyLootLedger();
+function resetDifficultyLoot() { difficultyLoot.reset(); }
+function snapshotDifficultyLoot() { return difficultyLoot.snapshot(); }
+function restoreDifficultyLoot(snapshot) { return difficultyLoot.restore(snapshot); }
 
 const EnemyNavigation = new EnemyNavigationPlanner({
   bounds: {
@@ -135,9 +142,13 @@ const EnemyPool = {
     // simultaneous cap. Bakery entry immediately starts its shared finale
     // roster; it does not need a second normal-zone allocation. Only one
     // finale can run, and two corpse slots are reserved across the whole run.
-    return enemyCampaignPoolCapacity(type,
-      Object.entries(ZONE_WAVE_CONFIG).filter(([zone]) => zone !== 'bakery').map(([, config]) => config),
-      Object.values(FINAL_ENCOUNTERS));
+    const encounters = Object.entries(ZONE_WAVE_CONFIG).filter(([zone]) => zone !== 'bakery').map(([, config]) => config);
+    const finales = Object.values(FINAL_ENCOUNTERS);
+    const campaign = Math.max(...DIFFICULTY_LEVELS.map(profile => enemyCampaignPoolCapacity(type,
+      encounters.map(config => scaleEncounter(config, profile)), finales.map(config => scaleEncounter(config, profile)))));
+    // Defense has at most six live enemies, including one heavy gunner.
+    // Its independent run does not reserve a second set of campaign rigs.
+    return Math.max(campaign, (type === 'enforcer' ? 1 : 6) + 2);
   },
   acquire(type) {
     const arr = this.pools[type];
@@ -582,7 +593,18 @@ function enemyTick(enemy, dt) {
     investigationMemorySeconds(enemy.navigation, enemy.lastSeenPosition, def.speed, EnemyNavigation.generation),
     enemy.zone === 'stairwell' ? stairPursuitMemorySeconds(enemy.stairPursuit, _navGoal, def.speed) : 0,
   );
-  const awareness = updateAwareness(enemy, enemy.losObservedPosition, visible, dt, memoryDuration);
+  let awareness = updateAwareness(enemy, enemy.losObservedPosition, visible, dt, memoryDuration);
+  if (!visible && !PlayerState.dead && enemy.encounterKey?.startsWith('defense-')) {
+    // Arena attackers have an explicit objective: converge on the defender,
+    // including across the wide street. Campaign enemies still forget an
+    // unseen player normally. This destination grants movement only; actual
+    // sight remains mandatory before any attack or committed firearm aim.
+    enemy.lastSeenPosition.copy(Player.pos);
+    enemy.lastSeenFootY = Player.pos.y - Player._eyeH;
+    enemy.lastSeenPlayer = true;
+    enemy.timeSinceSeen = 0;
+    awareness = 'investigate';
+  }
   if (visible) enemy.lastSeenFootY = enemy.losObservedFootY;
   if (enemy.staggerTime > 0) {
     setEnemyState(enemy, 'stagger');
@@ -791,10 +813,11 @@ function enemiesUpdate(dt) {
 }
 
 // ── Enemy damage / death ───────────────────────────────────────────────────
-// This is the sole body-part multiplier. Weapons pass unscaled base damage.
+// Preserve each weapon's base strength and body-part multiplier, then apply
+// the selected run's common outgoing damage factor exactly once.
 function damageEnemy(enemy, dmg, hitPart, hitPos) {
   if (!enemy.alive || enemy.removed) return null;
-  const damage = damageForHit(dmg, hitPart);
+  const damage = damageForHit(dmg, hitPart) * RunSettings.profile.playerDamage;
   if (damage <= 0) return null;
   const applied = Math.min(enemy.health, damage);
   enemy.armorStrength = armorStrengthAfterHit(enemy.armorStrength, hitPart);
@@ -824,7 +847,8 @@ function killEnemy(enemy, hitPos) {
   const support = surfaceTopAt(enemy.pos.x, enemy.pos.y + 0.20, enemy.pos.z, SUPPORT_LOOKDOWN);
   if (Number.isFinite(support)) enemy.floorY = support;
   if (enemy.armorStrength > 0) {
-    ArmorPickups.spawn(enemy.pos.x, enemy.floorY, enemy.pos.z, enemy.armorStrength, enemy.zone);
+    const strength = Math.min(MAX_ARMOR, Math.round(enemy.armorStrength * RunSettings.profile.armor));
+    ArmorPickups.spawn(enemy.pos.x, enemy.floorY, enemy.pos.z, strength, enemy.zone);
   }
   // Encounter identity survives checkpoint crossings. Constrain a corpse to
   // balcony rails only when its actual death position is on that gallery.
@@ -844,9 +868,10 @@ function killEnemy(enemy, hitPos) {
   // Drop weapon if not already done.
   if (!enemy.hasDroppedWeapon) {
     enemy.hasDroppedWeapon = true;
-    if (enemy.def.weaponType && enemy.def.weaponType !== 'fists') {
+    const drop = difficultyLoot.drop(enemy.def.weaponType, enemy.def.ammo, RunSettings.profile);
+    if (drop) {
       WeaponDrops.spawn(enemy.pos.x, enemy.floorY, enemy.pos.z,
-        enemy.def.weaponType, enemy.def.ammo);
+        drop.type, drop.ammo);
     }
     // Detach the held weapon so it stays with the corpse (cosmetic).
     if (enemy.weaponMesh) enemy.weaponMesh.visible = false;
@@ -905,4 +930,4 @@ function raycastEnemies(origin, direction, maxDist = 80, worldDistance) {
   return s.result;
 }
 
-export { ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, damageEnemy, killEnemy, raycastEnemies, enemyAttackPlayer, hasLineOfSight, resolveEnemyCollision, isBlocked, primeEnemyInvestigation };
+export { ENEMY_TYPES, EnemyPool, EnemyNavigation, Enemies, enemiesUpdate, damageEnemy, killEnemy, raycastEnemies, enemyAttackPlayer, hasLineOfSight, resolveEnemyCollision, isBlocked, primeEnemyInvestigation, resetDifficultyLoot, snapshotDifficultyLoot, restoreDifficultyLoot };

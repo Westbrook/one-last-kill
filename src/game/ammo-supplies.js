@@ -5,6 +5,7 @@ import { Architecture } from '../world/architecture.js';
 import { isSegmentOccluded } from './combat-rules.js';
 import { WEAPON_DEFS } from './weapon-data.js';
 import { AMMO_SUPPLY_CACHES, AmmoSupplyLedger } from './ammo-supply-rules.js';
+import { RunSettings } from './run-settings.js';
 
 function makeLabelTexture() {
   if (!globalThis.document?.createElement) return null;
@@ -23,7 +24,7 @@ function makeLabelTexture() {
   return texture;
 }
 
-function createResources() {
+export function createResources() {
   return {
     box: new THREE.BoxGeometry(1, 1, 1),
     body: new RoundedBoxGeometry(1, 1, 1, 2, 0.035),
@@ -37,7 +38,7 @@ function createResources() {
 }
 
 /** A low field case with lid, latches and handle, resting on its rubber rails. */
-function buildAmmoBox(config, resources) {
+export function buildAmmoBox(config, resources) {
   const group = new THREE.Group();
   group.position.set(config.position.x, config.position.y, config.position.z);
   const transform = new THREE.Object3D();
@@ -96,7 +97,7 @@ export function createAmmoSupplies(caches = AMMO_SUPPLY_CACHES) {
     // A spent case remains on its supporting floor. A solid supply object
     // must never disappear while its collider still belongs to the world.
     entry.mesh.visible = true;
-    const fraction = entry.remainingUnits / entry.capacity;
+    const fraction = entry.capacity > 0 ? entry.remainingUnits / entry.capacity : 0;
     entry.indicator.visible = fraction > 0;
     entry.indicator.scale.x = entry.indicatorWidth * fraction;
     entry.indicator.position.x = entry.indicatorWidth * (fraction - 1) / 2;
@@ -131,10 +132,11 @@ export function createAmmoSupplies(caches = AMMO_SUPPLY_CACHES) {
         });
         const entry = {
           id: config.id, kind: 'ammoSupply', zone: config.zone, floorY: config.floorY,
-          visibleZones: config.visibleZones, capacity: config.units, ...box, collider,
+          visibleZones: config.visibleZones, ...box, collider,
           // The target sits above the complete case, including its handle.
           // Every side can reach it without a ray crossing its own collider.
           interactionPosition: new THREE.Vector3(config.position.x, bounds.max.y + 0.025, config.position.z),
+          get capacity() { return ledger.capacity(config.id); },
           get remainingUnits() { return ledger.units(config.id); },
           get active() { return ledger.units(config.id) >= 3; },
         };
@@ -173,8 +175,8 @@ export function createAmmoSupplies(caches = AMMO_SUPPLY_CACHES) {
       if (restored) for (const entry of list) sync(entry);
       return restored;
     },
-    reset() {
-      ledger.reset();
+    reset(ammoMultiplier = RunSettings.profile.ammo) {
+      ledger.reset(ammoMultiplier);
       this.setZone('apartment');
     },
   };

@@ -5,6 +5,8 @@ import { runInNewContext } from 'node:vm';
 import { Group, Vector3 } from 'three';
 import { createArmorPickups } from '../../src/game/armor-pickups.js';
 import { CHECKPOINTS, FINAL_ENCOUNTERS } from '../../src/game/mission-data.js';
+import { createRunSettings } from '../../src/game/run-settings.js';
+import { scaleEncounter } from '../../src/game/difficulty.js';
 
 const source = readFileSync(new URL('../../src/game/mission.js', import.meta.url), 'utf8');
 const endingStart = source.indexOf('const Endings = (() => {');
@@ -14,6 +16,8 @@ assert.ok(endingStart >= 0 && endingEnd > endingStart && zoneChange, 'exercise a
 const noOp = () => {};
 
 test('committing the bakery branch keeps survivor and bakery vests collectible across its zone trigger', () => {
+  const RunSettings = createRunSettings();
+  RunSettings.configure({ difficulty: 'average' }); RunSettings.start();
   const player = { health: 100, armor: 0, pos: new Vector3(0, 1.72, 0), _eyeH: 1.72 };
   const pickups = createArmorPickups();
   pickups.init({ world: new Group(), player, colliders: [] });
@@ -28,7 +32,7 @@ const spawnCursors = new Map();
 ${source.slice(endingStart, endingEnd)}
 ${zoneChange}
 ;({ Endings, handleZoneChange });`, {
-    CHECKPOINTS, FINAL_ENCOUNTERS, Player: player,
+    CHECKPOINTS, FINAL_ENCOUNTERS, Player: player, RunSettings, scaleEncounter,
     EncounterSeeds: { next: () => 1 },
     EncounterSchedule: class {
       constructor(config) { this.config = config; }

@@ -6,6 +6,9 @@ import * as THREE from 'three';
 import { createRageState } from '../../src/game/rage-rules.js';
 import { applyArmorDamage, clampArmor } from '../../src/game/armor-rules.js';
 import { createOffscreenThreatTracker } from '../../src/game/offscreen-threats.js';
+import { createRunSettings } from '../../src/game/run-settings.js';
+import { createHealthRegeneration } from '../../src/game/health-regeneration.js';
+import { createCombatStats } from '../../src/game/combat-stats.js';
 
 const adapterSource = readFileSync(new URL('../../src/game/threat-feedback.js', import.meta.url), 'utf8')
   .replace(/^import .*;\s*$/gm, match => match.replace(/[^\n]/g, ''))
@@ -70,6 +73,8 @@ function feedbackHarness() {
 // without replacing the threat adapter or its timing/visibility behavior.
 function missionHarness() {
   const h = feedbackHarness(), { record } = h;
+  const RunSettings = createRunSettings();
+  RunSettings.configure({ difficulty: 'average' }); RunSettings.start();
   const checkpoint = {
     zone: 'apartment', branch: null, anchor: { x: -9, y: 4, z: -4, yaw: 0.35 },
     weapon: { id: 'fists' }, ammoSupplies: { collected: [] },
@@ -77,6 +82,8 @@ function missionHarness() {
   const checkpointStatus = { valid: true, foot: { x: -9, y: 4, z: -4 } };
   const bindings = {
     ...h, checkpointSeed: checkpoint, checkpointStatus, Rage: createRageState(), applyArmorDamage, clampArmor,
+    RunSettings, HealthRegeneration: createHealthRegeneration(), CombatStats: createCombatStats(),
+    DefenseDirector: { recordDamage: record('defenseDamage') },
     getCheckpointStatus: () => checkpointStatus,
     saveCheckpoint() { throw new Error('The fixture already provides a saved checkpoint'); },
     WaveDirector: { stop: record('waveStop'), reset: record('waveReset'), start: record('waveStart') },

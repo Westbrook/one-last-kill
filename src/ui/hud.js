@@ -3,6 +3,7 @@ import { Input, engageLock } from '../core/input.js';
 import { Audio } from '../core/audio.js';
 import { AUDIO_MIX_SETTINGS, Settings } from '../core/settings.js';
 import { CombatStats } from '../game/combat-stats.js';
+import { DIFFICULTY_LEVELS, RunSettings } from '../game/run-settings.js';
 
 const byId = (id) => document.getElementById(id);
 const write = (element, value) => {
@@ -266,7 +267,7 @@ const HUD = (() => {
       const nextKills = nonNegative(stats.kills, state.kills);
       if (nextKills < state.kills) state.bestStreak = 0;
       for (const key of ['kills', 'shots', 'hits', 'headshots', 'streak']) state[key] = nonNegative(stats[key], state[key]);
-      state.bestStreak = Math.max(state.bestStreak, state.streak, nonNegative(stats.bestStreak));
+      state.bestStreak = Number.isFinite(stats.bestStreak) ? nonNegative(stats.bestStreak) : Math.max(state.bestStreak, state.streak);
       write(killCount, padded(state.kills));
       write(combatStreak, state.streak > 1 ? '× ' + padded(state.streak) : '');
       combatSummary.classList.toggle('show', state.kills > 0);
@@ -293,6 +294,7 @@ const HUD = (() => {
       if (options.aiming != null) byId('hud').dataset.aiming = String(Boolean(options.aiming));
       const progress = options.progress;
       const meter = byId('missionmeter');
+      if (options.progressLabel) meter.setAttribute('aria-label', options.progressLabel);
       if (typeof progress === 'string') write(byId('missionprogress'), progress);
       else if (typeof progress === 'number' && Number.isFinite(progress)) {
         meter.max = 1;
@@ -337,7 +339,7 @@ const ObjectiveBanner = (() => {
       element.classList.add('show');
       hideAt = currentTime + 4.5;
       const index = ZONE_ORDER.indexOf(zone);
-      HUD.setStatus({ chapter: name, ...(index >= 0 ? { progress: { current: index + 1, total: ZONE_ORDER.length } } : {}) });
+      HUD.setStatus({ chapter: name, progressLabel: 'Mission route progress', ...(index >= 0 ? { progress: { current: index + 1, total: ZONE_ORDER.length } } : {}) });
     },
     hide() { element.classList.remove('show'); hideAt = 0; },
     update(now) {
@@ -346,6 +348,178 @@ const ObjectiveBanner = (() => {
       currentTime = now;
       if (hideAt > 0 && now >= hideAt) this.hide();
     },
+  };
+})();
+
+function runDescription(run = RunSettings.snapshot()) {
+  const difficulty = DIFFICULTY_LEVELS.find(level => level.id === run.difficulty)?.label ?? 'Not selected';
+  const arena = run.arena === 'street' ? 'Street' : 'Rooftop';
+  return {
+    difficulty,
+    arena,
+    mode: run.mode === 'defense' ? 'Tower defense / ' + arena : 'Story campaign',
+    summary: run.mode === 'defense'
+      ? 'TOWER DEFENSE / ' + arena.toUpperCase() + ' · ' + run.waves + ' WAVES · ' + difficulty.toUpperCase()
+      : 'STORY CAMPAIGN · ' + difficulty.toUpperCase(),
+  };
+}
+
+/** Selection is temporary until the explicit Begin action; gameplay owns the lock. */
+const RunSetup = (() => {
+  const element = byId('runsetup');
+  const form = byId('runsetupform');
+  const mode = byId('runmode');
+  const arena = byId('runarena');
+  const waves = byId('runwaves');
+  const difficulty = byId('rundifficulty');
+  const defenseOptions = byId('rundefenseoptions');
+  const confirm = byId('runsetupconfirm');
+  const back = byId('runsetupback');
+  const error = byId('runsetuperror');
+  let open = false;
+  let previousPad = null, controllerFocus = null;
+
+  function clearControllerFocus() {
+    controllerFocus?.setAttribute('data-controller-focus', 'false');
+    controllerFocus = null;
+  }
+  function focusFromController(control) {
+    clearControllerFocus();
+    controllerFocus = control;
+    control.setAttribute('data-controller-focus', 'true');
+    // Native scrolling keeps a focused control visible in short viewports.
+    control.focus();
+  }
+
+  for (const level of DIFFICULTY_LEVELS) {
+    const option = document.createElement('option');
+    option.value = level.id;
+    option.textContent = level.label;
+    difficulty.append(option);
+  }
+
+  function sync() {
+    const defense = mode.value === 'defense';
+    write(byId('runsetupconfirmlabel'), defense ? 'BEGIN DEFENSE' : 'BEGIN MISSION');
+    defenseOptions.hidden = !defense;
+    defenseOptions.disabled = !defense;
+    write(byId('runmodehelp'), defense
+      ? 'Hold one location against recurring waves. Survive every wave to win.'
+      : 'Fight your way through Little Sicily and choose how the night ends.');
+    const selected = DIFFICULTY_LEVELS.find(level => level.id === difficulty.value);
+    write(byId('rundifficultydescription'), selected?.description
+      ?? 'Difficulty controls enemy numbers, their weapons and damage, time between waves, and supplies. Below Average, health regenerates automatically.');
+    confirm.disabled = !selected || RunSettings.isLocked();
+    error.hidden = true;
+  }
+
+  function hide({ restoreFocus = false } = {}) {
+    if (!open) return false;
+    open = false;
+    previousPad = null;
+    clearControllerFocus();
+    element.classList.remove('show');
+    element.setAttribute('aria-hidden', 'true');
+    byId('overlay').inert = false;
+    if (restoreFocus) byId('startbutton').focus({ preventScroll: true });
+    return true;
+  }
+
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!open) return;
+    if (RunSettings.isLocked()) {
+      write(error, 'This run has started. Difficulty and game mode are locked.');
+      error.hidden = false;
+      confirm.disabled = true;
+      return;
+    }
+    let configuration;
+    try {
+      configuration = RunSettings.configure({ difficulty: difficulty.value, mode: mode.value, arena: arena.value, waves: Number(waves.value) });
+    } catch {
+      write(error, 'Choose a difficulty, location and wave count before you begin.');
+      error.hidden = false;
+      difficulty.focus({ preventScroll: true });
+      return;
+    }
+    hide();
+    document.dispatchEvent(new CustomEvent('run:configured', { detail: configuration }));
+  });
+  for (const field of [mode, difficulty, arena, waves]) field.addEventListener('change', sync);
+  back.addEventListener('click', event => {
+    event.stopPropagation();
+    hide({ restoreFocus: true });
+  });
+  element.addEventListener('pointerdown', clearControllerFocus);
+  element.addEventListener('keydown', clearControllerFocus);
+
+  function pollGamepad(pad) {
+    if (!open) return false;
+    if (!pad) { previousPad = null; return true; }
+    const pressed = index => Boolean(pad.buttons?.[index]?.pressed);
+    const current = {
+      up: pressed(12) || pad.axes?.[1] < -0.55,
+      down: pressed(13) || pad.axes?.[1] > 0.55,
+      left: pressed(14) || pad.axes?.[0] < -0.55,
+      right: pressed(15) || pad.axes?.[0] > 0.55,
+      confirm: pressed(0), back: pressed(1),
+    };
+    // The A press that opened setup is still held on its first sampled frame.
+    if (!previousPad) { previousPad = current; return true; }
+    const edge = name => current[name] && !previousPad[name];
+    const move = edge('down') ? 1 : edge('up') ? -1 : 0;
+    const change = edge('right') ? 1 : edge('left') ? -1 : 0;
+    const accept = edge('confirm'), cancel = edge('back');
+    previousPad = current;
+    if (cancel) { hide({ restoreFocus: true }); return true; }
+    const controls = [mode, ...(mode.value === 'defense' ? [arena, waves] : []), difficulty, ...(!confirm.disabled ? [confirm] : []), back];
+    let index = controls.indexOf(document.activeElement);
+    if (index < 0) index = controls.indexOf(difficulty);
+    const control = controls[index];
+    if (move) {
+      focusFromController(controls[(index + move + controls.length) % controls.length]);
+    } else if (change && control.options) {
+      const options = Array.from(control.options, option => option.value);
+      const selected = Math.max(0, options.indexOf(control.value));
+      control.value = options[(selected + change + options.length) % options.length];
+      sync();
+      focusFromController(control);
+    } else if (accept) {
+      if (control === back) hide({ restoreFocus: true });
+      else if (control === confirm) confirm.click();
+      else if (control === difficulty && !difficulty.value) {
+        write(error, 'Use left or right to choose a difficulty.');
+        error.hidden = false;
+        focusFromController(difficulty);
+      } else focusFromController(controls[(index + 1) % controls.length]);
+    }
+    return true;
+  }
+
+  return {
+    present() {
+      if (RunSettings.isLocked()) return false;
+      const run = RunSettings.snapshot();
+      mode.value = run.mode;
+      arena.value = run.arena;
+      waves.value = String(run.waves);
+      difficulty.value = run.difficulty ?? '';
+      sync();
+      previousPad = null;
+      clearControllerFocus();
+      open = true;
+      byId('overlay').classList.remove('hidden');
+      byId('overlay').inert = true;
+      element.classList.add('show');
+      element.setAttribute('aria-hidden', 'false');
+      difficulty.focus({ preventScroll: true });
+      return true;
+    },
+    hide,
+    pollGamepad,
+    isOpen() { return open; },
   };
 })();
 
@@ -367,6 +541,16 @@ const IntroCard = (() => {
   });
   return {
     present() {
+      const run = RunSettings.snapshot(), description = runDescription(run);
+      const defense = run.mode === 'defense';
+      write(byId('introlocation'), defense ? 'TOWER DEFENSE / ' + description.arena.toUpperCase() : 'NEW YORK CITY / LITTLE SICILY');
+      write(byId('introtitle'), defense ? 'HOLD YOUR\nGROUND.' : 'THEY CAME TO\nFINISH THE JOB.');
+      byId('introcampaigncopy').hidden = defense;
+      byId('introdefensecopy').hidden = !defense;
+      write(byId('introdefenseobjective'), 'Defend the ' + description.arena.toLowerCase() + ' through ' + run.waves + ' waves on ' + description.difficulty + ' difficulty.');
+      write(byId('introrunsummary'), description.summary + ' · LOCKED');
+      write(byId('introcontinuelabel'), defense ? 'BEGIN THE DEFENSE' : 'ENTER LITTLE SICILY');
+      write(byId('introskip'), defense ? 'RETRIES RESTART THE DEFENSE AT WAVE 1' : 'CHECKPOINTS AT EACH NEW AREA');
       open = true;
       element.classList.add('show');
       element.setAttribute('aria-hidden', 'false');
@@ -385,14 +569,47 @@ const EndCard = (() => {
     location.reload();
   });
   return {
-    show(tag, title, body, stats = CombatStats.snapshot()) {
+    show(tag, title, body, stats = CombatStats.snapshot(), result = {}) {
+      const run = RunSettings.snapshot(), description = runDescription(run);
       write(byId('endtag'), tag);
       write(byId('endtitle'), title);
       // Legacy mission copy uses <br>; preserve its line breaks without HTML injection.
       write(byId('endbody'), String(body ?? '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, ''));
       write(byId('endkills'), padded(nonNegative(stats.kills)));
       write(byId('endaccuracy'), stats.shots ? Math.round(clamp(stats.hits / stats.shots, 0, 1) * 100) + '%' : '—');
-      write(byId('endstreak'), padded(Math.max(nonNegative(stats.bestStreak), nonNegative(stats.streak), HUD.snapshot().bestStreak)));
+      write(byId('endstreak'), padded(Number.isFinite(stats.bestStreak) ? nonNegative(stats.bestStreak) : Math.max(nonNegative(stats.streak), HUD.snapshot().bestStreak)));
+      write(byId('enddifficulty'), description.difficulty);
+      write(byId('endmode'), description.mode);
+      byId('endwavesdetail').hidden = run.mode !== 'defense';
+      write(byId('endwaves'), nonNegative(result.wavesSurvived, run.waves) + ' / ' + nonNegative(result.wavesTotal, run.waves));
+      write(byId('endfavorite'), stats.favoriteWeaponName || 'No weapon used');
+      const weaponRows = Array.isArray(stats.weapons) ? stats.weapons : [];
+      byId('endweaponstats').replaceChildren(...weaponRows.map(weapon => {
+        const row = document.createElement('tr');
+        const attacks = nonNegative(weapon.attacks);
+        row.dataset.used = String(attacks > 0);
+        const heading = document.createElement('th');
+        heading.scope = 'row';
+        heading.textContent = String(weapon.name ?? weapon.type ?? 'Weapon');
+        row.append(heading);
+        const values = [
+          attacks,
+          nonNegative(weapon.hits),
+          attacks ? Math.round(clamp(nonNegative(weapon.hits) / attacks, 0, 1) * 100) + '%' : '—',
+          nonNegative(weapon.kills),
+          nonNegative(weapon.headshots),
+          Math.round(nonNegative(weapon.damageDealt)),
+        ];
+        for (const value of values) {
+          const cell = document.createElement('td');
+          cell.textContent = String(value);
+          row.append(cell);
+        }
+        return row;
+      }));
+      write(byId('endnote'), run.mode === 'defense'
+        ? 'Choose another location, wave count or difficulty for your next defense.'
+        : 'A different choice. A different ending.');
       element.classList.add('show');
       element.setAttribute('aria-hidden', 'false');
       Input.pause({ showOverlay: false });
@@ -508,15 +725,21 @@ document.querySelectorAll('[data-close-panel]').forEach((button) => button.addEv
 
 // Native controls keep their usual keyboard behavior; modal focus cannot start play.
 document.addEventListener('keydown', (event) => {
+  if (event.code === 'Escape' && !openPanel && RunSetup.isOpen()) {
+    event.preventDefault();
+    event.stopPropagation();
+    RunSetup.hide({ restoreFocus: true });
+    return;
+  }
   if (openPanel && event.code === 'Escape') {
     event.preventDefault();
     event.stopPropagation();
     closePanel();
     return;
   }
-  const dialog = openPanel || (IntroCard.isOpen() ? byId('introcard') : byId('endcard').classList.contains('show') ? byId('endcard') : byId('deathscreen').classList.contains('show') ? byId('deathscreen') : null);
+  const dialog = openPanel || (RunSetup.isOpen() ? byId('runsetup') : IntroCard.isOpen() ? byId('introcard') : byId('endcard').classList.contains('show') ? byId('endcard') : byId('deathscreen').classList.contains('show') ? byId('deathscreen') : null);
   if (!dialog || event.code !== 'Tab') return;
-  const controls = Array.from(dialog.querySelectorAll('button:not(:disabled), input, select, [tabindex="0"]'));
+  const controls = Array.from(dialog.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]'));
   const first = controls[0], last = controls.at(-1);
   if (!first) { event.preventDefault(); return; }
   if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
@@ -616,6 +839,23 @@ function primaryLabel(text) {
   }
   write(label, text);
 }
+
+function syncRunDetails(run = RunSettings.snapshot()) {
+  const description = runDescription(run);
+  const selected = Boolean(run.difficulty);
+  const defense = run.mode === 'defense';
+  byId('menurunsummary').hidden = !selected;
+  write(byId('menurunsummary'), description.summary + (run.locked ? ' · LOCKED' : ''));
+  write(byId('settingsrunsummary'), selected
+    ? 'Difficulty level: ' + description.difficulty + '. ' + description.mode + (defense ? ', ' + run.waves + ' waves' : '') + '. ' + (run.locked ? 'Fixed for this run, including retries.' : 'Locks when you begin.')
+    : 'Choose your difficulty when you begin. It stays fixed throughout the run.');
+  write(byId('restartlabel'), defense ? 'RETRY DEFENSE' : 'RETRY CHECKPOINT');
+  write(byId('deathhint'), defense ? 'Restart from wave 1 with the same difficulty. Hold your ground this time.' : 'Return to your last checkpoint. Make the next move count.');
+}
+document.addEventListener('run:settingschange', event => syncRunDetails(event.detail));
+document.addEventListener('run:started', () => syncRunDetails());
+syncRunDetails();
+
 document.addEventListener('game:ready', () => {
   byId('startbutton').disabled = false;
   primaryLabel(missionStarted ? 'RESUME MISSION' : 'BEGIN MISSION');
@@ -633,4 +873,4 @@ document.addEventListener('playstatechange', (event) => {
   if (active && mode !== 'mouse') HUD.setStatus(mode === 'touch' ? 'TOUCH CONTROLS / TAP PAUSE FOR MENU' : mode === 'gamepad' ? 'CONTROLLER / START TO PAUSE' : 'ARROWS LOOK / J FIRE / P PAUSE');
 });
 
-export { HUD, ObjectiveBanner, IntroCard, EndCard, FPSMeter };
+export { HUD, ObjectiveBanner, RunSetup, IntroCard, EndCard, FPSMeter };

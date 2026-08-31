@@ -8,6 +8,7 @@ import { BALCONY, ROOF, SCAFFOLD_LEVELS } from '../world/layout.js';
 import { STAIRS } from '../world/stair-layout.js';
 import { DISTRICT } from '../world/district-layout.js';
 import { CHECKPOINT_COMMS } from './checkpoint-comms.js';
+import { RunSettings } from './run-settings.js';
 import '../navigation.css';
 
 // Original fan-mission dialogue, not a transcription of the film.
@@ -50,6 +51,12 @@ export function initNavigation() {
   document.getElementById('hud').append(caption);
   onZoneChange(zone => {
     routeIndex = 0;
+    if (RunSettings.snapshot().mode === 'defense') {
+      pendingRadio = null;
+      captionTime = 0;
+      caption.classList.remove('show');
+      return;
+    }
     const line = LINES[zone];
     if (!line) return;
     caption.querySelector('span').textContent = line[0];
@@ -109,6 +116,12 @@ function target() {
 
 export function updateNavigation(dt) {
   if (!marker) return;
+  if (RunSettings.snapshot().mode === 'defense') {
+    marker.hidden = true;
+    caption.classList.remove('show');
+    pendingRadio = null;
+    return;
+  }
   // A restore can change the zone while paused. Play only its current cue on
   // the next simulation step; inspection and muted sessions never speak.
   if (pendingRadio && dt > 0 && !Endings.isResolved()) {

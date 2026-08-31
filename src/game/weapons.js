@@ -297,6 +297,7 @@ const Weapons = {
     FX.muzzleFlash(s.muzzle);
     const pellets = d.pellets || 1;
     let anyHit = false;
+    let damageDealt = 0;
     let killed = false, headshot = false;
     let worldSoundDistance = Infinity, bodySoundDistance = Infinity;
     const spread = d.spread * (Player.aiming ? 0.30 : 1);
@@ -321,10 +322,11 @@ const Weapons = {
       }
       if (hit) {
         const wasAlive = hit.enemy.alive;
-        damageEnemy(hit.enemy, d.dmg, hit.part, hit.point);
+        const result = damageEnemy(hit.enemy, d.dmg, hit.part, hit.point);
+        damageDealt += result?.damage ?? 0;
         if (wasAlive && !hit.enemy.alive) {
           killed = true;
-          CombatStats.recordKill(hit.part === 'head');
+          CombatStats.recordKill(hit.part === 'head', this.current);
         }
         headshot = headshot || hit.part === 'head';
         anyHit = true;
@@ -344,7 +346,7 @@ const Weapons = {
       }
       FX.tracer(barrelBlocked ? s.origin : s.muzzle, s.end);
     }
-    CombatStats.recordShot(anyHit);
+    CombatStats.recordShot(anyHit, this.current, damageDealt);
     if (anyHit) HUD.hit?.({ killed, headshot });
     const recoil = d.recoil * (Player.aiming ? 0.32 : 0.50);
     Player.pitch = clamp(Player.pitch + recoil, -1.5, 1.5);
@@ -415,6 +417,7 @@ const Weapons = {
       }
     }
     if (!best.enemy) {
+      CombatStats.recordMelee(false, this.melee.type);
       if (Number.isFinite(s.meleeWorldHit.distance)) {
         const hit = s.meleeWorldHit;
         Audio.impact({ surface: hit.surfaceKind, pos: hit.point, intensity: 0.65, environment: currentZone });
@@ -424,9 +427,10 @@ const Weapons = {
       return false;
     }
     const wasAlive = best.enemy.alive;
-    damageEnemy(best.enemy, d.dmg, best.part, best.point);
+    const result = damageEnemy(best.enemy, d.dmg, best.part, best.point);
+    CombatStats.recordMelee(true, this.melee.type, result?.damage ?? 0);
     const killed = wasAlive && !best.enemy.alive;
-    if (killed) CombatStats.recordKill(false);
+    if (killed) CombatStats.recordKill(false, this.melee.type);
     HUD.hit?.({ killed, headshot: false });
     // Only the held pose pauses briefly at impact; the world and input keep
     // advancing, so this feedback cannot grant invulnerability or extra hits.

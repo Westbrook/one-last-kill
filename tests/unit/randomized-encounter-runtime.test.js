@@ -4,6 +4,10 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { createRageState } from '../../src/game/rage-rules.js';
+import { createCombatStats } from '../../src/game/combat-stats.js';
+import { createRunSettings } from '../../src/game/run-settings.js';
+import { scaleEncounter } from '../../src/game/difficulty.js';
+import { createHealthRegeneration } from '../../src/game/health-regeneration.js';
 import { clampArmor } from '../../src/game/armor-rules.js';
 import { Colliders, capsuleHasClearance } from '../../src/core/collision.js';
 import { createEncounterSeedSource } from '../../src/game/encounter-session.js';
@@ -39,6 +43,8 @@ assert.ok(spawnStart >= 0 && spawnEnd > spawnStart && endingStart >= 0 && ending
 // real. GPU/rig presentation, audio, input and HUD are explicit quiet sinks.
 // Scripted deaths below are fixture damage, never simulated player kill credit.
 const ai = createEnemyAIHarness(), messages = [], checkpointCalls = [];
+const RunSettings = createRunSettings(), CombatStats = createCombatStats();
+RunSettings.configure({ difficulty: 'average' }); RunSettings.start();
 const camera = new THREE.PerspectiveCamera(82, 16 / 9, 0.05, 220);
 let entropyCalls = 0, weapon = { current: 'fists', loaded: 0, reserve: 0 };
 const seeds = createEncounterSeedSource({
@@ -53,6 +59,9 @@ const readThreatView = () => ({ position: camera.position, yaw: camera.rotation.
 let mission;
 const bindings = {
   THREE, camera, Architecture, Colliders, capsuleHasClearance, EncounterSeeds: seeds, Rage: createRageState(), clampArmor,
+  RunSettings, scaleEncounter, CombatStats, HealthRegeneration: createHealthRegeneration(),
+  DefenseDirector: { snapshot: () => ({ active: false }), isActive: () => false, isResolved: () => false },
+  snapshotDifficultyLoot: ai.snapshotDifficultyLoot, restoreDifficultyLoot: ai.restoreDifficultyLoot,
   Player: ai.player, PlayerState: ai.playerState, Enemies: ai.Enemies,
   surfaceTopAt: ai.surfaceTopAt, isBlocked: ai.isBlocked, primeEnemyInvestigation: ai.primeEnemyInvestigation,
   EncounterSchedule, EncounterRouteProgress, selectEncounterSpawn, selectEncounterFrontPair,
@@ -87,7 +96,7 @@ function place(point, yaw = point.yaw ?? Math.PI / 2) {
 }
 function reset(seed, zone = 'balcony', point = CHECKPOINTS[zone], yaw = point.yaw) {
   mission.Endings.reset(); mission.StreetChoice.reset(); mission.WaveDirector.reset(); ai.reset();
-  seeds.setOverride(seed); messages.length = 0; checkpointCalls.length = 0;
+  seeds.setOverride(seed); messages.length = 0; checkpointCalls.length = 0; CombatStats.reset();
   weapon = { current: 'fists', loaded: 0, reserve: 0 };
   bindings.currentZone = zone; ai.player.health = 100;
   place(point, yaw); mission.WaveDirector.start(zone); mission.saveCheckpoint(zone);
@@ -373,6 +382,33 @@ test('every forward checkpoint preserves the previous area’s living enemies wi
     assert.equal(mission.getMissionState().checkpoint.zone, nextZone);
     assert.equal(mission.getMissionState().checkpoint.branch, nextZone === 'bakery' ? 'bakery' : null);
   }
+});
+
+test('an actual checkpoint retry rolls weapon statistics and the loot cadence back to the saved run', () => {
+  reset(null, 'roof');
+  CombatStats.recordShot(true, 'pistol', 30);
+  CombatStats.recordKill(true, 'pistol');
+  CombatStats.update(10);
+  ai.spawn('gunman', CHECKPOINTS.roof, { zone: 'roof' });
+  defeat();
+  mission.saveCheckpoint('roof');
+  const savedStats = CombatStats.snapshot();
+  const savedLoot = ai.snapshotDifficultyLoot();
+  const savedRun = RunSettings.snapshot();
+
+  CombatStats.recordMelee(true, 'bat', 55);
+  CombatStats.recordKill(false, 'bat');
+  CombatStats.recordShot(false, 'pistol');
+  ai.spawn('gunman', CHECKPOINTS.roof, { zone: 'roof' });
+  defeat();
+  assert.notDeepEqual(CombatStats.snapshot(), savedStats);
+  assert.notDeepEqual(ai.snapshotDifficultyLoot(), savedLoot);
+  assert.equal(mission.restartFromZone(), true);
+  assert.deepEqual(CombatStats.snapshot(), savedStats,
+    'failed-attempt attacks, misses and kills cannot inflate the win-screen weapon rows');
+  assert.deepEqual(ai.snapshotDifficultyLoot(), savedLoot,
+    'replaying a checkpoint replays its guaranteed first drops and duplicate-drop cadence');
+  assert.equal(RunSettings.snapshot(), savedRun, 'retry retains the same locked difficulty');
 });
 
 test('the actual scaffold director keeps upper contacts and their occupied slots after a drop', () => {

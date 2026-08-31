@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { CHECKPOINTS, ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS } from '../../src/game/mission-data.js';
 import { EncounterSchedule, EncounterRouteProgress } from '../../src/game/encounter-rules.js';
 import { createEncounterSeedSource } from '../../src/game/encounter-session.js';
+import { createRunSettings } from '../../src/game/run-settings.js';
+import { scaleEncounter } from '../../src/game/difficulty.js';
 import { selectEncounterSpawn, selectEncounterFrontPair } from '../../src/game/encounter-spawns.js';
 import { describeOffscreenThreat } from '../../src/game/offscreen-threats.js';
 import { hasPairBearingSeparation, isBehindPlayer } from '../../src/game/rear-encounter-rules.js';
@@ -22,6 +24,8 @@ const messages = [];
 // fresh attempt seeds; separate runtime integration tests exercise that mode.
 const EncounterSeeds = createEncounterSeedSource();
 EncounterSeeds.setOverride(null);
+const RunSettings = createRunSettings();
+RunSettings.configure({ difficulty: 'average' }); RunSettings.start();
 let weapon = { current: 'fists', loaded: 0, reserve: 0 };
 const source = readFileSync(new URL('../../src/game/mission.js', import.meta.url), 'utf8');
 const start = source.indexOf('function playerFootPosition()');
@@ -37,7 +41,7 @@ ${source.slice(start, end)}
   THREE, camera, Architecture, Colliders, capsuleHasClearance, Player: ai.player, PlayerState: ai.playerState,
   Enemies: ai.Enemies, isBlocked: ai.isBlocked, primeEnemyInvestigation: ai.primeEnemyInvestigation,
   surfaceTopAt: ai.surfaceTopAt, selectEncounterSpawn, selectEncounterFrontPair, isSegmentOccluded, readThreatView,
-  EncounterSchedule, EncounterRouteProgress, EncounterSeeds, ZONE_WAVE_CONFIG,
+  EncounterSchedule, EncounterRouteProgress, EncounterSeeds, ZONE_WAVE_CONFIG, RunSettings, scaleEncounter,
   Weapons: { snapshot: () => ({ ...weapon }) },
   HUD: { message: (...values) => messages.push(values), setHealth() {}, setObjective() {} },
 }, { filename: 'src/game/mission.js' });
@@ -439,7 +443,8 @@ test('the campaign rig pools cover the strongest possible concentration of rear 
     for (const config of Object.values(ZONE_WAVE_CONFIG).filter(value => value.rearPressure)) {
       const capacity = enemyCampaignPoolCapacity(type, configs, Object.values(FINAL_ENCOUNTERS));
       assert.ok(capacity >= config.maxAlive + 2, `${type}: two dead rigs cannot exhaust rear arrival capacity`);
-      assert.equal(ai.EnemyPool.pools[type].length, capacity);
+      assert.ok(ai.EnemyPool.pools[type].length >= capacity,
+        'The shared pool includes every supported difficulty and defense session');
     }
   }
 });

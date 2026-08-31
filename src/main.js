@@ -29,10 +29,12 @@ import { ArmorPickups } from './game/armor-pickups.js';
 import { Enemies, EnemyPool, enemiesUpdate } from './game/enemies.js';
 import {
   initMission, WaveDirector, HealPickups, StreetChoice, Endings, FireHazards,
-  CHECKPOINTS, saveCheckpoint, restartFromZone,
+  CHECKPOINTS, saveCheckpoint, restartFromZone, startRun, DefenseDirector,
 } from './game/mission.js';
 import { CombatStats } from './game/combat-stats.js';
 import { Rage } from './game/rage-rules.js';
+import { RunSettings } from './game/run-settings.js';
+import { HealthRegeneration } from './game/health-regeneration.js';
 import { ThreatFeedback } from './game/threat-feedback.js';
 import { initNavigation, updateNavigation } from './game/navigation.js';
 import { Blood, FX } from './render/effects.js';
@@ -70,9 +72,17 @@ document.addEventListener('settingschange', event => syncAudioSettings(event.det
 const renderWorld = () => worldPresentation ? worldPresentation.render() : renderer.render(scene, camera);
 
 function isPlaying() {
-  return Input.active && !PlayerState.dead && !IntroCard.isOpen()
-    && !Endings.isResolved() && !document.hidden && !contextLost;
+  return (RunSettings.isStarted() || controlledTest) && Input.active && !PlayerState.dead && !IntroCard.isOpen()
+    && !Endings.isResolved() && !DefenseDirector.isResolved() && !document.hidden && !contextLost;
 }
+
+document.addEventListener('game:runstart', () => {
+  startRun();
+  clock.advance(0, false);
+  previousTime = 0;
+  inspecting = false;
+  render();
+});
 
 function syncTouchContext() {
   Input.setTouchContext({
@@ -111,6 +121,7 @@ function stepFrame(realDt) {
     Weapons.tick(clock.step);
     syncTouchContext();
     playerUpdate(clock.step);
+    DefenseDirector.containPlayer();
     FireHazards.update(clock.step);
     if (PlayerState.dead) {
       // Lethal contact cannot collect a supply or commit a checkpoint/ending.
@@ -119,12 +130,19 @@ function stepFrame(realDt) {
       continue;
     }
     enemiesUpdate(clock.step);
-    WaveDirector.update(clock.step);
-    triggersUpdate();
+    if (PlayerState.dead) continue;
+    if (RunSettings.snapshot().mode === 'defense') DefenseDirector.update(clock.step);
+    else {
+      WaveDirector.update(clock.step);
+      triggersUpdate();
+    }
     HealPickups.update(clock.step);
     ArmorPickups.update(clock.step);
-    StreetChoice.update(clock.step);
-    Endings.update(clock.step);
+    if (RunSettings.snapshot().mode !== 'defense') {
+      StreetChoice.update(clock.step);
+      Endings.update(clock.step);
+    }
+    if (HealthRegeneration.update(clock.step, Player, RunSettings.profile)) HUD.setHealth(Player.health);
     CombatStats.update(clock.step);
     const rageOutcome = Rage.takeOutcome();
     if (rageOutcome === 'secured') HUD.message('RAGE SECURED · BONUS HEALTH KEPT', 2.5);
@@ -304,11 +322,11 @@ async function boot() {
   // QA is visible, explicit, and excluded from production builds.
   const params = new URLSearchParams(location.search);
   if (import.meta.env.DEV && params.get('qa') === '1') {
-    const [{ installQA }, { createGpuFrameTimer }] = await Promise.all([
-      import('./testing/qa.js'), import('./core/gpu-frame-timer.js'),
+    const [{ installQA }, { createGpuFrameTimer }, { installDifficultyQA }] = await Promise.all([
+      import('./testing/qa.js'), import('./core/gpu-frame-timer.js'), import('./testing/difficulty-qa.js'),
     ]);
     const gpuTimer = createGpuFrameTimer(renderer.getContext(), { sampleWindow: 2048 });
-    installQA({
+    const qaApi = {
       scene, World, renderer, camera, Player, PlayerState, Enemies, Weapons,
       stepFrame, gpuTimer,
       render() {
@@ -337,6 +355,9 @@ async function boot() {
       },
       resetToApartment() {
         Input.pause({ showOverlay: false });
+        DefenseDirector.reset();
+        RunSettings.reset();
+        HealthRegeneration.reset();
         Triggers.reset();
         Endings.reset(); StreetChoice.reset(); WaveDirector.reset();
         AmmoSupplies.reset();
@@ -359,7 +380,9 @@ async function boot() {
         heroFace: getHeroFaceTextureStatus(),
         surfaceDelivery,
         startup: graphicsStartup }),
-    });
+    };
+    installQA(qaApi);
+    installDifficultyQA(qaApi);
   }
 }
 

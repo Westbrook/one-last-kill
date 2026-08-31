@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { WEAPON_DEFS } from '../../../src/game/weapon-data.js';
+import { createCombatStats } from '../../../src/game/combat-stats.js';
 import * as weaponRules from '../../../src/game/weapon-rules.js';
 import * as meleeRules from '../../../src/game/melee-rules.js';
 import { isSegmentOccluded } from '../../../src/game/combat-rules.js';
@@ -26,11 +27,15 @@ export function weaponHarness({ supplies, colliders = { list: [] }, ballistics =
     .replace(/^import .*;\s*$/gm, '').replace(/^export \{[^}]+\};\s*$/gm, '');
   assert.doesNotMatch(source, /^import\s/m, 'Update the explicit fixture for multiline imports');
   const calls = { sounds: 0, pickups: 0, audioEvents: [], damage: [], ranges: [], hits: [], kills: 0, messages: [], shots: [], impacts: [], tracers: [] };
+  const CombatStats = createCombatStats();
+  const recordShot = CombatStats.recordShot.bind(CombatStats), recordKill = CombatStats.recordKill.bind(CombatStats);
+  CombatStats.recordShot = (hit, ...args) => { calls.shots.push(hit); recordShot(hit, ...args); };
+  CombatStats.recordKill = (...args) => { calls.kills++; recordKill(...args); };
   const camera = new THREE.PerspectiveCamera(82, 16 / 9, 0.05, 100), scene = new THREE.Scene();
   const Player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), speedSprint: 6.5, _eyeH: 1.7, aiming: false, pitch: 0, yaw: 0 };
   const PlayerState = { dead: false }, World = new THREE.Group(), GameTime = { elapsed: 0 };
   const enemy = { alive: true, health: 500 };
-  const ray = { query: () => ({ enemy, part: 'body', point: new THREE.Vector3(0, 0, -1), dist: 1 }) };
+  const ray = { query: () => enemy.alive ? { enemy, part: 'body', point: new THREE.Vector3(0, 0, -1), dist: 1 } : null };
   const noOp = () => {};
   const audioEvent = name => (options = {}) => calls.audioEvents.push({ name, options: {
     ...options, ...(options.pos ? { pos: { x: options.pos.x, y: options.pos.y, z: options.pos.z } } : {}),
@@ -60,7 +65,7 @@ export function weaponHarness({ supplies, colliders = { list: [] }, ballistics =
       muzzleFlash() {}, tracer(start, end) { calls.tracers.push({ start: start.clone(), end: end.clone() }); },
       impact(x, y, z, count, hit) { calls.impacts.push({ point: new THREE.Vector3(x, y, z), count, surfaceKind: hit?.surfaceKind, normal: hit?.normal.clone(), object: hit?.object }); },
     },
-    CombatStats: { recordKill() { calls.kills++; }, recordShot(hit) { calls.shots.push(hit); } },
+    CombatStats,
     Settings: { get: key => settings[key] ?? false },
     document: { getElementById: () => ({ classList: { toggle: noOp } }) },
     raycastEnemies(origin, direction, range, worldDistance) {
@@ -70,9 +75,12 @@ export function weaponHarness({ supplies, colliders = { list: [] }, ballistics =
     damageEnemy(target, damage, part, point) {
       calls.damage.push(damage);
       if (damageTarget) return damageTarget(target, damage, part, point);
+      if (!target.alive) return null;
+      const applied = Math.min(target.health, damage);
       target.health = Math.max(0, target.health - damage);
       target.alive = target.health > 0;
+      return { damage: applied, killed: !target.alive, headshot: part === 'head' };
     },
   }, { filename: 'weapons.js' });
-  return { ...api, camera, calls, Player, PlayerState, World, GameTime, enemy, ray, settings, colliders, ballistics };
+  return { ...api, CombatStats, camera, calls, Player, PlayerState, World, GameTime, enemy, ray, settings, colliders, ballistics };
 }

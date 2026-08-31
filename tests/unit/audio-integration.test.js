@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { createRageState } from '../../src/game/rage-rules.js';
+import { createHealthRegeneration } from '../../src/game/health-regeneration.js';
+import { createRunSettings } from '../../src/game/run-settings.js';
 import { createAudioController } from '../../src/core/audio.js';
 import { createSettingsStore, audioMixFromSettings } from '../../src/core/settings.js';
 import { FixedStepClock } from '../../src/core/frame-budget.js';
@@ -25,6 +27,13 @@ const manifest = JSON.parse(readFileSync(new URL('../../public/assets/audio/mani
 const near = (actual, expected, message = 'Values agree') => assert.ok(Math.abs(actual - expected) < 1e-8,
   message + ': expected ' + expected + ', got ' + actual);
 const noOp = () => {};
+
+function startedRun(options = {}) {
+  const settings = createRunSettings();
+  settings.configure({ difficulty: 'average', mode: 'campaign', ...options });
+  settings.start();
+  return settings;
+}
 
 function actualMain(name) {
   const source = mainSource.match(new RegExp('^function ' + name + '\\([^]*?^\\}', 'm'))?.[0];
@@ -167,7 +176,7 @@ test('real pickups distinguish weapon handling from reserve ammo without doublin
 // Execute the real main functions without booting its renderer or world.
 // Simulation services are explicit recording sinks; the clock and controller
 // remain real, so accepted/paused time crosses the production boundary.
-function mainHarness(audio, { updateNavigation = noOp } = {}) {
+function mainHarness(audio, { updateNavigation = noOp, run = {} } = {}) {
   const ticks = [], simulated = [], listeners = new Map();
   const document = {
     hidden: false,
@@ -176,13 +185,15 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
   };
   const Settings = createSettingsStore({ onChange: detail => document.dispatchEvent({ type: 'settingschange', detail }) });
   const record = name => dt => simulated.push({ name, dt });
-  const gates = { intro: false, ending: false };
+  const gates = { intro: false, ending: false, defense: false };
   const Input = { active: true, pollGamepad: noOp, setTouchContext: noOp };
   const Player = { pos: new THREE.Vector3(0, 5.72, 0), yaw: 0.3, health: 100 };
   const PlayerState = { dead: false }, camera = new THREE.PerspectiveCamera();
   camera.position.copy(Player.pos);
   const bindings = {
     FixedStepClock, Settings, audioMixFromSettings, document, Input, Player, PlayerState, camera, Rage: createRageState(),
+    RunSettings: startedRun(run),
+    HealthRegeneration: createHealthRegeneration(),
     Audio: { ...audio, tick(dt, state) {
       ticks.push({ dt, zone: state.zone, threat: state.threat, paused: state.paused, dead: state.dead,
         listenerPosition: state.listener.position, yaw: state.listener.yaw });
@@ -192,7 +203,9 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
     Enemies: { list: [] }, currentZone: 'roof', GameTime: { elapsed: 0 },
     Weapons: { tick: record('weapon'), update: record('viewmodel'), def: () => ({ kind: 'ranged' }) },
     playerUpdate: record('player'), enemiesUpdate: record('enemy'), triggersUpdate: record('triggers'),
-    WaveDirector: { update: record('wave') }, HealPickups: { update: record('heal') }, ArmorPickups: { update: record('armor') },
+    WaveDirector: { update: record('wave') },
+    DefenseDirector: { isResolved: () => gates.defense, update: record('defense'), containPlayer: record('contain') },
+    HealPickups: { update: record('heal') }, ArmorPickups: { update: record('armor') },
     FireHazards: { update: record('fire'), reset: noOp },
     StreetChoice: { update: record('choice') }, CombatStats: { update: record('stats'), snapshot: () => ({}) },
     HUD: { update: record('hud'), setRage: noOp, setHealth: noOp, message: noOp },
@@ -215,7 +228,7 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
   return { ...api, ...bindings, audio, ticks, simulated, gates, setZone(zone) { bindings.currentZone = zone; } };
 }
 
-function navigationHarness(audio) {
+function navigationHarness(audio, run = {}) {
   const nodes = new Map(), callbacks = [];
   function element() {
     const children = new Map(), classes = new Set();
@@ -229,6 +242,7 @@ function navigationHarness(audio) {
       },
       classList: {
         add(value) { classes.add(value); },
+        remove(value) { classes.delete(value); },
         toggle(value, on) { if (on) classes.add(value); else classes.delete(value); },
         contains: value => classes.has(value),
       },
@@ -241,6 +255,7 @@ function navigationHarness(audio) {
   const announcements = [], gates = { resolved: false };
   const bindings = {
     THREE, camera, Player, BALCONY, ROOF, SCAFFOLD_LEVELS, STAIRS, DISTRICT, CHECKPOINT_COMMS,
+    RunSettings: startedRun(run),
     currentZone: 'apartment', onZoneChange: callback => callbacks.push(callback),
     document: { createElement: element, getElementById: id => nodes.get(id) },
     Endings: { isResolved: () => gates.resolved, isCommitted: () => false },
@@ -341,6 +356,11 @@ test('actual fixed-step and animation hooks freeze audio for all pause gates and
   const gates = [
     on => { h.Input.active = !on; }, on => { h.PlayerState.dead = on; },
     on => { h.gates.intro = on; }, on => { h.gates.ending = on; },
+    on => { h.gates.defense = on; },
+    on => {
+      if (on) h.RunSettings.reset();
+      else { h.RunSettings.configure({ difficulty: 'average' }); h.RunSettings.start(); }
+    },
     on => { h.document.hidden = on; }, on => { h.setContextLost(on); },
   ];
   for (const gate of gates) {
@@ -362,6 +382,23 @@ test('actual fixed-step and animation hooks freeze audio for all pause gates and
   near(audio.getStatus().elapsed, elapsed); near(h.GameTime.elapsed, game);
   h.frame(180017); assert.ok(audio.getStatus().elapsed > elapsed);
   await audio.reset(); assert.equal(output.calls.contexts, 1);
+});
+
+test('actual defense simulation advances its director and audio without campaign transitions', () => {
+  const { audio, calls } = lockedAudio();
+  const h = mainHarness(audio, { run: { mode: 'defense', arena: 'street', waves: 20 } });
+  near(h.stepFrame(STEP), STEP);
+  const updated = h.simulated.map(item => item.name);
+  for (const service of ['contain', 'defense', 'heal', 'armor', 'stats']) assert.ok(updated.includes(service), service);
+  for (const service of ['wave', 'triggers', 'choice', 'ending']) assert.equal(updated.includes(service), false, service);
+  assert.equal(h.ticks.at(-1).paused, false);
+  near(h.ticks.at(-1).dt, STEP);
+  h.gates.defense = true;
+  const simulated = h.simulated.length;
+  near(h.stepFrame(60), 0); near(h.GameTime.elapsed, STEP);
+  assert.equal(h.simulated.length, simulated);
+  assert.equal(h.ticks.at(-1).paused, true);
+  assertLocked(audio, calls);
 });
 
 test('all eight actual checkpoint captions match local radio IDs and announce once only after positive simulation time', () => {
@@ -386,6 +423,25 @@ test('all eight actual checkpoint captions match local radio IDs and announce on
     assert.equal(h.announcements.length, count + 1);
     assert.equal(h.announcements.at(-1).cue, cue); assert.equal(h.announcements.at(-1).accepted, false);
     assertLocked(audio, calls);
+  }
+});
+
+test('tower defense suppresses campaign routes, dialogue and checkpoint radio in either arena', async () => {
+  for (const arena of ['roof', 'street']) {
+    const output = outputDouble(), audio = createAudioController(output);
+    audio.setVoiceEnabled(true); audio.setMuted(false); await audio.resume();
+    const h = navigationHarness(audio, { mode: 'defense', arena, waves: 10 });
+    h.changeZone(arena);
+    const caption = h.nodes.get('mission-caption'), marker = h.nodes.get('route-marker');
+    assert.equal(caption.classList.contains('show'), false);
+    for (const dt of [0, STEP, STEP, 1]) {
+      h.updateNavigation(dt);
+      assert.equal(marker.hidden, true);
+      assert.equal(caption.classList.contains('show'), false);
+    }
+    assert.equal(h.announcements.length, 0);
+    assert.equal(output.calls.speech.length, 0);
+    await audio.reset();
   }
 });
 
