@@ -1,0 +1,21 @@
+ M README.md
+ M docs/architecture.md
+ M docs/art-direction.md
+ M src/render/hero-character-geometry.js
+ M src/render/hero-character-head.js
+ M src/render/hero-character-materials.js
+ M src/render/hero-face-albedo.js
+ M src/testing/qa.js
+ M src/world/zones/street.js
+ M tests/unit/district-layout.test.js
+ M tests/unit/helpers/world-surface-fixture.js
+ M tests/unit/qa-encounter-seeds.test.js
+ M tests/unit/spatial-builders.test.js
+?? docs/character-finish-provenance.md
+?? docs/cohesive-art-review.md
+?? docs/storefront-kit-provenance.md
+?? src/render/hero-surface-finish.js
+?? src/render/storefront-kit.js
+?? tests/unit/hero-surface-finish.test.js
+?? tests/unit/storefront-kit.test.js
+?? tools/art-review-report.mjs

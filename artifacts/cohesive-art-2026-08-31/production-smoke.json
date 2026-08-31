@@ -1,0 +1,17 @@
+{
+  "url": "http://127.0.0.1:4173/?qa=1&mute=1",
+  "qaPanelCount": 0,
+  "qaReportCount": 0,
+  "playing": "- generic \"First-person game. Use keyboard and mouse, a gamepad, or enable on-screen touch controls in Settings. Open Field Notes for controls.\" [active]\n- generic \"Game status\":\n  - generic: 01 / LITTLE SICILY\n  - generic: APARTMENT\n  - generic: 01 / 08\n  - status: GET OUT — THE FIRE IS SPREADING\n  - progressbar \"Mission route progress\"\n  - generic \"Compass heading\":\n    - generic: 045°\n    - generic: \"N\"\n    - generic: NE\n    - generic: E\n  - status:\n    - generic: apartment\n    - text: GET OUT — THE FIRE IS SPREADING\n  - status: KEYBOARD MODE · ARROWS LOOK · J FIRE · P PAUSE\n  - generic: +\n  - generic: \"100\"\n  - generic: HEALTH\n  - progressbar \"Armor\"\n  - progressbar \"Health\"\n  - status\n  - generic: ARROWS LOOK / J FIRE / P PAUSE\n  - text: RELOADING\n  - generic: ···\n  - generic: CLOSE QUARTERS\n  - generic: \"01\"\n  - generic: FISTS\n  - generic \"Unlimited melee attacks\":\n    - generic: ∞\n  - generic: R\n  - text: RELOAD\n  - generic: V\n  - text: MELEE\n  - status\n  - generic: THROUGH THE LIVING ROOM\n  - generic: 2 m\n  - status:\n    - text: CASTLE\n    - paragraph: They came for me. The people downstairs didn’t choose this.\n    - generic: INTERCEPTED RADIO · Ready.\n- button \"Audio is locked off for this silent session.\" [disabled]:\n  - generic: AUDIO LOCKED OFF",
+  "paused": "- generic \"First-person game. Use keyboard and mouse, a gamepad, or enable on-screen touch controls in Settings. Open Field Notes for controls.\" [active]\n- main:\n  - generic: A FAN-MADE EXPERIENCE\n  - generic: SINGLE PLAYER\n  - generic: MISSION PAUSED / LITTLE SICILY\n  - 'heading \"The Punisher: One Last Kill\" [level=1]':\n    - generic: THE PUNISHER\n    - generic: ONE LAST\n    - generic: KILL.\n  - paragraph:\n    - text: They came for you.\n    - text: The people downstairs didn’t ask to be part of it.\n  - button \"RESUME MISSION\":\n    - generic: RESUME MISSION\n    - generic: ↗\n  - button \"FIELD NOTES\":\n    - generic: \"01\"\n    - text: FIELD NOTES\n  - button \"SETTINGS\":\n    - generic: \"02\"\n    - text: SETTINGS\n  - paragraph: KEYBOARD + MOUSE / GAMEPAD / TOUCH\n  - generic: \"01\"\n  - strong: LITTLE SICILY\n  - generic: NEW YORK CITY / 6:47 PM\n  - paragraph: Unofficial fan-made experience. Not affiliated with Marvel or Disney.\n  - text: ORIGINAL SCENARIO\n  - text: WEBGL EXPERIENCE\n- button \"Audio is locked off for this silent session.\" [disabled]:\n  - generic: AUDIO LOCKED OFF",
+  "logs": [],
+  "checks": [
+    "Field Notes opened and closed",
+    "High and Automatic selected in Settings",
+    "Reduced motion toggled and restored",
+    "Briefing and mission entry",
+    "Normal keyboard look/move/fire and pause",
+    "Audio lock visible throughout",
+    "Production ignores qa=1"
+  ]
+}

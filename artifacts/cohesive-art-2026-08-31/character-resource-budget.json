@@ -1,0 +1,320 @@
+{
+  "roles": [
+    {
+      "role": "thug",
+      "before": {
+        "triangles": 13814,
+        "draws": 4,
+        "geometryBytes": 656464,
+        "vertexBytes": 580528,
+        "finishBytes": 0,
+        "vertices": 9948,
+        "contactSamples": 1000
+      },
+      "after": {
+        "triangles": 13832,
+        "draws": 4,
+        "geometryBytes": 690674,
+        "vertexBytes": 614738,
+        "finishBytes": 20342,
+        "vertices": 10171,
+        "contactSamples": 1000
+      },
+      "delta": {
+        "triangles": 18,
+        "draws": 0,
+        "geometryBytes": 34210,
+        "vertexBytes": 34210,
+        "finishBytes": 20342,
+        "vertices": 223,
+        "contactSamples": 0
+      },
+      "fixtureAppearance": {
+        "skin": "#c39780",
+        "shirt": "#41464a",
+        "pants": "#2b3036",
+        "hair": "#0e0a08",
+        "height": 1.82,
+        "build": 1.05,
+        "kind": "thug",
+        "role": "thug"
+      }
+    },
+    {
+      "role": "brawler",
+      "before": {
+        "triangles": 13572,
+        "draws": 4,
+        "geometryBytes": 644920,
+        "vertexBytes": 570208,
+        "finishBytes": 0,
+        "vertices": 9756,
+        "contactSamples": 1031
+      },
+      "after": {
+        "triangles": 13618,
+        "draws": 4,
+        "geometryBytes": 685270,
+        "vertexBytes": 610558,
+        "finishBytes": 20202,
+        "vertices": 10101,
+        "contactSamples": 1029
+      },
+      "delta": {
+        "triangles": 46,
+        "draws": 0,
+        "geometryBytes": 40350,
+        "vertexBytes": 40350,
+        "finishBytes": 20202,
+        "vertices": 345,
+        "contactSamples": -2
+      },
+      "fixtureAppearance": {
+        "skin": "#c09072",
+        "shirt": "#646558",
+        "pants": "#353b3f",
+        "hair": "#211c18",
+        "height": 1.78,
+        "build": 1,
+        "kind": "brawler",
+        "role": "brawler"
+      }
+    },
+    {
+      "role": "gunman",
+      "before": {
+        "triangles": 13438,
+        "draws": 4,
+        "geometryBytes": 641424,
+        "vertexBytes": 567744,
+        "finishBytes": 0,
+        "vertices": 9760,
+        "contactSamples": 990
+      },
+      "after": {
+        "triangles": 13462,
+        "draws": 4,
+        "geometryBytes": 676086,
+        "vertexBytes": 602406,
+        "finishBytes": 20002,
+        "vertices": 10001,
+        "contactSamples": 992
+      },
+      "delta": {
+        "triangles": 24,
+        "draws": 0,
+        "geometryBytes": 34662,
+        "vertexBytes": 34662,
+        "finishBytes": 20002,
+        "vertices": 241,
+        "contactSamples": 2
+      },
+      "fixtureAppearance": {
+        "skin": "#b89876",
+        "shirt": "#3f4652",
+        "pants": "#2c323b",
+        "hair": "#1a1208",
+        "height": 1.76,
+        "build": 0.98,
+        "kind": "gunman",
+        "role": "gunman"
+      }
+    },
+    {
+      "role": "bruiser",
+      "before": {
+        "triangles": 14796,
+        "draws": 4,
+        "geometryBytes": 695744,
+        "vertexBytes": 613916,
+        "finishBytes": 0,
+        "vertices": 10439,
+        "contactSamples": 973
+      },
+      "after": {
+        "triangles": 14816,
+        "draws": 4,
+        "geometryBytes": 731212,
+        "vertexBytes": 649384,
+        "finishBytes": 21336,
+        "vertices": 10668,
+        "contactSamples": 975
+      },
+      "delta": {
+        "triangles": 20,
+        "draws": 0,
+        "geometryBytes": 35468,
+        "vertexBytes": 35468,
+        "finishBytes": 21336,
+        "vertices": 229,
+        "contactSamples": 2
+      },
+      "fixtureAppearance": {
+        "skin": "#b78a72",
+        "shirt": "#51483b",
+        "pants": "#34342e",
+        "hair": "#1a0e08",
+        "height": 1.94,
+        "build": 1.32,
+        "kind": "bruiser",
+        "role": "bruiser"
+      }
+    },
+    {
+      "role": "hitman",
+      "before": {
+        "triangles": 13570,
+        "draws": 4,
+        "geometryBytes": 646704,
+        "vertexBytes": 572232,
+        "finishBytes": 0,
+        "vertices": 9826,
+        "contactSamples": 972
+      },
+      "after": {
+        "triangles": 13600,
+        "draws": 4,
+        "geometryBytes": 682326,
+        "vertexBytes": 607854,
+        "finishBytes": 20170,
+        "vertices": 10085,
+        "contactSamples": 974
+      },
+      "delta": {
+        "triangles": 30,
+        "draws": 0,
+        "geometryBytes": 35622,
+        "vertexBytes": 35622,
+        "finishBytes": 20170,
+        "vertices": 259,
+        "contactSamples": 2
+      },
+      "fixtureAppearance": {
+        "skin": "#a88068",
+        "shirt": "#37434b",
+        "pants": "#29323a",
+        "hair": "#080808",
+        "height": 1.78,
+        "build": 1,
+        "kind": "hitman",
+        "role": "hitman"
+      }
+    },
+    {
+      "role": "enforcer",
+      "before": {
+        "triangles": 14682,
+        "draws": 4,
+        "geometryBytes": 691184,
+        "vertexBytes": 610040,
+        "finishBytes": 0,
+        "vertices": 10382,
+        "contactSamples": 973
+      },
+      "after": {
+        "triangles": 14696,
+        "draws": 4,
+        "geometryBytes": 725710,
+        "vertexBytes": 644566,
+        "finishBytes": 21186,
+        "vertices": 10593,
+        "contactSamples": 975
+      },
+      "delta": {
+        "triangles": 14,
+        "draws": 0,
+        "geometryBytes": 34526,
+        "vertexBytes": 34526,
+        "finishBytes": 21186,
+        "vertices": 211,
+        "contactSamples": 2
+      },
+      "fixtureAppearance": {
+        "skin": "#b08068",
+        "shirt": "#424a45",
+        "pants": "#2c3434",
+        "hair": "#08060a",
+        "height": 1.92,
+        "build": 1.28,
+        "kind": "bruiser",
+        "role": "enforcer"
+      }
+    }
+  ],
+  "totalOneOfEach": {
+    "before": {
+      "triangles": 83872,
+      "draws": 24,
+      "geometryBytes": 3976440,
+      "vertexBytes": 3514668,
+      "finishBytes": 0,
+      "vertices": 60111,
+      "contactSamples": 5939
+    },
+    "after": {
+      "triangles": 84024,
+      "draws": 24,
+      "geometryBytes": 4191278,
+      "vertexBytes": 3729506,
+      "finishBytes": 123238,
+      "vertices": 61619,
+      "contactSamples": 5945
+    }
+  },
+  "textures": {
+    "beforeSharedProcedural": 6,
+    "afterSharedProcedural": 6,
+    "baseRGBABytesPer256Map": 262144,
+    "rgbaBytesWithMipmapsPer256Map": 349524,
+    "sharedProceduralRGBABytesWithMipmaps": 2097144,
+    "sharedFace": {
+      "width": 1254,
+      "height": 1254,
+      "downloadBytes": 2102953,
+      "rgbaBytesWithMipmapsEstimate": 8386752,
+      "unchanged": true,
+      "sha256": "5f50a4d9cad25b94a09abd5bdfc09ba9527bc4d8cf725341329687e012449596"
+    },
+    "addedTextureDownloadBytes": 0,
+    "addedTextureSamples": 0
+  },
+  "sources": [
+    {
+      "path": "src/render/hero-character-geometry.js",
+      "bytes": 27329,
+      "sha256": "dc9d5d591158d4722396a6eff1635d4e990dad61b8b1e4742442ecd54c736a0b"
+    },
+    {
+      "path": "src/render/hero-character-head.js",
+      "bytes": 22033,
+      "sha256": "781211aa58dfff345e869623cad219e139e7d02481a81cf36dbc1363e5fb3b05"
+    },
+    {
+      "path": "src/render/hero-character-materials.js",
+      "bytes": 3867,
+      "sha256": "8cf980c51070537cd0e9d8b3c7834e04be91bcbc4c22e604b5bea12b3be6f93b"
+    },
+    {
+      "path": "src/render/hero-face-albedo.js",
+      "bytes": 9920,
+      "sha256": "95d5fc755672ba89bf98befab1f56b1a51459852baedc36ca0a0d92129cae2a1"
+    },
+    {
+      "path": "src/render/hero-surface-finish.js",
+      "bytes": 2525,
+      "sha256": "31b77237b7f77241fd0f15f2aafa93a6619e82553d16b60ea44801d0e25e6bdd"
+    }
+  ],
+  "notes": [
+    "One cached body geometry per exact appearance; pooled instances share it. Counts exclude weapons, proxies, skeleton/bone textures, driver allocations and repeated shadow/presentation passes.",
+    "The six existing 256x256 maps retain their slots and storage; shared cloth texture data is authored once during startup construction.",
+    "UV preservation adds seam vertices; indexed triangle counts change only at authored hair perimeters.",
+    "New finish data is 2 normalized bytes per vertex. No source geometry or texture generation runs during animation."
+  ],
+  "sourceBytes": {
+    "before": 53940,
+    "after": 65674,
+    "delta": 11734
+  },
+  "fixture": "createHumanoidRig with the runtime ENEMY_TYPES role and all consumed appearance fields, against the preserved baseline and current source. Pool seed and shirtAccent are not consumed by hero surface construction. Counts exclude held weapons."
+}

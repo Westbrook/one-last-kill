@@ -5,9 +5,9 @@ import { applyBoxWorldUV } from './world-uv.js';
 // Keep the public geometry cache while the articulated rig owns its shapes.
 const _HG = HUMANOID_GEOMETRY;
 
-// Shared car part geometries — cars are scene-built once (4 total) but caching
-// the size-invariant pieces (wheels, hubs, lugs, spokes, mirrors, trim slats,
-// antennas, plates, wheel-well torus) keeps spawnParkedCar quiet on memory.
+// Legacy sedan parts retained for the objective car. Civilian vehicles use
+// their own shared variant meshes; these size-invariant wheels, hubs, lugs,
+// spokes, mirrors, trim slats, antennas and plates keep its startup bounded.
 // Body / hood / cabin / roof are still per-car since their box dimensions
 // scale with the `length`/`width`/`height` option.
 const _CG = {

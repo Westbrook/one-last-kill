@@ -1,0 +1,4129 @@
+{
+  "schemaVersion": 1,
+  "directory": "/Users/westbrook/intent/workspaces/person-create/repo/artifacts/civilian-vehicles-2026-08-31",
+  "generatedAt": "2026-08-31T12:34:19.766Z",
+  "phases": {
+    "baseline": {
+      "runs": 6,
+      "intervals": 7204,
+      "over16_9": 0,
+      "over33_5": 0,
+      "over50": 0,
+      "longTasks": 0,
+      "rafP95RangeMs": [
+        9.1,
+        9.3
+      ],
+      "rafP99RangeMs": [
+        9.3,
+        9.4
+      ],
+      "rafMaximumRangeMs": [
+        9.4,
+        9.5
+      ],
+      "callbackP95RangeMs": [
+        4.5,
+        7.1
+      ],
+      "gpuP95RangeMs": [
+        4.2,
+        13.83
+      ]
+    },
+    "candidate": {
+      "runs": 0,
+      "intervals": 0,
+      "over16_9": 0,
+      "over33_5": 0,
+      "over50": 0,
+      "longTasks": 0,
+      "rafP95RangeMs": null,
+      "rafP99RangeMs": null,
+      "rafMaximumRangeMs": null,
+      "callbackP95RangeMs": null,
+      "gpuP95RangeMs": null
+    },
+    "final": {
+      "runs": 8,
+      "intervals": 9492,
+      "over16_9": 7,
+      "over33_5": 0,
+      "over50": 0,
+      "longTasks": 0,
+      "rafP95RangeMs": [
+        9.2,
+        16.6
+      ],
+      "rafP99RangeMs": [
+        9.4,
+        16.8
+      ],
+      "rafMaximumRangeMs": [
+        9.4,
+        25
+      ],
+      "callbackP95RangeMs": [
+        3.7,
+        7
+      ],
+      "gpuP95RangeMs": [
+        3.74,
+        17.23
+      ]
+    },
+    "control": {
+      "runs": 3,
+      "intervals": 3479,
+      "over16_9": 12,
+      "over33_5": 0,
+      "over50": 0,
+      "longTasks": 0,
+      "rafP95RangeMs": [
+        9.2,
+        16.7
+      ],
+      "rafP99RangeMs": [
+        9.3,
+        16.82
+      ],
+      "rafMaximumRangeMs": [
+        9.4,
+        25.7
+      ],
+      "callbackP95RangeMs": [
+        5.3,
+        9.9
+      ],
+      "gpuP95RangeMs": [
+        5.22,
+        18.53
+      ]
+    }
+  },
+  "runs": [
+    {
+      "file": "after-perf-auto-street.txt",
+      "phase": "final",
+      "heading": "CONTROLLED COMBAT BENCHMARK MEASURED",
+      "zone": "Street",
+      "sha256": "27cf4efeeff395f51d96e422878a222d080f21f9a882ce4578ef951343c9b982",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 1.2
+      },
+      "presentations": [
+        {
+          "frames": 1201,
+          "quality": "auto",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 1536,
+          "height": 864,
+          "ratio": 1.2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 8,
+          "denoise": 8,
+          "msaa": 2
+        }
+      ],
+      "reviewScale": "device/preset.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1201,
+        "seconds": 10.01,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3,
+          "p95Ms": 5.2,
+          "p99Ms": null,
+          "maximumMs": 6,
+          "averageMs": 3.19
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 5.2,
+          "p99Ms": null,
+          "maximumMs": 6,
+          "averageMs": null,
+          "samples": 1201
+        },
+        "simulation": {
+          "medianMs": 0.3,
+          "p95Ms": 2.7,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 2.6,
+          "p95Ms": 3.1,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 2.26,
+        "p95Ms": 3.74,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1200,
+        "totalSamples": 1200,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 527,
+        "triangles": 365734,
+        "endpoints": {
+          "before": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 193708333,
+            "totalJSHeapSize": 224167113,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 200280592,
+            "totalJSHeapSize": 227882648,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 6572259,
+          "totalJSHeapSize": 3715535,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2586,
+        "mapsMs": 199,
+        "worldBuildMs": 506
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10.01,
+        "actions": 84,
+        "hits": 58,
+        "kills": 11,
+        "minimumContacts": 3,
+        "maximumContacts": 4,
+        "respawns": 11,
+        "maximumAttackers": 4
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "after-perf-auto-sweep.txt",
+      "phase": "final",
+      "heading": "PAUSED CAMERA SWEEP BENCHMARK MEASURED",
+      "zone": "Street",
+      "sha256": "a36aa467ed0f3773f9f294f10357922373ce6ca1d90d1bc77a3af0f98ff14344",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 1.2
+      },
+      "presentations": [
+        {
+          "frames": 504,
+          "quality": "auto",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        },
+        {
+          "frames": 696,
+          "quality": "auto",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 1536,
+          "height": 864,
+          "ratio": 1.2
+        },
+        {
+          "width": 1536,
+          "height": 864,
+          "ratio": 1.2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 8,
+          "denoise": 8,
+          "msaa": 2
+        },
+        {
+          "ao": 8,
+          "denoise": 8,
+          "msaa": 2
+        }
+      ],
+      "reviewScale": "device/preset.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1200,
+        "seconds": 10,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Render CPU",
+        "section": {
+          "medianMs": 2.7,
+          "p95Ms": 4.1,
+          "p99Ms": null,
+          "maximumMs": 4.8,
+          "averageMs": 2.9
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 4.2,
+          "p99Ms": null,
+          "maximumMs": 4.8,
+          "averageMs": null,
+          "samples": 1200
+        },
+        "simulation": {
+          "medianMs": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 2.7,
+          "p95Ms": 4.1,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": 2.9
+        }
+      },
+      "gpu": {
+        "medianMs": 2.36,
+        "p95Ms": 4.71,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1199,
+        "totalSamples": 1199,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 678,
+        "triangles": 160167,
+        "endpoints": {
+          "before": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 185322266,
+            "totalJSHeapSize": 222484438,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 186294180,
+            "totalJSHeapSize": 222706280,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 971914,
+          "totalJSHeapSize": 221842,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2586,
+        "mapsMs": 199,
+        "worldBuildMs": 506
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": null,
+      "lateIntervals": null
+    },
+    {
+      "file": "after-perf-high2-apartment-sweep.txt",
+      "phase": "final",
+      "heading": "PAUSED CAMERA SWEEP BENCHMARK MEASURED",
+      "zone": "Apartment",
+      "sha256": "3ee2787b5f2f359d941b5b44ffef2b5d600286a8633c838e07344782f08f216c",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 492,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        },
+        {
+          "frames": 164,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        },
+        {
+          "frames": 545,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        },
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        },
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        },
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        },
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1201,
+        "seconds": 10.01,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Render CPU",
+        "section": {
+          "medianMs": 3,
+          "p95Ms": 3.7,
+          "p99Ms": null,
+          "maximumMs": 5.2,
+          "averageMs": 2.98
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 3.7,
+          "p99Ms": null,
+          "maximumMs": 5.4,
+          "averageMs": null,
+          "samples": 1201
+        },
+        "simulation": {
+          "medianMs": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 3,
+          "p95Ms": 3.7,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": 2.98
+        }
+      },
+      "gpu": {
+        "medianMs": 4.71,
+        "p95Ms": 5.69,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1200,
+        "totalSamples": 1200,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 668,
+        "triangles": 165049,
+        "endpoints": {
+          "before": {
+            "geometries": 872,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 872,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 184804714,
+            "totalJSHeapSize": 205072074,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 186175304,
+            "totalJSHeapSize": 216605572,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 1370590,
+          "totalJSHeapSize": 11533498,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2586,
+        "mapsMs": 199,
+        "worldBuildMs": 506
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": null,
+      "lateIntervals": null
+    },
+    {
+      "file": "after-perf-high2-melee-repeat.txt",
+      "phase": "final",
+      "heading": "CONTROLLED BALCONY MELEE BENCHMARK MEASURED",
+      "zone": "Balcony",
+      "sha256": "bd9623571342ae1f3007982c51aacf5193cc438cbe3ade89b52afa0aa69925d6",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1106,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 16.6,
+        "p99Ms": 16.8,
+        "maximumMs": 25,
+        "averageMs": 9.04,
+        "intervals": 1106,
+        "seconds": 10,
+        "callbackRateHz": 110.6,
+        "over16_9": 7,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 4.5,
+          "p95Ms": 7,
+          "p99Ms": null,
+          "maximumMs": 10.8,
+          "averageMs": 4.87
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 7,
+          "p99Ms": null,
+          "maximumMs": 10.8,
+          "averageMs": null,
+          "samples": 1106
+        },
+        "simulation": {
+          "medianMs": 0.3,
+          "p95Ms": 3.07,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 4,
+          "p95Ms": 5.4,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 4.98,
+        "p95Ms": 17.18,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1102,
+        "totalSamples": 1102,
+        "pending": 4,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 780,
+        "triangles": 336872,
+        "endpoints": {
+          "before": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 187932951,
+            "totalJSHeapSize": 221889715,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 191576363,
+            "totalJSHeapSize": 247884355,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 3643412,
+          "totalJSHeapSize": 25994640,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2586,
+        "mapsMs": 199,
+        "worldBuildMs": 506
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10,
+        "actions": 12,
+        "hits": 11,
+        "kills": 8,
+        "minimumContacts": 1,
+        "maximumContacts": 2,
+        "respawns": 8,
+        "maximumAttackers": 2
+      },
+      "lateIntervals": [
+        {
+          "sample": 178,
+          "elapsedMs": 1516.7,
+          "intervalMs": 17.1,
+          "previousCpuMs": 4.2,
+          "currentCpuMs": 7,
+          "previousCallbackCpuMs": 4.3,
+          "currentCallbackCpuMs": 7,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 201,
+          "elapsedMs": 1750,
+          "intervalMs": 25,
+          "previousCpuMs": 4,
+          "currentCpuMs": 4.1,
+          "previousCallbackCpuMs": 4,
+          "currentCallbackCpuMs": 4.2,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 294,
+          "elapsedMs": 2674.5,
+          "intervalMs": 17,
+          "previousCpuMs": 3.9,
+          "currentCpuMs": 4.1,
+          "previousCallbackCpuMs": 3.9,
+          "currentCallbackCpuMs": 4.2,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 303,
+          "elapsedMs": 2766.7,
+          "intervalMs": 17.6,
+          "previousCpuMs": 4.2,
+          "currentCpuMs": 3.9,
+          "previousCallbackCpuMs": 4.2,
+          "currentCallbackCpuMs": 3.9,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 314,
+          "elapsedMs": 2874.8,
+          "intervalMs": 17.4,
+          "previousCpuMs": 4.6,
+          "currentCpuMs": 4.3,
+          "previousCallbackCpuMs": 4.6,
+          "currentCallbackCpuMs": 4.4,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 1031,
+          "elapsedMs": 9250,
+          "intervalMs": 17.6,
+          "previousCpuMs": 5.9,
+          "currentCpuMs": 5.6,
+          "previousCallbackCpuMs": 5.9,
+          "currentCallbackCpuMs": 5.7,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 1094,
+          "elapsedMs": 9891.7,
+          "intervalMs": 17.1,
+          "previousCpuMs": 5.9,
+          "currentCpuMs": 5.7,
+          "previousCallbackCpuMs": 5.9,
+          "currentCallbackCpuMs": 5.7,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        }
+      ]
+    },
+    {
+      "file": "after-perf-high2-melee.txt",
+      "phase": "final",
+      "heading": "CONTROLLED BALCONY MELEE BENCHMARK MEASURED",
+      "zone": "Balcony",
+      "sha256": "a848e18ffb60129434d66d79a6e7c2279eafe523e8be08bf30b67fe52f810681",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1188,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.2,
+        "p99Ms": 16.04,
+        "maximumMs": 16.9,
+        "averageMs": 8.42,
+        "intervals": 1188,
+        "seconds": 10.01,
+        "callbackRateHz": 118.7,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3.7,
+          "p95Ms": 6.1,
+          "p99Ms": null,
+          "maximumMs": 7.1,
+          "averageMs": 3.9
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 6.1,
+          "p99Ms": null,
+          "maximumMs": 7.1,
+          "averageMs": null,
+          "samples": 1188
+        },
+        "simulation": {
+          "medianMs": 0.3,
+          "p95Ms": 2.6,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 3.3,
+          "p95Ms": 3.9,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 4.97,
+        "p95Ms": 17.23,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1185,
+        "totalSamples": 1185,
+        "pending": 3,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 780,
+        "triangles": 337727,
+        "endpoints": {
+          "before": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 193403414,
+            "totalJSHeapSize": 225478854,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 190528927,
+            "totalJSHeapSize": 223708307,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": -2874487,
+          "totalJSHeapSize": -1770547,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2586,
+        "mapsMs": 199,
+        "worldBuildMs": 506
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10.01,
+        "actions": 12,
+        "hits": 11,
+        "kills": 8,
+        "minimumContacts": 1,
+        "maximumContacts": 2,
+        "respawns": 8,
+        "maximumAttackers": 2
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "after-perf-high2-roof.txt",
+      "phase": "final",
+      "heading": "CONTROLLED ROOFTOP COMBAT BENCHMARK MEASURED",
+      "zone": "Rooftop",
+      "sha256": "dc5ba2b08852451ff1a5448346f87dcd90abefab2721bb798685b70a6651c91f",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1201,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.5,
+        "averageMs": 8.33,
+        "intervals": 1201,
+        "seconds": 10.01,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3,
+          "p95Ms": 5.2,
+          "p99Ms": null,
+          "maximumMs": 6.6,
+          "averageMs": 3.2
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 5.2,
+          "p99Ms": null,
+          "maximumMs": 6.6,
+          "averageMs": null,
+          "samples": 1201
+        },
+        "simulation": {
+          "medianMs": 0.4,
+          "p95Ms": 2.7,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 2.5,
+          "p95Ms": 3.1,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 2.88,
+        "p95Ms": 4.77,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1200,
+        "totalSamples": 1200,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 472,
+        "triangles": 350581,
+        "endpoints": {
+          "before": {
+            "geometries": 872,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 4,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 188575035,
+            "totalJSHeapSize": 217289739,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 185694736,
+            "totalJSHeapSize": 221591256,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": -2880299,
+          "totalJSHeapSize": 4301517,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2586,
+        "mapsMs": 199,
+        "worldBuildMs": 506
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10.01,
+        "actions": 84,
+        "hits": 84,
+        "kills": 10,
+        "minimumContacts": 4,
+        "maximumContacts": 5,
+        "respawns": 10,
+        "maximumAttackers": 5
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "after-perf-high2-street-repeat.txt",
+      "phase": "final",
+      "heading": "CONTROLLED COMBAT BENCHMARK MEASURED",
+      "zone": "Street",
+      "sha256": "c356c157172cc4464432bb629efa31e0e322a3ce0f76ab1ee823f39b359a568c",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1200,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 15.8,
+        "averageMs": 8.34,
+        "intervals": 1200,
+        "seconds": 10.01,
+        "callbackRateHz": 119.9,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 2.8,
+          "p95Ms": 5,
+          "p99Ms": null,
+          "maximumMs": 6,
+          "averageMs": 3.05
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 5.1,
+          "p99Ms": null,
+          "maximumMs": 6,
+          "averageMs": null,
+          "samples": 1200
+        },
+        "simulation": {
+          "medianMs": 0.2,
+          "p95Ms": 2.6,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 2.6,
+          "p95Ms": 3,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 3.43,
+        "p95Ms": 5.58,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1199,
+        "totalSamples": 1199,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 523,
+        "triangles": 360356,
+        "endpoints": {
+          "before": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 876,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 182177772,
+            "totalJSHeapSize": 216401600,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 188702724,
+            "totalJSHeapSize": 222196328,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 6524952,
+          "totalJSHeapSize": 5794728,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2586,
+        "mapsMs": 199,
+        "worldBuildMs": 506
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10,
+        "actions": 84,
+        "hits": 24,
+        "kills": 5,
+        "minimumContacts": 3,
+        "maximumContacts": 4,
+        "respawns": 5,
+        "maximumAttackers": 4
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "after-perf-high2-street.txt",
+      "phase": "final",
+      "heading": "CONTROLLED COMBAT BENCHMARK MEASURED",
+      "zone": "Street",
+      "sha256": "68afcdedc5c3946dcad81acc973d5b5d6a8bde42006a22fb132ae643332350c8",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1195,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 16.8,
+        "averageMs": 8.38,
+        "intervals": 1195,
+        "seconds": 10.01,
+        "callbackRateHz": 119.4,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3.2,
+          "p95Ms": 5,
+          "p99Ms": null,
+          "maximumMs": 7.1,
+          "averageMs": 3.44
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 5,
+          "p99Ms": null,
+          "maximumMs": 7.1,
+          "averageMs": null,
+          "samples": 1195
+        },
+        "simulation": {
+          "medianMs": 0.4,
+          "p95Ms": 1.9,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 2.7,
+          "p95Ms": 3.6,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 4.08,
+        "p95Ms": 6.89,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1194,
+        "totalSamples": 1194,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 526,
+        "triangles": 363230,
+        "endpoints": {
+          "before": {
+            "geometries": 871,
+            "textures": 180,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 872,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 1,
+          "textures": 1,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 180261979,
+            "totalJSHeapSize": 191168691,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 187226189,
+            "totalJSHeapSize": 204526713,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 6964210,
+          "totalJSHeapSize": 13358022,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2586,
+        "mapsMs": 199,
+        "worldBuildMs": 506
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10.01,
+        "actions": 84,
+        "hits": 53,
+        "kills": 10,
+        "minimumContacts": 3,
+        "maximumContacts": 4,
+        "respawns": 10,
+        "maximumAttackers": 4
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "before-perf-auto-street.txt",
+      "phase": "baseline",
+      "heading": "CONTROLLED COMBAT BENCHMARK MEASURED",
+      "zone": "Street",
+      "sha256": "e64b0318f6234c20477900e7071ceb393f17f189e64c534e0748413acac145ab",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 1.2
+      },
+      "presentations": [
+        {
+          "frames": 1201,
+          "quality": "auto",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 1536,
+          "height": 864,
+          "ratio": 1.2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 8,
+          "denoise": 8,
+          "msaa": 2
+        }
+      ],
+      "reviewScale": "device/preset.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1201,
+        "seconds": 10.01,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3.4,
+          "p95Ms": 5.8,
+          "p99Ms": null,
+          "maximumMs": 6.8,
+          "averageMs": 3.62
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 5.9,
+          "p99Ms": null,
+          "maximumMs": 7,
+          "averageMs": null,
+          "samples": 1201
+        },
+        "simulation": {
+          "medianMs": 0.2,
+          "p95Ms": 2.8,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 3.1,
+          "p95Ms": 3.5,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 2.37,
+        "p95Ms": 4.79,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1200,
+        "totalSamples": 1200,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 530,
+        "triangles": 366012,
+        "endpoints": {
+          "before": {
+            "geometries": 886,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 886,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 174585918,
+            "totalJSHeapSize": 219753966,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 158483190,
+            "totalJSHeapSize": 223231218,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": -16102728,
+          "totalJSHeapSize": 3477252,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2455,
+        "mapsMs": 215,
+        "worldBuildMs": 563
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10,
+        "actions": 84,
+        "hits": 24,
+        "kills": 5,
+        "minimumContacts": 3,
+        "maximumContacts": 4,
+        "respawns": 5,
+        "maximumAttackers": 4
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "before-perf-auto-sweep.txt",
+      "phase": "baseline",
+      "heading": "PAUSED CAMERA SWEEP BENCHMARK MEASURED",
+      "zone": "Street",
+      "sha256": "53c47763b3b41db804d7cf7fb76002e1e6acab020679d134e458eb44beb52d6e",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 1.2
+      },
+      "presentations": [
+        {
+          "frames": 504,
+          "quality": "auto",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        },
+        {
+          "frames": 696,
+          "quality": "auto",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 1536,
+          "height": 864,
+          "ratio": 1.2
+        },
+        {
+          "width": 1536,
+          "height": 864,
+          "ratio": 1.2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 8,
+          "denoise": 8,
+          "msaa": 2
+        },
+        {
+          "ao": 8,
+          "denoise": 8,
+          "msaa": 2
+        }
+      ],
+      "reviewScale": "device/preset.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.5,
+        "averageMs": 8.33,
+        "intervals": 1200,
+        "seconds": 10,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Render CPU",
+        "section": {
+          "medianMs": 3.3,
+          "p95Ms": 4.5,
+          "p99Ms": null,
+          "maximumMs": 5.5,
+          "averageMs": 3.39
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 4.5,
+          "p99Ms": null,
+          "maximumMs": 5.5,
+          "averageMs": null,
+          "samples": 1200
+        },
+        "simulation": {
+          "medianMs": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 3.3,
+          "p95Ms": 4.5,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": 3.39
+        }
+      },
+      "gpu": {
+        "medianMs": 2.57,
+        "p95Ms": 5.46,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1199,
+        "totalSamples": 1199,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 683,
+        "triangles": 163836,
+        "endpoints": {
+          "before": {
+            "geometries": 886,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 886,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 150100516,
+            "totalJSHeapSize": 216126800,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 148216516,
+            "totalJSHeapSize": 215561356,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": -1884000,
+          "totalJSHeapSize": -565444,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2455,
+        "mapsMs": 215,
+        "worldBuildMs": 563
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": null,
+      "lateIntervals": null
+    },
+    {
+      "file": "before-perf-high2-apartment-sweep.txt",
+      "phase": "baseline",
+      "heading": "PAUSED CAMERA SWEEP BENCHMARK MEASURED",
+      "zone": "Apartment",
+      "sha256": "c104f329fec819bfeb2b2c406278cc489c3bee24f169e2fc1b2e0f6b5357ad37",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 492,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        },
+        {
+          "frames": 164,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        },
+        {
+          "frames": 545,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        },
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        },
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        },
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        },
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1201,
+        "seconds": 10.01,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Render CPU",
+        "section": {
+          "medianMs": 3.8,
+          "p95Ms": 4.7,
+          "p99Ms": null,
+          "maximumMs": 5.4,
+          "averageMs": 3.73
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 4.7,
+          "p99Ms": null,
+          "maximumMs": 5.4,
+          "averageMs": null,
+          "samples": 1201
+        },
+        "simulation": {
+          "medianMs": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 3.8,
+          "p95Ms": 4.7,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": 3.73
+        }
+      },
+      "gpu": {
+        "medianMs": 4.07,
+        "p95Ms": 5.38,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1200,
+        "totalSamples": 1200,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 673,
+        "triangles": 168761,
+        "endpoints": {
+          "before": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 169048871,
+            "totalJSHeapSize": 212590015,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 173899422,
+            "totalJSHeapSize": 212851914,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 4850551,
+          "totalJSHeapSize": 261899,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2455,
+        "mapsMs": 215,
+        "worldBuildMs": 563
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": null,
+      "lateIntervals": null
+    },
+    {
+      "file": "before-perf-high2-melee.txt",
+      "phase": "baseline",
+      "heading": "CONTROLLED BALCONY MELEE BENCHMARK MEASURED",
+      "zone": "Balcony",
+      "sha256": "e2562b61c448c671d8322bffae6a21dfef9779024d0e60f32489a72ffdad1e70",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1201,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.2,
+        "p99Ms": 9.4,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1201,
+        "seconds": 10.01,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 4.5,
+          "p95Ms": 7,
+          "p99Ms": null,
+          "maximumMs": 8.4,
+          "averageMs": 4.77
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 7.1,
+          "p99Ms": null,
+          "maximumMs": 8.5,
+          "averageMs": null,
+          "samples": 1201
+        },
+        "simulation": {
+          "medianMs": 0.3,
+          "p95Ms": 2.9,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 4,
+          "p95Ms": 4.9,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 4.44,
+        "p95Ms": 13.83,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1200,
+        "totalSamples": 1200,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 788,
+        "triangles": 342731,
+        "endpoints": {
+          "before": {
+            "geometries": 886,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 886,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 164380283,
+            "totalJSHeapSize": 219103351,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 156899418,
+            "totalJSHeapSize": 222182554,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": -7480865,
+          "totalJSHeapSize": 3079203,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2455,
+        "mapsMs": 215,
+        "worldBuildMs": 563
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10,
+        "actions": 12,
+        "hits": 11,
+        "kills": 8,
+        "minimumContacts": 1,
+        "maximumContacts": 2,
+        "respawns": 8,
+        "maximumAttackers": 2
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "before-perf-high2-roof.txt",
+      "phase": "baseline",
+      "heading": "CONTROLLED ROOFTOP COMBAT BENCHMARK MEASURED",
+      "zone": "Rooftop",
+      "sha256": "ed6d370d3b69f9e3bd0900d7706cf5f34963eb46ee690d85baf82766f8043a01",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1201,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.1,
+        "p99Ms": 9.3,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1201,
+        "seconds": 10.01,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3.6,
+          "p95Ms": 6,
+          "p99Ms": null,
+          "maximumMs": 7.3,
+          "averageMs": 3.83
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 6.1,
+          "p99Ms": null,
+          "maximumMs": 7.3,
+          "averageMs": null,
+          "samples": 1201
+        },
+        "simulation": {
+          "medianMs": 0.4,
+          "p95Ms": 2.9,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 3.1,
+          "p95Ms": 3.7,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 2.51,
+        "p95Ms": 4.2,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1200,
+        "totalSamples": 1200,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 471,
+        "triangles": 350924,
+        "endpoints": {
+          "before": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 886,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 4,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 152897276,
+            "totalJSHeapSize": 219041080,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 150669495,
+            "totalJSHeapSize": 218754463,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": -2227781,
+          "totalJSHeapSize": -286617,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2455,
+        "mapsMs": 215,
+        "worldBuildMs": 563
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10.01,
+        "actions": 84,
+        "hits": 84,
+        "kills": 10,
+        "minimumContacts": 4,
+        "maximumContacts": 5,
+        "respawns": 10,
+        "maximumAttackers": 5
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "before-perf-high2-street.txt",
+      "phase": "baseline",
+      "heading": "CONTROLLED COMBAT BENCHMARK MEASURED",
+      "zone": "Street",
+      "sha256": "3e25396110d98ae3ca632f1847ce68740d4f6a8b096de9310f8aee73a73c60c6",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1200,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1200,
+        "seconds": 10,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3.5,
+          "p95Ms": 5.6,
+          "p99Ms": null,
+          "maximumMs": 6.7,
+          "averageMs": 3.7
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 5.7,
+          "p99Ms": null,
+          "maximumMs": 6.7,
+          "averageMs": null,
+          "samples": 1200
+        },
+        "simulation": {
+          "medianMs": 0.2,
+          "p95Ms": 2.6,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 3.1,
+          "p95Ms": 3.6,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 3.96,
+        "p95Ms": 5.63,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1199,
+        "totalSamples": 1199,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 530,
+        "triangles": 366007,
+        "endpoints": {
+          "before": {
+            "geometries": 881,
+            "textures": 180,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 1,
+          "textures": 1,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 153265731,
+            "totalJSHeapSize": 179210907,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 161322841,
+            "totalJSHeapSize": 215583657,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 8057110,
+          "totalJSHeapSize": 36372750,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2455,
+        "mapsMs": 215,
+        "worldBuildMs": 563
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10,
+        "actions": 84,
+        "hits": 24,
+        "kills": 5,
+        "minimumContacts": 3,
+        "maximumContacts": 4,
+        "respawns": 5,
+        "maximumAttackers": 4
+      },
+      "lateIntervals": null
+    },
+    {
+      "file": "control-perf-high2-melee-repeat.txt",
+      "phase": "control",
+      "heading": "CONTROLLED BALCONY MELEE BENCHMARK MEASURED",
+      "zone": "Balcony",
+      "sha256": "8324b3b3fd5872bdb493e6f7c2c860740075968c1307397296e610e5bb87737f",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1079,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 16.7,
+        "p99Ms": 16.82,
+        "maximumMs": 25.7,
+        "averageMs": 9.27,
+        "intervals": 1079,
+        "seconds": 10,
+        "callbackRateHz": 107.9,
+        "over16_9": 11,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 5.5,
+          "p95Ms": 9.81,
+          "p99Ms": null,
+          "maximumMs": 13.3,
+          "averageMs": 5.96
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 9.9,
+          "p99Ms": null,
+          "maximumMs": 13.4,
+          "averageMs": null,
+          "samples": 1079
+        },
+        "simulation": {
+          "medianMs": 0.3,
+          "p95Ms": 4.5,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 4.9,
+          "p95Ms": 6.21,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 4.31,
+        "p95Ms": 14.47,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1075,
+        "totalSamples": 1075,
+        "pending": 4,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 789,
+        "triangles": 344980,
+        "endpoints": {
+          "before": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 273389782,
+            "totalJSHeapSize": 343745754,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 308299814,
+            "totalJSHeapSize": 360588506,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 34910032,
+          "totalJSHeapSize": 16842752,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2752,
+        "mapsMs": 213,
+        "worldBuildMs": 565
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10,
+        "actions": 12,
+        "hits": 11,
+        "kills": 8,
+        "minimumContacts": 1,
+        "maximumContacts": 2,
+        "respawns": 8,
+        "maximumAttackers": 2
+      },
+      "lateIntervals": [
+        {
+          "sample": 297,
+          "elapsedMs": 2900,
+          "intervalMs": 17.3,
+          "previousCpuMs": 7.9,
+          "currentCpuMs": 7.4,
+          "previousCallbackCpuMs": 7.9,
+          "currentCallbackCpuMs": 7.5,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 322,
+          "elapsedMs": 3183.3,
+          "intervalMs": 17.2,
+          "previousCpuMs": 5.8,
+          "currentCpuMs": 7,
+          "previousCallbackCpuMs": 5.8,
+          "currentCallbackCpuMs": 7.1,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 331,
+          "elapsedMs": 3283.4,
+          "intervalMs": 16.9,
+          "previousCpuMs": 6.4,
+          "currentCpuMs": 11.9,
+          "previousCallbackCpuMs": 6.4,
+          "currentCallbackCpuMs": 12.1,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 377,
+          "elapsedMs": 3724.7,
+          "intervalMs": 17,
+          "previousCpuMs": 6.1,
+          "currentCpuMs": 10.5,
+          "previousCallbackCpuMs": 6.1,
+          "currentCallbackCpuMs": 10.6,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 396,
+          "elapsedMs": 3908.4,
+          "intervalMs": 17.5,
+          "previousCpuMs": 6,
+          "currentCpuMs": 10.7,
+          "previousCallbackCpuMs": 6,
+          "currentCallbackCpuMs": 10.7,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 416,
+          "elapsedMs": 4108.3,
+          "intervalMs": 25.7,
+          "previousCpuMs": 9.9,
+          "currentCpuMs": 6.3,
+          "previousCallbackCpuMs": 9.9,
+          "currentCallbackCpuMs": 6.4,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 429,
+          "elapsedMs": 4224.9,
+          "intervalMs": 17.5,
+          "previousCpuMs": 5.5,
+          "currentCpuMs": 5.3,
+          "previousCallbackCpuMs": 5.5,
+          "currentCallbackCpuMs": 5.3,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 463,
+          "elapsedMs": 4558.4,
+          "intervalMs": 17.6,
+          "previousCpuMs": 5.3,
+          "currentCpuMs": 5.6,
+          "previousCallbackCpuMs": 5.3,
+          "currentCallbackCpuMs": 5.7,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 533,
+          "elapsedMs": 5175,
+          "intervalMs": 17.1,
+          "previousCpuMs": 5.2,
+          "currentCpuMs": 5.2,
+          "previousCallbackCpuMs": 5.2,
+          "currentCallbackCpuMs": 5.3,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 945,
+          "elapsedMs": 8733.3,
+          "intervalMs": 17.6,
+          "previousCpuMs": 5.4,
+          "currentCpuMs": 5.4,
+          "previousCallbackCpuMs": 5.4,
+          "currentCallbackCpuMs": 5.4,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        },
+        {
+          "sample": 992,
+          "elapsedMs": 9174.7,
+          "intervalMs": 17.3,
+          "previousCpuMs": 5.4,
+          "currentCpuMs": 5.7,
+          "previousCallbackCpuMs": 5.5,
+          "currentCallbackCpuMs": 5.8,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        }
+      ]
+    },
+    {
+      "file": "control-perf-high2-melee.txt",
+      "phase": "control",
+      "heading": "CONTROLLED BALCONY MELEE BENCHMARK MEASURED",
+      "zone": "Balcony",
+      "sha256": "ce8b800ba0200f1eabba5f20385c971bf682797a80546d0560c5cab186f06b77",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1200,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.2,
+        "p99Ms": 9.3,
+        "maximumMs": 17.6,
+        "averageMs": 8.34,
+        "intervals": 1200,
+        "seconds": 10.01,
+        "callbackRateHz": 119.9,
+        "over16_9": 1,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3.8,
+          "p95Ms": 6.4,
+          "p99Ms": null,
+          "maximumMs": 8.8,
+          "averageMs": 4.12
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 6.5,
+          "p99Ms": null,
+          "maximumMs": 8.8,
+          "averageMs": null,
+          "samples": 1200
+        },
+        "simulation": {
+          "medianMs": 0.3,
+          "p95Ms": 2.8,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 3.5,
+          "p95Ms": 4.3,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 4.9,
+        "p95Ms": 18.53,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1197,
+        "totalSamples": 1197,
+        "pending": 3,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 788,
+        "triangles": 342866,
+        "endpoints": {
+          "before": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 0,
+          "textures": 0,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 257681528,
+            "totalJSHeapSize": 324319192,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 285590168,
+            "totalJSHeapSize": 341489664,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 27908640,
+          "totalJSHeapSize": 17170472,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2752,
+        "mapsMs": 213,
+        "worldBuildMs": 565
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10.01,
+        "actions": 12,
+        "hits": 11,
+        "kills": 8,
+        "minimumContacts": 1,
+        "maximumContacts": 2,
+        "respawns": 8,
+        "maximumAttackers": 2
+      },
+      "lateIntervals": [
+        {
+          "sample": 1195,
+          "elapsedMs": 9966.6,
+          "intervalMs": 17.6,
+          "previousCpuMs": 5.3,
+          "currentCpuMs": 5,
+          "previousCallbackCpuMs": 5.4,
+          "currentCallbackCpuMs": 5.1,
+          "yawDegrees": 90,
+          "pitchDegrees": -22.95,
+          "shadowFraction": 0.75,
+          "healthWarning": "normal"
+        }
+      ]
+    },
+    {
+      "file": "control-perf-high2-street.txt",
+      "phase": "control",
+      "heading": "CONTROLLED COMBAT BENCHMARK MEASURED",
+      "zone": "Street",
+      "sha256": "6e9d0079ab3b0c4a69be696d214d84e639cb20cb158eabaa92e55b5745050daf",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "ratio": 2
+      },
+      "presentations": [
+        {
+          "frames": 1200,
+          "quality": "high",
+          "ao": true,
+          "reason": "active",
+          "worldPasses": 1,
+          "postPasses": 5
+        }
+      ],
+      "buffers": [
+        {
+          "width": 2560,
+          "height": 1440,
+          "ratio": 2
+        }
+      ],
+      "sampleProfiles": [
+        {
+          "ao": 12,
+          "denoise": 8,
+          "msaa": 4
+        }
+      ],
+      "reviewScale": "explicit QA override, not a device capability claim.",
+      "ratioHeld": true,
+      "raf": {
+        "medianMs": 8.3,
+        "p95Ms": 9.3,
+        "p99Ms": 9.4,
+        "maximumMs": 9.4,
+        "averageMs": 8.33,
+        "intervals": 1200,
+        "seconds": 10,
+        "callbackRateHz": 120,
+        "over16_9": 0,
+        "over33_5": 0,
+        "over50": 0
+      },
+      "cpu": {
+        "sectionLabel": "Fixture + simulation + render CPU",
+        "section": {
+          "medianMs": 3,
+          "p95Ms": 5.2,
+          "p99Ms": null,
+          "maximumMs": 5.8,
+          "averageMs": 3.21
+        },
+        "callback": {
+          "medianMs": null,
+          "p95Ms": 5.3,
+          "p99Ms": null,
+          "maximumMs": 5.9,
+          "averageMs": null,
+          "samples": 1200
+        },
+        "simulation": {
+          "medianMs": 0.2,
+          "p95Ms": 2.7,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        },
+        "render": {
+          "medianMs": 2.6,
+          "p95Ms": 3.1,
+          "p99Ms": null,
+          "maximumMs": null,
+          "averageMs": null
+        }
+      },
+      "gpu": {
+        "medianMs": 3.24,
+        "p95Ms": 5.22,
+        "p99Ms": null,
+        "maximumMs": null,
+        "averageMs": null,
+        "samples": 1199,
+        "totalSamples": 1199,
+        "pending": 1,
+        "skipped": 0,
+        "disjoint": 0,
+        "discarded": 0,
+        "status": "available"
+      },
+      "renderer": {
+        "drawCalls": 531,
+        "triangles": 366752,
+        "endpoints": {
+          "before": {
+            "geometries": 881,
+            "textures": 180,
+            "retainedPrograms": 102
+          },
+          "after": {
+            "geometries": 882,
+            "textures": 181,
+            "retainedPrograms": 102
+          }
+        },
+        "delta": {
+          "geometries": 1,
+          "textures": 1,
+          "retainedPrograms": 0
+        }
+      },
+      "heap": {
+        "endpoints": {
+          "before": {
+            "usedJSHeapSize": 226167061,
+            "totalJSHeapSize": 301321145,
+            "jsHeapSizeLimit": 4395630592
+          },
+          "after": {
+            "usedJSHeapSize": 244456074,
+            "totalJSHeapSize": 316296438,
+            "jsHeapSizeLimit": 4395630592
+          }
+        },
+        "delta": {
+          "usedJSHeapSize": 18289013,
+          "totalJSHeapSize": 14975293,
+          "jsHeapSizeLimit": 0
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0
+      },
+      "startup": {
+        "readyMs": 2752,
+        "mapsMs": 213,
+        "worldBuildMs": 565
+      },
+      "assetEstimates": {
+        "surfaceDelivery": {
+          "requestedMode": "ktx2",
+          "state": "complete",
+          "materials": {
+            "plaster": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "plastered_wall_03",
+              "tileMeters": 4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 2832460,
+              "fallback": false,
+              "fallbackReason": null
+            },
+            "brick": {
+              "status": "ready",
+              "source": "polyhaven",
+              "format": "ktx2",
+              "assetId": "red_brick",
+              "tileMeters": 1.4,
+              "mipCount": 11,
+              "gpuFormats": {
+                "map": 37808,
+                "normalMap": 37808,
+                "roughnessMap": 37808
+              },
+              "gpuFormatNames": {
+                "map": "ASTC 4x4",
+                "normalMap": "ASTC 4x4",
+                "roughnessMap": "ASTC 4x4"
+              },
+              "compressedBytes": 4194384,
+              "textureBytes": 3145728,
+              "textureBytesWithMipmaps": 4194384,
+              "downloadBytes": 3096559,
+              "fallback": false,
+              "fallbackReason": null
+            }
+          }
+        },
+        "faceBytes": 8386752,
+        "reflectionBytes": 2064384
+      },
+      "fixture": {
+        "simulatedSeconds": 10,
+        "actions": 84,
+        "hits": 36,
+        "kills": 7,
+        "minimumContacts": 3,
+        "maximumContacts": 4,
+        "respawns": 7,
+        "maximumAttackers": 4
+      },
+      "lateIntervals": null
+    }
+  ],
+  "excludedVisual": [
+    "after-ordinary-auto-moving-VISUAL-ONLY.txt",
+    "after-walk-auto-VISUAL-ONLY-1.txt",
+    "after-walk-auto-VISUAL-ONLY-2.txt",
+    "after-walk-auto-VISUAL-ONLY-3.txt",
+    "after-walk-auto-VISUAL-ONLY-4.txt",
+    "after-walk-auto-VISUAL-ONLY-5.txt",
+    "after-walk-auto-VISUAL-ONLY-complete.txt",
+    "after-walk-paused-VISUAL-ONLY.txt",
+    "after-walk-reduced-motion-VISUAL-ONLY-complete.txt",
+    "after-walk-reduced-motion-VISUAL-ONLY.txt",
+    "after-walk-resumed-VISUAL-ONLY.txt",
+    "after-walk-stop-VISUAL-ONLY.txt",
+    "rejected-paused-inspection-input-VISUAL-ONLY.txt"
+  ],
+  "rejected": [],
+  "limitations": [
+    "rAF interval statistics and callback cadence do not measure presented FPS or input latency.",
+    "CPU sections cover the named QA work; they exclude browser paint/composition, separate callbacks and time between callbacks.",
+    "GPU elapsed queries are asynchronous, may cover only the retained sample window, and exclude browser/CSS composition.",
+    "Missing p99, maximum or tail statistics remain null; they cannot be recovered from a median and p95.",
+    "Each controlled run holds its initial render ratio. This does not validate adaptive resolution over an ordinary playthrough.",
+    "Controlled combat restores health and replaces enemies. Similar aggregate outcomes do not guarantee identical per-frame work.",
+    "Renderer counts and optional JS heap values are endpoints, not complete GPU residency or proof of leak freedom.",
+    "Texture byte figures are reported asset/payload estimates. Startup times include the local cache/network state.",
+    "Per-run percentiles are retained separately. A range of per-run percentiles is not a pooled percentile.",
+    "Files named live, visual, capture or screenshot (separate filename terms) and reports marked VISUAL-ONLY are excluded. Other capture/timing separation remains the reviewer's responsibility.",
+    "Callback rate is an approximation calculated from the report's rounded measured duration."
+  ]
+}

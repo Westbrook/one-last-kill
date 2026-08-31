@@ -1,0 +1,1 @@
+{"phase":"after","totals":{"triangles":17908,"draws":31,"geometryBytes":2215536},"geometries":31,"materials":17,"textures":0,"objective":"b66dfd6f133ff67c3a47742111b03e7c1152a7af52cfba10af2eaf3cc945770c"}

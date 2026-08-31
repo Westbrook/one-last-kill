@@ -1,0 +1,14 @@
+{
+  "baselineFilesCompared": 375,
+  "changedExistingRuntimeOrTestFiles": [
+    "src/render/models.js",
+    "src/testing/qa.js",
+    "src/world/district-layout.js",
+    "src/world/zones/street.js",
+    "tests/unit/district-layout.test.js",
+    "tests/unit/helpers/world-surface-fixture.js",
+    "tests/unit/spatial-builders.test.js"
+  ],
+  "unexpectedChanges": [],
+  "finalFiles": 402
+}

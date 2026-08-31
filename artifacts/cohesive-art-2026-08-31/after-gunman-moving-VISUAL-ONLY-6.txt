@@ -1,0 +1,8 @@
+VISUAL-ONLY · gunman motion / collapse / reuse · PLAYING · 5.01 / 17 s
+Phase: Guard / aim
+0–3 s in-place walking/carry; 3–5 s turn; 5–7 s guard; 7–12 s attack poses; 12–14.5 s real collapse; 14.5–17 s same-slot reuse.
+Living motion uses the production pose driver with disclosed visual inputs; AI, hit tests and attack damage are paused. The in-place stride is not a traversal test.
+Selected portrait framing and initial rotation; collapse widens to show floor contact. Environment lighting and materials are unchanged.
+Quality auto · 1728 × 972 drawing buffer · ratio 1.35
+Use Pause / resume review to hold the rendered pose. Finish review restores the apartment.
+No performance measurement · audio locked off · no AudioContext

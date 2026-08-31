@@ -1,0 +1,595 @@
+{
+  "unchanged": true,
+  "before": {
+    "sedan": {
+      "resources": {
+        "triangles": 3456,
+        "materialDraws": 6,
+        "geometryBytes": 456192,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.2869999408721924,
+          1.1920929132713809e-8,
+          -1.0164999961853027
+        ],
+        [
+          2.2869999408721924,
+          1.4889999628067017,
+          1.0164999961853027
+        ]
+      ],
+      "categories": [
+        {
+          "name": "civilian-sedan-paint",
+          "geometry": "444a496040bf62d5457ae8435f4ed19b48f6ea9ec78b6ec08ca93b535ecf662a",
+          "material": {
+            "color": 6251607,
+            "roughness": 0.67,
+            "metalness": 0.31,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-sedan-trim",
+          "geometry": "b281ce0e69fc242d4b08c4721d1d69e8d6cfb7fc2c947e31074f17f26dc12848",
+          "material": {
+            "color": 2830381,
+            "roughness": 0.87,
+            "metalness": 0.06,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.14
+          }
+        },
+        {
+          "name": "civilian-sedan-metal",
+          "geometry": "86d4daac48945abe4323cb51c7885e42e1a4f78a31bbce59683087a281b818d9",
+          "material": {
+            "color": 8950154,
+            "roughness": 0.47,
+            "metalness": 0.72,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-sedan-glass",
+          "geometry": "78fa6fec3f5e6ae59be94391df8e1020410fe48dc0bc768fda1f355aac973e4e",
+          "material": {
+            "color": 3426628,
+            "roughness": 0.24,
+            "metalness": 0.23,
+            "opacity": 0.88,
+            "transparent": true,
+            "envMapIntensity": 0.58
+          }
+        },
+        {
+          "name": "civilian-sedan-tires",
+          "geometry": "c8311e2303ea74890ed0c41e9fb67905f32358207ed65f77cd4ea70374f42974",
+          "material": {
+            "color": 1119765,
+            "roughness": 0.97,
+            "metalness": 0,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.1
+          }
+        },
+        {
+          "name": "civilian-sedan-lamps",
+          "geometry": "3f325a8241167a43cd331b53fbe9000c6097ddf97ff881d1499e863e95fb88d8",
+          "material": {
+            "color": 16777215,
+            "roughness": 0.35,
+            "metalness": 0.08,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.4
+          }
+        }
+      ]
+    },
+    "hatchback": {
+      "resources": {
+        "triangles": 3384,
+        "materialDraws": 6,
+        "geometryBytes": 446688,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.0269999504089355,
+          1.1920929132713809e-8,
+          -0.9915000200271606
+        ],
+        [
+          2.0269999504089355,
+          1.503999948501587,
+          0.9915000200271606
+        ]
+      ],
+      "categories": [
+        {
+          "name": "civilian-hatchback-paint",
+          "geometry": "5312c3a8bf1a49487e36c8216df3553d27b278441573352863aed9f012ddc02a",
+          "material": {
+            "color": 6251607,
+            "roughness": 0.67,
+            "metalness": 0.31,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-hatchback-trim",
+          "geometry": "462471c8100641e07a0e9f670aec303b49e2d881eb593f7a7402e56310ed596f",
+          "material": {
+            "color": 2830381,
+            "roughness": 0.87,
+            "metalness": 0.06,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.14
+          }
+        },
+        {
+          "name": "civilian-hatchback-metal",
+          "geometry": "3c3484c8417ee0489b7cc58d5f6ca2480ecd10b5223f9773e08e21115a4edd35",
+          "material": {
+            "color": 8950154,
+            "roughness": 0.47,
+            "metalness": 0.72,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-hatchback-glass",
+          "geometry": "83bcfdf85301c2ecc518073760fb597912c2cf370f9909808fdabe3a18b6e45f",
+          "material": {
+            "color": 3426628,
+            "roughness": 0.24,
+            "metalness": 0.23,
+            "opacity": 0.88,
+            "transparent": true,
+            "envMapIntensity": 0.58
+          }
+        },
+        {
+          "name": "civilian-hatchback-tires",
+          "geometry": "fbebac71d6783ce48e349b02cc661dad640146332b9a3a7a0280282cf231c525",
+          "material": {
+            "color": 1119765,
+            "roughness": 0.97,
+            "metalness": 0,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.1
+          }
+        },
+        {
+          "name": "civilian-hatchback-lamps",
+          "geometry": "f6e41d32145fc35ab15d25263d6ce727d60aa4c3905421e013d83b0f91b73f93",
+          "material": {
+            "color": 16777215,
+            "roughness": 0.35,
+            "metalness": 0.08,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.4
+          }
+        }
+      ]
+    },
+    "wagon": {
+      "resources": {
+        "triangles": 3456,
+        "materialDraws": 6,
+        "geometryBytes": 456192,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.377000093460083,
+          1.1920929132713809e-8,
+          -1.0264999866485596
+        ],
+        [
+          2.377000093460083,
+          1.5140000581741333,
+          1.0264999866485596
+        ]
+      ],
+      "categories": [
+        {
+          "name": "civilian-wagon-paint",
+          "geometry": "af6f17967612662052c064386bb98b1d43da4c4e3e76725d3a22fdb6d4a0c905",
+          "material": {
+            "color": 6251607,
+            "roughness": 0.67,
+            "metalness": 0.31,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-wagon-trim",
+          "geometry": "f0362a0a54d25dbf65017201c90efdac269c6ac37c867c1145d0f12012133e7c",
+          "material": {
+            "color": 2830381,
+            "roughness": 0.87,
+            "metalness": 0.06,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.14
+          }
+        },
+        {
+          "name": "civilian-wagon-metal",
+          "geometry": "eeb57e4214ab54aba338dfd494c0d21621632663bd55736feda9a3c718ea9099",
+          "material": {
+            "color": 8950154,
+            "roughness": 0.47,
+            "metalness": 0.72,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-wagon-glass",
+          "geometry": "ebd20e52f6a2f115d7ca634b3078494e753e0303af48c2895c5ffb7addc0876d",
+          "material": {
+            "color": 3426628,
+            "roughness": 0.24,
+            "metalness": 0.23,
+            "opacity": 0.88,
+            "transparent": true,
+            "envMapIntensity": 0.58
+          }
+        },
+        {
+          "name": "civilian-wagon-tires",
+          "geometry": "4aea9e2dc3d7e5e09603f8526b47bd57168465ef35db7a347174e93fa62b6d03",
+          "material": {
+            "color": 1119765,
+            "roughness": 0.97,
+            "metalness": 0,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.1
+          }
+        },
+        {
+          "name": "civilian-wagon-lamps",
+          "geometry": "a154da0b5eb7102635db59f440bd474de5f77a33e38f510f6ccbab391958f531",
+          "material": {
+            "color": 16777215,
+            "roughness": 0.35,
+            "metalness": 0.08,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.4
+          }
+        }
+      ]
+    }
+  },
+  "after": {
+    "sedan": {
+      "resources": {
+        "triangles": 3456,
+        "materialDraws": 6,
+        "geometryBytes": 456192,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.2869999408721924,
+          1.1920929132713809e-8,
+          -1.0164999961853027
+        ],
+        [
+          2.2869999408721924,
+          1.4889999628067017,
+          1.0164999961853027
+        ]
+      ],
+      "categories": [
+        {
+          "name": "civilian-sedan-paint",
+          "geometry": "444a496040bf62d5457ae8435f4ed19b48f6ea9ec78b6ec08ca93b535ecf662a",
+          "material": {
+            "color": 6251607,
+            "roughness": 0.67,
+            "metalness": 0.31,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-sedan-trim",
+          "geometry": "b281ce0e69fc242d4b08c4721d1d69e8d6cfb7fc2c947e31074f17f26dc12848",
+          "material": {
+            "color": 2830381,
+            "roughness": 0.87,
+            "metalness": 0.06,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.14
+          }
+        },
+        {
+          "name": "civilian-sedan-metal",
+          "geometry": "86d4daac48945abe4323cb51c7885e42e1a4f78a31bbce59683087a281b818d9",
+          "material": {
+            "color": 8950154,
+            "roughness": 0.47,
+            "metalness": 0.72,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-sedan-glass",
+          "geometry": "78fa6fec3f5e6ae59be94391df8e1020410fe48dc0bc768fda1f355aac973e4e",
+          "material": {
+            "color": 3426628,
+            "roughness": 0.24,
+            "metalness": 0.23,
+            "opacity": 0.88,
+            "transparent": true,
+            "envMapIntensity": 0.58
+          }
+        },
+        {
+          "name": "civilian-sedan-tires",
+          "geometry": "c8311e2303ea74890ed0c41e9fb67905f32358207ed65f77cd4ea70374f42974",
+          "material": {
+            "color": 1119765,
+            "roughness": 0.97,
+            "metalness": 0,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.1
+          }
+        },
+        {
+          "name": "civilian-sedan-lamps",
+          "geometry": "3f325a8241167a43cd331b53fbe9000c6097ddf97ff881d1499e863e95fb88d8",
+          "material": {
+            "color": 16777215,
+            "roughness": 0.35,
+            "metalness": 0.08,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.4
+          }
+        }
+      ]
+    },
+    "hatchback": {
+      "resources": {
+        "triangles": 3384,
+        "materialDraws": 6,
+        "geometryBytes": 446688,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.0269999504089355,
+          1.1920929132713809e-8,
+          -0.9915000200271606
+        ],
+        [
+          2.0269999504089355,
+          1.503999948501587,
+          0.9915000200271606
+        ]
+      ],
+      "categories": [
+        {
+          "name": "civilian-hatchback-paint",
+          "geometry": "5312c3a8bf1a49487e36c8216df3553d27b278441573352863aed9f012ddc02a",
+          "material": {
+            "color": 6251607,
+            "roughness": 0.67,
+            "metalness": 0.31,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-hatchback-trim",
+          "geometry": "462471c8100641e07a0e9f670aec303b49e2d881eb593f7a7402e56310ed596f",
+          "material": {
+            "color": 2830381,
+            "roughness": 0.87,
+            "metalness": 0.06,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.14
+          }
+        },
+        {
+          "name": "civilian-hatchback-metal",
+          "geometry": "3c3484c8417ee0489b7cc58d5f6ca2480ecd10b5223f9773e08e21115a4edd35",
+          "material": {
+            "color": 8950154,
+            "roughness": 0.47,
+            "metalness": 0.72,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-hatchback-glass",
+          "geometry": "83bcfdf85301c2ecc518073760fb597912c2cf370f9909808fdabe3a18b6e45f",
+          "material": {
+            "color": 3426628,
+            "roughness": 0.24,
+            "metalness": 0.23,
+            "opacity": 0.88,
+            "transparent": true,
+            "envMapIntensity": 0.58
+          }
+        },
+        {
+          "name": "civilian-hatchback-tires",
+          "geometry": "fbebac71d6783ce48e349b02cc661dad640146332b9a3a7a0280282cf231c525",
+          "material": {
+            "color": 1119765,
+            "roughness": 0.97,
+            "metalness": 0,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.1
+          }
+        },
+        {
+          "name": "civilian-hatchback-lamps",
+          "geometry": "f6e41d32145fc35ab15d25263d6ce727d60aa4c3905421e013d83b0f91b73f93",
+          "material": {
+            "color": 16777215,
+            "roughness": 0.35,
+            "metalness": 0.08,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.4
+          }
+        }
+      ]
+    },
+    "wagon": {
+      "resources": {
+        "triangles": 3456,
+        "materialDraws": 6,
+        "geometryBytes": 456192,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.377000093460083,
+          1.1920929132713809e-8,
+          -1.0264999866485596
+        ],
+        [
+          2.377000093460083,
+          1.5140000581741333,
+          1.0264999866485596
+        ]
+      ],
+      "categories": [
+        {
+          "name": "civilian-wagon-paint",
+          "geometry": "af6f17967612662052c064386bb98b1d43da4c4e3e76725d3a22fdb6d4a0c905",
+          "material": {
+            "color": 6251607,
+            "roughness": 0.67,
+            "metalness": 0.31,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-wagon-trim",
+          "geometry": "f0362a0a54d25dbf65017201c90efdac269c6ac37c867c1145d0f12012133e7c",
+          "material": {
+            "color": 2830381,
+            "roughness": 0.87,
+            "metalness": 0.06,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.14
+          }
+        },
+        {
+          "name": "civilian-wagon-metal",
+          "geometry": "eeb57e4214ab54aba338dfd494c0d21621632663bd55736feda9a3c718ea9099",
+          "material": {
+            "color": 8950154,
+            "roughness": 0.47,
+            "metalness": 0.72,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.34
+          }
+        },
+        {
+          "name": "civilian-wagon-glass",
+          "geometry": "ebd20e52f6a2f115d7ca634b3078494e753e0303af48c2895c5ffb7addc0876d",
+          "material": {
+            "color": 3426628,
+            "roughness": 0.24,
+            "metalness": 0.23,
+            "opacity": 0.88,
+            "transparent": true,
+            "envMapIntensity": 0.58
+          }
+        },
+        {
+          "name": "civilian-wagon-tires",
+          "geometry": "4aea9e2dc3d7e5e09603f8526b47bd57168465ef35db7a347174e93fa62b6d03",
+          "material": {
+            "color": 1119765,
+            "roughness": 0.97,
+            "metalness": 0,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.1
+          }
+        },
+        {
+          "name": "civilian-wagon-lamps",
+          "geometry": "a154da0b5eb7102635db59f440bd474de5f77a33e38f510f6ccbab391958f531",
+          "material": {
+            "color": 16777215,
+            "roughness": 0.35,
+            "metalness": 0.08,
+            "opacity": 1,
+            "transparent": false,
+            "envMapIntensity": 0.4
+          }
+        }
+      ]
+    }
+  }
+}

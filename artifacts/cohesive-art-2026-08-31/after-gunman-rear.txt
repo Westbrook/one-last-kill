@@ -1,0 +1,10 @@
+NPC INSPECTION · gunman · neutral · simulation paused
+Actual pooled rig v2 · 17 joints · 1.76 m height
+Character surface: 13,462 triangles · 4 visible body draws · 992 bounded collapse samples
+Pose idle / idle · sole height L -0.000 m, R -0.000 m
+Facing 270° · held prop pistol
+Framing portrait · same camera FOV and production materials; inspection placement only
+Quality high · 2560 × 1440 drawing buffer · ratio 2.00
+The actor uses the production pose driver; AI and damage are paused. Advance pose moves only this visible specimen.
+Uncovered wrap walkway · unchanged environment lighting · transient HUD overlays hidden for inspection only
+Audio locked off · no AudioContext

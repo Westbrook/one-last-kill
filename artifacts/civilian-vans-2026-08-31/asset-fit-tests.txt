@@ -1,0 +1,28 @@
+✔ sedan glass is seated in its actual shoulder and covered by the complete roof (2.188416ms)
+✔ sedan front/rear pillars and mirrors contact the sloped side glazing (0.486459ms)
+✔ sedan nose and tail support the full lamp panels instead of leaving their upper corners floating (0.616917ms)
+✔ sedan shell, glazing, roof and bumpers have closed triangle surfaces (1.642083ms)
+✔ hatchback glass is seated in its actual shoulder and covered by the complete roof (0.357458ms)
+✔ hatchback front/rear pillars and mirrors contact the sloped side glazing (0.276375ms)
+✔ hatchback nose and tail support the full lamp panels instead of leaving their upper corners floating (1.057167ms)
+✔ hatchback shell, glazing, roof and bumpers have closed triangle surfaces (1.238125ms)
+✔ wagon glass is seated in its actual shoulder and covered by the complete roof (0.792667ms)
+✔ wagon front/rear pillars and mirrors contact the sloped side glazing (0.349667ms)
+✔ wagon nose and tail support the full lamp panels instead of leaving their upper corners floating (0.626167ms)
+✔ wagon shell, glazing, roof and bumpers have closed triangle surfaces (1.091292ms)
+✔ panel-van tall cargo/cab panels bear on the body and fit beneath one continuous roof (0.426584ms)
+✔ panel-van every side window perimeter overlaps real opaque posts, waist and header (1.887708ms)
+✔ panel-van mirror arms and rear hardware are attached to actual cab/cargo surfaces (0.421542ms)
+✔ panel-van cargo, door panels and every glass pane are closed solids (0.717917ms)
+✔ passenger-van tall cargo/cab panels bear on the body and fit beneath one continuous roof (0.751667ms)
+✔ passenger-van every side window perimeter overlaps real opaque posts, waist and header (3.172208ms)
+✔ passenger-van mirror arms and rear hardware are attached to actual cab/cargo surfaces (0.125875ms)
+✔ passenger-van cargo, door panels and every glass pane are closed solids (0.59025ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 143.232708

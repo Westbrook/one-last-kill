@@ -1,0 +1,61 @@
+✔ real pool variants compile once per output while every actor gets its own warmed bone texture (7.230958ms)
+✔ hidden character ancestors and material flags warm without showing legacy proxies or unrelated world objects (1.749625ms)
+✔ existing per-actor bone textures are reused and no float support safely warms only the canvas path (2.013708ms)
+✔ a light excluded by the game camera cannot become a warmup light through the temporary draw layer (1.359208ms)
+✔ frozen per-light shadow maps are not overwritten with the temporary pool contents (1.737709ms)
+✔ target-specific viewport/scissor restoration runs after the canvas defaults are restored (1.352167ms)
+✔ texture failure restores the pool and renderer before rejecting (1.549667ms)
+✔ compile failure restores the pool and renderer before rejecting (1.867958ms)
+✔ render failure restores the pool and renderer before rejecting (1.1065ms)
+✔ yield failure restores the pool and renderer before rejecting (1.061583ms)
+✔ a rejected HDR compile disposes its target after the successful canvas upload (1.587875ms)
+✔ owned targets and the concurrency guard are released even if renderer restoration fails (1.27575ms)
+✔ duplicate roots and concurrent calls cannot duplicate resource work or interleave renderer state (1.120083ms)
+✔ actual hero rigs expose only the rendered skinned surfaces and held weapon for warmup (211.491375ms)
+✔ invalid input is rejected before mutation and empty pools skip cleanly (1.483083ms)
+✔ rendered adult skulls retain tall proportions and a rising jaw instead of a flat lower head ring (717.394833ms)
+✔ the connected neck flares into the chest and blends through the head without rewriting shared geometry (11.072375ms)
+✔ the actual neck rim stays buried in the jaw through head turns and the visible face stays inside combat bounds (128.341625ms)
+✔ all enemy archetypes render four budgeted surfaces with exact neutral sole and crown bounds (728.77725ms)
+✔ the garment body has one welded component joining both legs, torso and sleeves (13.871625ms)
+✔ every rendered skin vertex has finite normalized weights and valid bone indices (17.06675ms)
+✔ pooled actors share immutable GPU geometry while their posed surfaces and resets remain independent (15.016417ms)
+✔ cached bone influence bounds enclose actual deformed surfaces in motion and transformed world space (92.4225ms)
+✔ collapse samples a bounded support cloud, grounds actual skin and performs no settled vertex scans (287.486959ms)
+✔ the actual head surface projects into the supplied source landmarks without mapping its back or hair (383.177ms)
+✔ decoded trial pixels update cached face materials while A/B toggles keep geometry, shader programs and skin palettes unchanged (212.857334ms)
+✔ missing, oversized and timed-out assets preserve the authored fallback and dispose rejected texture data (4.521875ms)
+✔ simultaneous distinct face sources cannot silently resolve to the wrong asset (0.419959ms)
+✔ each garment construction stays below 800 triangles and supplies only mergeable geometry (3.586916ms)
+✔ folds, seams and panels are closed surfaces with outward winding and valid skin weights (7.296417ms)
+✔ sleeve hems follow the A-pose arm endpoint and keep blended wrist influences (2.289167ms)
+✔ front and back armor faces conform to a curved body without cutting through it (1.55275ms)
+✔ integrated panels and pockets remain outside the actual extracted body triangles (1015.525458ms)
+✔ the extracted body closes its shoulder and ankle boundaries across the full roster (34.120667ms)
+✔ actual short-sleeve surfaces cover the upper cuff seam in oblique resting and fist views (875.018292ms)
+✔ the rendered skull is one closed oriented surface after positional welding (742.053208ms)
+✔ upward views below the chin hit the physical jaw underside (9.282333ms)
+✔ hair occludes the actual scalp around the crown and temples without extending above the authored height (47.688041ms)
+✔ actual eye openings are restrained, pupils are round in metres, and coloured eye surfaces stay inside the opening (8.38625ms)
+✔ opposing eyelids cover the actual upper and lower rims while preserving the visible centered gaze (3.077208ms)
+✔ brawler shoulder silhouettes preserve the accepted neckline drop and improvement over the previous cap (451.282208ms)
+ℹ Brawler 1.64 m/build 0.85: remaining center/front-back rebound 0.00/11.68 mm; neckline drop 19.87–22.99 mm.
+ℹ Brawler 1.78 m/build 1: remaining center/front-back rebound 0.00/8.58 mm; neckline drop 20.41–24.22 mm.
+ℹ Brawler 1.94 m/build 1.3: remaining center/front-back rebound 0.91/9.91 mm; neckline drop 28.12–28.18 mm.
+✔ brawler tailoring leaves the other archetypes rendered shoulder profiles unchanged (543.847584ms)
+✔ the first bare-arm band stays covered in guard and both punching poses (154.255917ms)
+✔ all six combat roles carry compact authored finishes through four shared rendered surfaces (728.452333ms)
+✔ role-specific jackets, woven shirts and armor retain purposeful finish contrasts (7.224125ms)
+✔ civilian and player appearances retain their existing face treatment without combat finish attributes (426.819667ms)
+✔ rendered cloth, denim, boot leather, rubber, skin and hair retain distinct absolute roughness (2.293875ms)
+✔ the finish hook composes with existing PBR shaders without additional texture sampling (0.356792ms)
+✔ projected face colour preserves the authored skin hook and the shared roughness reference (1.972458ms)
+✔ actual bare forearms meet the palm boundary through rest and both fist contacts (15.062625ms)
+ℹ tests 50
+ℹ suites 0
+ℹ pass 50
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2191.874667

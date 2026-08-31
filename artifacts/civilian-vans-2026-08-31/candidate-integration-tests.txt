@@ -1,0 +1,16 @@
+✔ four civilian vehicles preserve the objective, road alignment and compact material batches (1.133ms)
+✔ every actual tire reaches the road and remains clear of the curb (2.272083ms)
+✔ the final car envelopes and registered movement bounds agree with their actual surfaces (0.331458ms)
+✔ relocated cars clear full arrival jitter, checkpoint approaches and the bakery crossing (1.668042ms)
+✔ projectiles use actual car bodies and glazing while the open underbody stays open (10.665166ms)
+✔ the taller middle van preserves direct street views of both objectives (1.804875ms)
+✔ van cargo and passenger windows use real opaque or glass bullet and sight surfaces (20.18575ms)
+✔ all vehicle factory variants reuse cached geometry and materials while preserving independent transforms (6.138458ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1091.742166

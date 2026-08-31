@@ -1,0 +1,228 @@
+[
+  {
+    "label": "Street · High 2×",
+    "before": {
+      "Feet": "Feet 24.00, 0.07, 12.20",
+      "Yaw": "Yaw 90° · pitch 0°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)"
+    },
+    "after": {
+      "Feet": "Feet 24.00, 0.07, 12.20",
+      "Yaw": "Yaw 90° · pitch 0°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)"
+    },
+    "matched": true
+  },
+  {
+    "label": "Street, turned toward shops · High 2×",
+    "before": {
+      "Feet": "Feet 24.00, 0.07, 12.20",
+      "Yaw": "Yaw 135° · pitch 0°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)"
+    },
+    "after": {
+      "Feet": "Feet 24.00, 0.07, 12.20",
+      "Yaw": "Yaw 135° · pitch 0°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)"
+    },
+    "matched": true
+  },
+  {
+    "label": "Street · Automatic",
+    "before": {
+      "Feet": "Feet 24.00, 0.07, 12.20",
+      "Yaw": "Yaw 90° · pitch 0°",
+      "Quality": "Quality auto · 1536 × 864 drawing buffer · ratio 1.20",
+      "Review": "Review scale: device/preset"
+    },
+    "after": {
+      "Feet": "Feet 24.00, 0.07, 12.20",
+      "Yaw": "Yaw 90° · pitch 0°",
+      "Quality": "Quality auto · 1536 × 864 drawing buffer · ratio 1.20",
+      "Review": "Review scale: device/preset"
+    },
+    "matched": true
+  },
+  {
+    "label": "Near row · High 2×",
+    "before": {
+      "Feet": "Feet 8.00, 0.58, 16.50",
+      "Yaw": "Yaw 70° · pitch -4°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor 8, 2.3, 16.5 · look target -11, 0.85, 9.7 m."
+    },
+    "after": {
+      "Feet": "Feet 8.00, 0.58, 16.50",
+      "Yaw": "Yaw 70° · pitch -4°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor 8, 2.3, 16.5 · look target -11, 0.85, 9.7 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "Near row · Automatic",
+    "before": {
+      "Feet": "Feet 8.00, 0.58, 16.50",
+      "Yaw": "Yaw 70° · pitch -4°",
+      "Quality": "Quality auto · 1536 × 864 drawing buffer · ratio 1.20",
+      "Review": "Review scale: device/preset",
+      "Camera": "Camera anchor 8, 2.3, 16.5 · look target -11, 0.85, 9.7 m."
+    },
+    "after": {
+      "Feet": "Feet 8.00, 0.58, 16.50",
+      "Yaw": "Yaw 70° · pitch -4°",
+      "Quality": "Quality auto · 1536 × 864 drawing buffer · ratio 1.20",
+      "Review": "Review scale: device/preset",
+      "Camera": "Camera anchor 8, 2.3, 16.5 · look target -11, 0.85, 9.7 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "West wagon · front quarter",
+    "before": {
+      "Feet": "Feet -25.00, -0.02, 14.00",
+      "Yaw": "Yaw 43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -25, 1.7, 14 · look target -29, 0.85, 9.7 m."
+    },
+    "after": {
+      "Feet": "Feet -25.00, -0.02, 14.00",
+      "Yaw": "Yaw 43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -25, 1.7, 14 · look target -29, 0.85, 9.7 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "West wagon · rear quarter",
+    "before": {
+      "Feet": "Feet -33.00, -0.02, 14.00",
+      "Yaw": "Yaw -43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -33, 1.7, 14 · look target -29, 0.85, 9.7 m."
+    },
+    "after": {
+      "Feet": "Feet -33.00, -0.02, 14.00",
+      "Yaw": "Yaw -43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -33, 1.7, 14 · look target -29, 0.85, 9.7 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "Middle sedan · front quarter",
+    "before": {
+      "Feet": "Feet -18.00, -0.02, 14.00",
+      "Yaw": "Yaw -43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -18, 1.7, 14 · look target -14, 0.85, 9.7 m."
+    },
+    "after": {
+      "Feet": "Feet -18.00, -0.02, 14.00",
+      "Yaw": "Yaw -43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -18, 1.7, 14 · look target -14, 0.85, 9.7 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "Middle sedan · rear quarter",
+    "before": {
+      "Feet": "Feet -10.00, -0.02, 14.00",
+      "Yaw": "Yaw 43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -10, 1.7, 14 · look target -14, 0.85, 9.7 m."
+    },
+    "after": {
+      "Feet": "Feet -10.00, -0.02, 14.00",
+      "Yaw": "Yaw 43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -10, 1.7, 14 · look target -14, 0.85, 9.7 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "East hatchback · front quarter",
+    "before": {
+      "Feet": "Feet 5.00, -0.02, 14.00",
+      "Yaw": "Yaw 43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor 5, 1.7, 14 · look target 1, 0.85, 9.7 m."
+    },
+    "after": {
+      "Feet": "Feet 5.00, -0.02, 14.00",
+      "Yaw": "Yaw 43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor 5, 1.7, 14 · look target 1, 0.85, 9.7 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "East hatchback · rear quarter",
+    "before": {
+      "Feet": "Feet -3.00, -0.02, 14.00",
+      "Yaw": "Yaw -43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -3, 1.7, 14 · look target 1, 0.85, 9.7 m."
+    },
+    "after": {
+      "Feet": "Feet -3.00, -0.02, 14.00",
+      "Yaw": "Yaw -43° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -3, 1.7, 14 · look target 1, 0.85, 9.7 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "Far-curb sedan",
+    "before": {
+      "Feet": "Feet -10.00, -0.02, 18.80",
+      "Yaw": "Yaw -138° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -10, 1.7, 18.8 · look target -6, 0.85, 23.3 m."
+    },
+    "after": {
+      "Feet": "Feet -10.00, -0.02, 18.80",
+      "Yaw": "Yaw -138° · pitch -8°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)",
+      "Camera": "Camera anchor -10, 1.7, 18.8 · look target -6, 0.85, 23.3 m."
+    },
+    "matched": true
+  },
+  {
+    "label": "Objective sedan · unchanged",
+    "before": {
+      "Feet": "Feet 19.00, -0.12, 17.90",
+      "Yaw": "Yaw -132° · pitch -7°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)"
+    },
+    "after": {
+      "Feet": "Feet 19.00, -0.12, 17.90",
+      "Yaw": "Yaw -132° · pitch -7°",
+      "Quality": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+      "Review": "Review scale: explicit QA override (not saved)"
+    },
+    "matched": true
+  }
+]

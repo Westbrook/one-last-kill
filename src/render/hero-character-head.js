@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { heroFaceProjection } from './hero-face-albedo.js';
+import { authorHeroSurface, hasHeroSurfaceFinish } from './hero-surface-finish.js';
 
 const cache = new Map(), TAU = Math.PI * 2;
 const gauss = (x, width) => Math.exp(-((x / width) ** 2));
@@ -17,10 +18,27 @@ const frontAngles = Array.from({ length: 16 }, (_, i) => i / 30 * Math.PI);
 frontAngles.splice(-1, 0, Math.PI / 2 - 0.052);
 const positiveAngles = [...frontAngles, ...[0.055, 0.11, 0.24, 0.48, 0.74, 1.0, 1.28, Math.PI / 2].map(a => Math.PI / 2 + a)];
 const HEAD_ANGLES = [...positiveAngles.slice(1).reverse().map(a => -a), ...positiveAngles];
+const HAIRCUTS = {
+  brawler: { front: 0.80, temple: 0.58, nape: 0.44, recession: 0.034, sideburn: 0.036, short: true },
+  thug: { front: 0.745, temple: 0.61, nape: 0.42, recession: 0.015, sideburn: 0.026 },
+  gunman: { front: 0.75, temple: 0.60, nape: 0.44, recession: 0.024, sideburn: 0.027, part: 0.20 },
+  bruiser: { front: 0.775, temple: 0.60, nape: 0.45, recession: 0.042, sideburn: 0.029, short: true },
+  hitman: { front: 0.73, temple: 0.60, nape: 0.44, recession: 0.018, sideburn: 0.030, part: 0.38 },
+  enforcer: { front: 0.79, temple: 0.59, nape: 0.435, recession: 0.040, sideburn: 0.025, short: true },
+};
 
 function hairline(angle, role) {
   const front = Math.cos(angle);
-  return front > 0 ? (role === 'brawler' ? 0.76 : 0.68) + front * 0.065 + Math.sin(angle * 3 + 0.4) * 0.023 : 0.61 + front * 0.19;
+  const cut = HAIRCUTS[role];
+  if (cut) {
+    // One continuous crew-cut perimeter: the old front/rear branches jumped
+    // at the temple and produced a square dark flap in profile.
+    const receded = gauss(Math.abs(angle) - 0.88, 0.28) * cut.recession;
+    const sideburn = gauss(Math.abs(angle) - 1.48, 0.13) * cut.sideburn;
+    return cut.temple + (front > 0 ? smooth(front) * (cut.front - cut.temple) : front * (cut.temple - cut.nape)) + receded - sideburn
+      + Math.sin(angle * 3 + 0.4) * 0.006;
+  }
+  return front > 0 ? 0.68 + front * 0.065 + Math.sin(angle * 3 + 0.4) * 0.023 : 0.61 + front * 0.19;
 }
 
 function curvedProfile(index, t, channel) {
@@ -123,8 +141,9 @@ function complexion(x, y, front, role) {
   const noseSide = gauss(Math.abs(x) - 0.082, 0.029) * gauss(y - 0.414, 0.079);
   const mouthCorner = gauss(Math.abs(x) - 0.119, 0.034) * gauss(y - 0.247, 0.04);
   const hollow = gauss(Math.abs(x) - 0.29, 0.105) * gauss(y - 0.30, 0.075);
-  const shadow = (socket * 0.34 + lowerLid * 0.12 + temple * 0.12 + noseSide * 0.22 + mouthCorner * 0.20 + hollow * 0.14) * facing;
-  const beard = role === 'hitman' ? 0.10 : role === 'brawler' ? 0.19 : 0.15;
+  const authored = hasHeroSurfaceFinish(role);
+  const shadow = (socket * 0.34 + lowerLid * 0.12 + temple * 0.12 + noseSide * 0.22 + mouthCorner * 0.20 + hollow * 0.14) * facing * (authored ? 0.65 : 1);
+  const beard = role === 'hitman' ? 0.075 : authored ? 0.125 : 0.15;
   const side = clamp((front + 0.30) / 0.52, 0, 1);
   const stubble = gauss(y - 0.17, 0.18) * (0.5 + 0.5 * gauss(Math.abs(x) - 0.24, 0.20)) * beard * side;
   const warm = gauss(Math.abs(x) - 0.265, 0.13) * gauss(y - 0.43, 0.08) * 0.07 * facing;
@@ -162,6 +181,10 @@ function skull(role) {
     }
   }
   const geometry = finish(positions, indices, colors, uv);
+  if (hasHeroSurfaceFinish(role)) authorHeroSurface(geometry, (x, y, z) => {
+    const front = smooth((z + 0.02) / 0.40), brow = gauss(y - 0.70, 0.14), nose = gauss(x, 0.10) * gauss(y - 0.45, 0.14);
+    return [0.73 - front * (brow * 0.095 + nose * 0.09), 0.85];
+  });
   const normal = geometry.attributes.normal, shared = new THREE.Vector3();
   for (let row = 0; row < ys.length; row++) {
     const start = row * (segments + 1), end = start + segments;
@@ -202,12 +225,15 @@ function hairSurface(role, hairColor, skin) {
   };
   const vertex = value => {
     if (vertices.has(value.key)) return vertices.get(value.key);
-    const index = positions.length / 3, { point, y, angle, distance } = value, shaved = role === 'brawler';
-    const thickness = (shaved ? 0.013 : 0.022) * (0.8 + 0.2 * Math.sin(angle * 7 + y * 8) ** 2);
+    const index = positions.length / 3, { point, y, angle, distance } = value, cut = HAIRCUTS[role], shaved = !!cut?.short;
+    const crop = cut ? gauss(y - 0.90, 0.075) * (0.004 + 0.007 * Math.sin(angle * 5 + y * 13 + 0.8) ** 2
+      + (cut.part ? gauss(angle + cut.part, 0.5) * 0.012 : 0)) * smooth(distance / 0.06) : 0;
+    const thickness = (shaved ? 0.011 : 0.022) * (0.8 + 0.2 * Math.sin(angle * 7 + y * 8) ** 2) + crop;
     positions.push(point[0] * (1 + thickness), point[1] + (1 - point[1]) * thickness * 0.4,
       -0.025 + (point[2] + 0.025) * (1 + thickness));
-    const strand = 0.88 + 0.24 * Math.sin(angle * 17 + y * 6) ** 2;
-    const tint = hairColor.clone().multiplyScalar(strand).lerp(skin, (shaved ? 0.28 : 0.12) * (1 - smooth(distance / 0.025)));
+    const strand = cut ? 0.97 + 0.10 * Math.sin(angle * 11 + y * 9 + (cut.part || 0) * 4) ** 2 : 0.88 + 0.24 * Math.sin(angle * 17 + y * 6) ** 2;
+    const fadeWidth = cut ? (shaved ? 0.045 : 0.026) + (1 - Math.max(0, Math.cos(angle))) * (shaved ? 0.11 : 0.067) : 0.025;
+    const tint = hairColor.clone().multiplyScalar(strand).lerp(skin, (shaved ? 0.87 : cut ? 0.58 : 0.12) * (1 - smooth(distance / fadeWidth)));
     colors.push(tint.r, tint.g, tint.b); vertices.set(value.key, index); return index;
   };
   for (const triangle of triangles) {
@@ -220,6 +246,7 @@ function hairSurface(role, hairColor, skin) {
     for (let i = 1; i < polygon.length - 1; i++) indices.push(vertex(polygon[0]), vertex(polygon[i]), vertex(polygon[i + 1]));
   }
   const geometry = finish(positions, indices, colors), normal = geometry.attributes.normal;
+  if (hasHeroSurfaceFinish(role)) authorHeroSurface(geometry, () => [role === 'hitman' ? 0.86 : HAIRCUTS[role].short ? 0.93 : 0.90, 0]);
   const coincident = new Map();
   for (let i = 0; i < positions.length; i += 3) {
     const key = positions.slice(i, i + 3).map(value => Math.round(value * 1e6)).join(':');
@@ -276,7 +303,7 @@ function detailParts(config, role) {
     // clipped before batching; the centered gaze does not move or add a draw.
     for (const upper of [true, false]) {
       const start = positions.length / 3, triangleStart = indices.length / 3;
-      const tone = skin.clone().multiplyScalar(upper ? 0.73 : 0.88);
+      const tone = skin.clone().multiplyScalar(upper ? (hasHeroSurfaceFinish(role) ? 0.81 : 0.73) : 0.88);
       for (let i = 0; i <= 12; i++) {
         const u = i / 12, px = x + (u - 0.5) * 0.156, arc = Math.sin(u * Math.PI);
         const edge = opening(px)[upper ? 1 : 0], direction = upper ? 1 : -1;
@@ -306,7 +333,12 @@ function detailParts(config, role) {
   disk(0, 0.254, 0.124, 0.017, lip.clone().multiplyScalar(0.77), 0.006, 28, true);
   disk(0, 0.224, 0.115, 0.017, lip, 0.006, 28, true);
   disk(0, 0.242, 0.125, 0.0038, skin.clone().multiplyScalar(0.25), 0.012, 28);
-  parts.push(finish(positions, indices, colors));
+  const facialDetails = finish(positions, indices, colors);
+  if (hasHeroSurfaceFinish(role)) authorHeroSurface(facialDetails, (x, y) => {
+    const eye = gauss(Math.abs(x) - 0.175, 0.071) * gauss(y - 0.554, 0.018), lips = gauss(x, 0.10) * gauss(y - 0.24, 0.025);
+    return [0.74 - eye * 0.28 - lips * 0.10, 0];
+  });
+  parts.push(facialDetails);
 
   parts.push(hairSurface(role, hairColor, skin));
   const hair = { triangleStart: parts[0].index.count / 3, triangleCount: parts[1].index.count / 3 };

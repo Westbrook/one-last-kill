@@ -1,0 +1,127 @@
+{
+  "designs": {
+    "sedan": {
+      "resources": {
+        "triangles": 3456,
+        "materialDraws": 6,
+        "geometryBytes": 456192,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.2869999408721924,
+          1.1920929132713809e-8,
+          -1.0164999961853027
+        ],
+        [
+          2.2869999408721924,
+          1.4889999628067017,
+          1.0164999961853027
+        ]
+      ]
+    },
+    "hatchback": {
+      "resources": {
+        "triangles": 3384,
+        "materialDraws": 6,
+        "geometryBytes": 446688,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.0269999504089355,
+          1.1920929132713809e-8,
+          -0.9915000200271606
+        ],
+        [
+          2.0269999504089355,
+          1.503999948501587,
+          0.9915000200271606
+        ]
+      ]
+    },
+    "wagon": {
+      "resources": {
+        "triangles": 3456,
+        "materialDraws": 6,
+        "geometryBytes": 456192,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.377000093460083,
+          1.1920929132713809e-8,
+          -1.0264999866485596
+        ],
+        [
+          2.377000093460083,
+          1.5140000581741333,
+          1.0264999866485596
+        ]
+      ]
+    },
+    "panel-van": {
+      "resources": {
+        "triangles": 3492,
+        "materialDraws": 6,
+        "geometryBytes": 460944,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.447000026702881,
+          1.1920929132713809e-8,
+          -1.0779999494552612
+        ],
+        [
+          2.447000026702881,
+          1.9359999895095825,
+          1.0779999494552612
+        ]
+      ]
+    },
+    "passenger-van": {
+      "resources": {
+        "triangles": 3672,
+        "materialDraws": 6,
+        "geometryBytes": 484704,
+        "textures": 0,
+        "textureBytes": 0,
+        "addedLights": 0,
+        "geometrySharedByVariant": true,
+        "runtimeConstruction": false
+      },
+      "bounds": [
+        [
+          -2.496999979019165,
+          1.1920929132713809e-8,
+          -1.087999939918518
+        ],
+        [
+          2.496999979019165,
+          1.9559999704360962,
+          1.087999939918518
+        ]
+      ]
+    }
+  },
+  "installedMaterialInstances": 10,
+  "sourcePrimitiveBytes": 25408,
+  "sourcePrimitiveBytesMeaning": "shared tire/hub/arch prototypes; unchanged from the prior car kit"
+}

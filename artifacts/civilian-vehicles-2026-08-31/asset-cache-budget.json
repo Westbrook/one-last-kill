@@ -1,0 +1,83 @@
+{
+  "method": "Direct Three.js factory construction with final authored civilian descriptors; local CPU typed arrays including retained source primitives. Driver memory and temporary build peaks excluded.",
+  "variants": {
+    "wagon": {
+      "triangles": 3456,
+      "materialDraws": 6,
+      "geometryBytes": 456192,
+      "textures": 0,
+      "textureBytes": 0,
+      "addedLights": 0,
+      "geometrySharedByVariant": true,
+      "runtimeConstruction": false,
+      "visualBounds": [
+        [
+          -2.377000093460083,
+          1.1920929132713809e-8,
+          -1.0264999866485596
+        ],
+        [
+          2.377000093460083,
+          1.5140000581741333,
+          1.0264999866485596
+        ]
+      ]
+    },
+    "sedan": {
+      "triangles": 3456,
+      "materialDraws": 6,
+      "geometryBytes": 456192,
+      "textures": 0,
+      "textureBytes": 0,
+      "addedLights": 0,
+      "geometrySharedByVariant": true,
+      "runtimeConstruction": false,
+      "visualBounds": [
+        [
+          -2.2869999408721924,
+          1.1920929132713809e-8,
+          -1.0164999961853027
+        ],
+        [
+          2.2869999408721924,
+          1.4889999628067017,
+          1.0164999961853027
+        ]
+      ]
+    },
+    "hatchback": {
+      "triangles": 3384,
+      "materialDraws": 6,
+      "geometryBytes": 446688,
+      "textures": 0,
+      "textureBytes": 0,
+      "addedLights": 0,
+      "geometrySharedByVariant": true,
+      "runtimeConstruction": false,
+      "visualBounds": [
+        [
+          -2.0269999504089355,
+          1.1920929132713809e-8,
+          -0.9915000200271606
+        ],
+        [
+          2.0269999504089355,
+          1.503999948501587,
+          0.9915000200271606
+        ]
+      ]
+    }
+  },
+  "sharedSourceGeometryBytes": {
+    "wheelTire": 7968,
+    "wheelHub": 3584,
+    "wheelCenter": 2720,
+    "wheelArch": 11136
+  },
+  "totalSharedSourceGeometryBytes": 25408,
+  "cachedMergedGeometryBytes": 1359072,
+  "totalRetainedGeometryBytes": 1384480,
+  "retainedMaterialInstances": 11,
+  "textureBytes": 0,
+  "addedLights": 0
+}

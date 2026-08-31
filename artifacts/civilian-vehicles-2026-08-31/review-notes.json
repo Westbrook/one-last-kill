@@ -1,0 +1,18 @@
+{
+  "rejectedTrials": [
+    {
+      "trial": "Initial low nose/tail",
+      "reason": "Upper lamp panel corners rose beyond the supporting metal; revised existing body outline without extra topology."
+    },
+    {
+      "trial": "Initial ordinary-play input attempt",
+      "reason": "QA panel retained keyboard focus in a paused inspection. Those screenshots show no gameplay movement and are excluded from play evidence. Normal RESUME MISSION was then used; active combat and actual incoming damage were observed."
+    }
+  ],
+  "motionEvidence": {
+    "normalPlay": "after-ordinary-auto-moving-VISUAL-ONLY-*",
+    "walk": "after-walk-auto-VISUAL-ONLY-*",
+    "reducedMotion": "after-walk-reduced-motion-VISUAL-ONLY-*",
+    "limitations": "Continuous walk uses production input/collision with waves stopped and an independent review-camera yaw; normal street sample is brief. No screenshot supplies timing evidence."
+  }
+}

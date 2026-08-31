@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { heroGarmentDetails } from './hero-garment-details.js';
+import { authorHeroSurface, hasHeroSurfaceFinish } from './hero-surface-finish.js';
 
 export const HERO_BIND_ARM_ANGLE = 0.45;
 const cache = new Map(), TAU = Math.PI * 2;
@@ -92,21 +93,48 @@ function bodyWeights(x, y, z, d, shortSleeve) {
   return weights;
 }
 
-function attributes(geometry, boneIndex, weightFor, colorFor) {
+function attributes(geometry, boneIndex, weightFor, colorFor, preserveUV = false) {
   const p = geometry.attributes.position, weights = [], indices = [], colors = [], uv = [];
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
     const entries = Object.entries(weightFor(x, y, z)).sort((a, b) => b[1] - a[1]).slice(0, 4);
     const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
     for (let k = 0; k < 4; k++) { indices.push(k < entries.length ? boneIndex[entries[k][0]] : 0); weights.push(k < entries.length ? entries[k][1] / total : 0); }
-    const color = colorFor(x, y, z); colors.push(color.r, color.g, color.b);
+    const color = colorFor(x, y, z, i); colors.push(color.r, color.g, color.b);
     uv.push(x * 4, y * 4);
   }
   geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(indices, 4));
   geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weights, 4));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  if (!preserveUV || !geometry.attributes.uv) geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   return geometry;
+}
+
+function wornGarmentColor(x, y, z, d, palette, role) {
+  const py = y / d.height, px = x / d.height, pz = z / d.height;
+  const front = smooth((pz + 0.015) / 0.06), side = Math.abs(px) / d.width;
+  // Construction and wear follow garment regions, never a painted light.
+  const wear = role === 'hitman' ? 0.42 : role === 'gunman' ? 0.72 : 1;
+  const mottling = Math.sin(px * 47 + py * 23) * Math.sin(py * 31 - pz * 37) * 0.023 * wear;
+  if (py < 0.578 && Math.abs(x) < d.height * 0.18) {
+    if (py > 0.563) return palette.belt;
+    const knees = gauss(py - 0.285, 0.05) * front, seat = gauss(py - 0.50, 0.050) * (1 - front);
+    const seam = gauss(side - 0.095, 0.006) * smooth((py - 0.13) / 0.35);
+    return palette.pants.clone().multiplyScalar(1 + mottling + wear * (knees * 0.20 + seat * 0.12 - seam * 0.11));
+  }
+  if (z > 0 && Math.abs(x) < d.height * 0.005 && role !== 'brawler') return palette.trim;
+  const shoulderWear = gauss(py - 0.78, 0.055) * smooth((side - 0.035) / 0.065);
+  const hemWear = gauss(py - 0.589, 0.017), sideSeam = gauss(side - 0.106, 0.010) * gauss(py - 0.69, 0.085);
+  return palette.shirt.clone().multiplyScalar(1.04 + mottling + wear * (shoulderWear * 0.18 + hemWear * 0.07 - sideSeam * 0.13));
+}
+
+function garmentFinish(role, trousers = false, belt = false) {
+  if (belt) return [0.67, 0.10];
+  if (trousers) return [role === 'hitman' ? 0.88 : 0.86, role === 'hitman' ? 0.8 : 1];
+  if (role === 'thug') return [0.69, 0.12];
+  if (role === 'hitman') return [0.84, 0.8];
+  if (role === 'gunman') return [0.90, 1];
+  return [role === 'brawler' ? 0.94 : 0.88, 1];
 }
 
 function exteriorSurface(geometry) {
@@ -162,6 +190,7 @@ function tailorShortSleeveSurface(geometry, d, boneIndex) {
 }
 
 function fieldSurface(d, role, boneIndex, palette) {
+  const authored = hasHeroSurfaceFinish(role);
   const resolution = ['brawler', 'bruiser', 'enforcer'].includes(role) ? 36 : 37;
   const field = new MarchingCubes(resolution, FIELD_MATERIAL, false, false, 18000);
   // Three extracts cube corners 1..N-2, leaving samples for normal gradients.
@@ -190,11 +219,16 @@ function fieldSurface(d, role, boneIndex, palette) {
   attributes(connected, boneIndex, (x, y, z) => bodyWeights(x / d.height, y / d.height, z / d.height, d, short),
     (x, y, z) => {
       const py = y / d.height;
+      if (authored) return wornGarmentColor(x, y, z, d, palette, role);
       if (py < 0.578 && Math.abs(x) < d.height * 0.18) return py > 0.563 ? palette.belt : palette.pants;
       if (z > 0 && Math.abs(x) < d.height * 0.005 && role !== 'brawler') return palette.trim;
       return palette.shirt;
     });
   if (short) tailorShortSleeveSurface(connected, d, boneIndex);
+  if (authored) authorHeroSurface(connected, (x, y) => {
+    const trousers = y / d.height < 0.578 && Math.abs(x) < d.height * 0.18;
+    return garmentFinish(role, trousers, trousers && y / d.height >= 0.563);
+  });
   connected.userData.continuousBody = true;
   return connected;
 }
@@ -234,7 +268,7 @@ function merge(parts) {
   indexed.computeBoundingBox(); indexed.computeBoundingSphere(); return indexed;
 }
 
-function boot(d, side, boneIndex, palette) {
+function boot(d, side, boneIndex, palette, authored = false) {
   const h = d.height, bottom = -d.ankleY, toe = d.bootLength;
   const geometry = lathe([
     [bottom, d.bootWidth * 0.40, toe * 0.43, toe * 0.13],
@@ -247,7 +281,12 @@ function boot(d, side, boneIndex, palette) {
     [bottom + h * 0.098, d.bootWidth * 0.34, toe * 0.20, -toe * 0.08],
   ], 24, true);
   geometry.translate((side === 'L' ? -1 : 1) * d.hipSpacing, d.ankleY, 0);
-  return attributes(geometry, boneIndex, () => ({ [`ankle${side}`]: 1 }), (x, y) => y < h * 0.023 ? palette.sole : palette.boot);
+  attributes(geometry, boneIndex, () => ({ [`ankle${side}`]: 1 }), (x, y, z) => {
+    if (y < h * 0.023) return palette.sole;
+    return authored ? palette.boot.clone().multiplyScalar(1 + gauss(y / h - 0.040, 0.018) * smooth(z / toe) * 0.24) : palette.boot;
+  }, authored);
+  if (authored) authorHeroSurface(geometry, (x, y) => [y < h * 0.023 ? 0.96 : 0.67, y < h * 0.023 ? 0.05 : 0.12]);
+  return geometry;
 }
 
 function garmentSurfaceSampler(d, shortSleeve) {
@@ -276,17 +315,38 @@ function bareArm(d, side, boneIndex) {
   const rows = [], angle = HERO_BIND_ARM_ANGLE;
   for (let i = 0; i <= 18; i++) {
     const t = 0.32 + i / 18 * 0.68, radius = h * (0.024 + gauss(t - 0.58, 0.15) * 0.004 - smooth((t - 0.80) / 0.20) * 0.010);
-    rows.push([-t * length, radius, radius * (1 - smooth((t - 0.62) / 0.38) * 0.12)]);
+    // Match the existing palm's wrist ellipse. The former round forearm end
+    // was wider and deeper than the hand, leaving a visible step in a punch.
+    const wrist = smooth((t - 0.80) / 0.20);
+    rows.push([-t * length, radius * (1 - wrist) + d.handWidth * 0.565 * 0.5 * wrist,
+      radius * (1 - smooth((t - 0.62) / 0.38) * 0.12) * (1 - wrist) + d.handDepth * 0.40 * 0.5 * wrist]);
   }
-  const g = lathe(rows.reverse(), 20); g.rotateZ(sign * angle).translate(sign * d.shoulderSpacing, d.shoulderY, 0);
-  return attributes(g, boneIndex, (x, y, z) => {
+  const g = lathe(rows.reverse(), 20), position = g.attributes.position;
+  // The palm uses ten sides. Fit alternating distal samples to its actual
+  // polygon instead of placing a higher-resolution ellipse outside that rim.
+  for (let row = 0; row < rows.length; row++) for (let i = 0; i <= 20; i++) {
+    const index = row * 21 + i, t = -rows[row][0] / length;
+    const polygon = 1 - smooth((t - 0.90) / 0.10) * (i % 2 ? 1 - Math.cos(Math.PI / 10) : 0);
+    position.setX(index, position.getX(index) * polygon); position.setZ(index, position.getZ(index) * polygon);
+  }
+  g.computeVertexNormals(); smoothRingNormals(g, rows.length, 20);
+  g.rotateZ(sign * angle).translate(sign * d.shoulderSpacing, d.shoulderY, 0);
+  attributes(g, boneIndex, (x, y, z) => {
     const t = armSample(x / h, y / h, z / h, sign, d).t;
     const elbow = smooth((t - 0.4) / 0.24), wrist = smooth((t - 0.9) / 0.1);
     return { [`shoulder${side}`]: 1 - elbow, [`elbow${side}`]: elbow * (1 - wrist), [`wrist${side}`]: wrist };
-  }, () => new THREE.Color(1, 1, 1));
+  }, (x, y, z) => {
+    const t = armSample(x / h, y / h, z / h, sign, d).t;
+    const elbow = gauss(t - 0.54, 0.10), wrist = gauss(t - 0.94, 0.065);
+    return new THREE.Color(1 - elbow * 0.025 - wrist * 0.012, 0.985 - elbow * 0.065 - wrist * 0.025, 0.965 - elbow * 0.072 - wrist * 0.026);
+  }, true);
+  return authorHeroSurface(g, (x, y, z) => {
+    const t = armSample(x / h, y / h, z / h, sign, d).t;
+    return [0.76 + gauss(t - 0.54, 0.12) * 0.045, 0.9];
+  });
 }
 
-function neckSurface(d, boneIndex) {
+function neckSurface(d, boneIndex, authored = false) {
   const h = d.height, top = d.headChinY + d.headHeight * 0.35;
   // A narrow middle and curved nape soften the former straight neck silhouette.
   // Keep the buried base and head-weighted upper rim in their existing frames.
@@ -309,25 +369,29 @@ function neckSurface(d, boneIndex) {
   // The lower flare follows the chest, the middle follows the neck, and the
   // hidden upper rim follows the head exactly. No rigid tube is left behind
   // when a guard looks aside or recoils; all deformation stays on the GPU.
-  return attributes(geometry, boneIndex, (x, y) => {
+  attributes(geometry, boneIndex, (x, y) => {
     const head = smooth((y - (d.headChinY - h * 0.006)) / (top - (d.headChinY - h * 0.006)));
     const chest = 1 - smooth((y / h - 0.818) / 0.030);
     return { chest: (1 - head) * chest, neck: (1 - head) * (1 - chest), head };
   }, (x, y, z) => {
     const upper = smooth((y / h - 0.837) / 0.045);
     const throatShadow = gauss(y / h - 0.869, 0.020) * Math.max(0, z / (h * 0.03)) * 0.055;
-    return new THREE.Color(1 - upper * 0.035 - throatShadow, 0.99 - upper * 0.055 - throatShadow, 0.98 - upper * 0.060 - throatShadow);
-  });
+    const warmth = authored ? gauss(y / h - 0.843, 0.022) * 0.020 : 0;
+    return new THREE.Color(1 - upper * 0.035 - throatShadow, 0.99 - upper * 0.055 - throatShadow - warmth, 0.98 - upper * 0.060 - throatShadow - warmth);
+  }, authored);
+  if (authored) authorHeroSurface(geometry, (x, y) => [0.74 - smooth((y / h - 0.84) / 0.05) * 0.025, 0.9]);
+  return geometry;
 }
 
 /** Original field-sculpted, welded body topology and authored garment details. */
 export function heroBodyGeometry(config, d, bones, proxies) {
   const role = config.role || config.kind || 'adult';
+  const authored = hasHeroSurfaceFinish(role);
   const key = JSON.stringify([role, d.height, d.width, config.skin, config.shirt, config.pants, config.hair]);
   if (cache.has(key)) return cache.get(key);
   const boneIndex = Object.fromEntries(bones.map((bone, i) => [bone.name.slice(6), i]));
   const tint = (color, lift = 0) => new THREE.Color(color).lerp(new THREE.Color('#879080'), lift);
-  const palette = { shirt: tint(config.shirt || '#41484b', 0.12), pants: tint(config.pants || '#2c3237', 0.08),
+  const palette = { shirt: tint(config.shirt || '#41484b', role === 'brawler' ? 0.20 : 0.12), pants: tint(config.pants || '#2c3237', role === 'brawler' ? 0.12 : 0.08),
     trim: tint('#232a29'), equipment: tint(role === 'enforcer' ? '#343c36' : '#414237'),
     belt: tint('#222522'), boot: tint('#242a29'), sole: tint('#111615') };
   const surface = fieldSurface(d, role, boneIndex, palette);
@@ -336,8 +400,25 @@ export function heroBodyGeometry(config, d, bones, proxies) {
     frontAt: garmentSurfaceSampler(d, role === 'brawler'), bindArmAngle: HERO_BIND_ARM_ANGLE });
   const garmentDetails = { triangles: details.userData.triangles,
     parts: details.map(part => ({ name: part.name, triangles: part.geometry.index.count / 3 })) };
-  const garments = merge([surface, ...details.map(part => attributes(part.geometry, boneIndex, part.weightFor, part.colorFor)),
-    boot(d, 'L', boneIndex, palette), boot(d, 'R', boneIndex, palette)]);
+  const garments = merge([surface, ...details.map(part => {
+    const colorFor = (x, y, z) => {
+      const base = part.colorFor(x, y, z);
+      if (!authored || !part.name.startsWith('sleeve-hem.')) return base;
+      const sign = part.name.endsWith('.L') ? -1 : 1;
+      const t = armSample(x / d.height, y / d.height, z / d.height, sign, d).t;
+      const edge = role === 'brawler' ? smooth((t - 0.358) / 0.023) : smooth((t - 0.971) / 0.012);
+      return base.clone().multiplyScalar(0.98 + edge * (role === 'hitman' ? 0.10 : 0.21));
+    };
+    const geometry = attributes(part.geometry, boneIndex, part.weightFor, colorFor);
+    if (authored) authorHeroSurface(geometry, () => {
+      if (part.name.includes('webbing') || part.name.includes('strap') || part.name.includes('pouch')) return [0.97, 0.75];
+      if (part.name.startsWith('vest-')) return [0.94, 0.8];
+      if (part.name === 'zipper-pull') return [0.53, 0.03];
+      if (part.name.startsWith('shirt-button.')) return [0.66, 0.06];
+      return role === 'brawler' ? [0.96, 0.8] : garmentFinish(role);
+    });
+    return geometry;
+  }), boot(d, 'L', boneIndex, palette, authored), boot(d, 'R', boneIndex, palette, authored)]);
   const skinParts = [];
   for (const side of ['L', 'R']) {
     const hand = proxies.find(mesh => mesh.name === `hand.${side}`);
@@ -347,10 +428,17 @@ export function heroBodyGeometry(config, d, bones, proxies) {
       for (let i = 0; i < count; i += 3) index.push(i + 2, i + 1, i);
       g.setIndex(index);
     }
-    skinParts.push(attributes(g, boneIndex, () => ({ [`wrist${side}`]: 1 }), () => new THREE.Color(1, 1, 1)));
+    const local = new THREE.Vector3(), inverse = hand.matrixWorld.clone().invert();
+    skinParts.push(attributes(g, boneIndex, () => ({ [`wrist${side}`]: 1 }), (x, y, z) => {
+      if (!authored) return new THREE.Color(1, 1, 1);
+      local.set(x, y, z).applyMatrix4(inverse);
+      const knuckle = gauss(local.y + 0.64, 0.13), palm = smooth(local.z / 0.32);
+      return new THREE.Color(1 - knuckle * 0.025, 0.985 - knuckle * 0.075 + palm * 0.012, 0.965 - knuckle * 0.082 + palm * 0.018);
+    }, authored));
+    if (authored) authorHeroSurface(g, () => [0.72, 0.85]);
     if (role === 'brawler') skinParts.push(bareArm(d, side, boneIndex));
   }
-  skinParts.push(neckSurface(d, boneIndex));
+  skinParts.push(neckSurface(d, boneIndex, authored));
   const skin = merge(skinParts);
   const result = { garments, skin, role, surfaceTriangles, surfaceVertices, garmentDetails,
     provenance: 'Original authored implicit surface, welded topology, folded and sewn garment surfaces, anatomical neck and GPU skin weights' };

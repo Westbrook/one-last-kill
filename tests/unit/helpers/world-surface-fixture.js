@@ -22,6 +22,8 @@ import { applyWaterTankStaveUV } from '../../../src/render/water-tank-uv.js';
 import { refineConcreteBarrier } from '../../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../../src/render/sedan-panels.js';
+import { createCivilianVehicle } from '../../../src/render/civilian-vehicles.js';
+import { buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES } from '../../../src/render/storefront-kit.js';
 
 function loadFunctions(path, bindings, names) {
   // Preserve source line numbers in captured VM stacks while removing imports.
@@ -108,7 +110,7 @@ export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld() }
   }
   const WorldState = { fires: [], smokeSystems: [], flickerLights: [], bakeryLights: [] };
   const bindings = {
-    refineConcreteBarrier,
+    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle,
     THREE, RoundedBoxGeometry, mergeGeometries, World, WorldState, MATS, ...caches,
     Architecture, boxBounds, Colliders, Ballistics: ballistics, BUILDING, BALCONY, ROOF, OPENINGS, APARTMENT_DOORS, STAIRS, DISTRICT,
     SCAFFOLD_LEVELS, SCAFFOLD_TRIGGER_MIN_Z, createInteriorProps, createDoorAssemblies,

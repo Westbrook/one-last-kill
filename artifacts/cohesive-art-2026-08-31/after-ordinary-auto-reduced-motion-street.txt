@@ -1,0 +1,50 @@
+- generic "First-person game. Use keyboard and mouse, a gamepad, or enable on-screen touch controls in Settings. Open Field Notes for controls."
+- generic "Game status":
+  - generic: 01 / LITTLE SICILY
+  - generic: STREET
+  - generic: 07 / 08
+  - status: LITTLE SICILY — CAR OR BAKERY?
+  - progressbar "Mission route progress"
+  - generic "Compass heading":
+    - generic: 270°
+    - generic: SW
+    - generic: W
+    - generic: NW
+  - generic: HOSTILE DOWN
+  - status:
+    - generic: street
+    - text: LITTLE SICILY — CAR OR BAKERY?
+  - status: DOWN — RESTART FROM CHECKPOINT
+  - generic: +
+  - generic: "0"
+  - generic: HEALTH
+  - progressbar "Armor"
+  - progressbar "Health"
+  - generic: ARROWS LOOK / J FIRE / P PAUSE
+  - text: RELOADING
+  - generic: ···
+  - generic: CLOSE QUARTERS
+  - generic: "01"
+  - generic: FISTS
+  - generic "Unlimited melee attacks":
+    - generic: ∞
+  - generic: R
+  - text: RELOAD
+  - generic: V
+  - text: MELEE
+  - status
+  - dialog "GET BACK UP.":
+    - generic: THE FIGHT ISN’T OVER
+    - heading "GET BACK UP." [level=2]
+    - paragraph: Return to your last checkpoint. Make the next move count.
+    - button "RETRY CHECKPOINT" [active]:
+      - text: RETRY CHECKPOINT
+      - generic: ↗
+  - status:
+    - text: CASTLE
+    - paragraph: One car. One chance. And a room full of people.
+    - generic: INTERCEPTED RADIO · Go, go, go.
+- button "Audio is locked off for this silent session." [disabled]:
+  - generic: AUDIO LOCKED OFF
+- complementary "Silent development QA":
+  - button "Show QA panel"

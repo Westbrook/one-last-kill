@@ -1,0 +1,206 @@
+[
+  {
+    "label": "Street · High 2×",
+    "before": "before-street-high2.png",
+    "after": "after-street-high2.png",
+    "beforeReport": "before-street-high2.txt",
+    "afterReport": "after-street-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Street, turned toward shops · High 2×",
+    "before": "before-street-left-high2.png",
+    "after": "after-street-left-high2.png",
+    "beforeReport": "before-street-left-high2.txt",
+    "afterReport": "after-street-left-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Street · Automatic",
+    "before": "before-street-auto.png",
+    "after": "after-street-auto.png",
+    "beforeReport": "before-street-auto.txt",
+    "afterReport": "after-street-auto.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Brawler · front",
+    "before": "before-brawler-front.png",
+    "after": "after-brawler-front.png",
+    "beforeReport": "before-brawler-front.txt",
+    "afterReport": "after-brawler-front.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Brawler · profile",
+    "before": "before-brawler-profile.png",
+    "after": "after-brawler-profile.png",
+    "beforeReport": "before-brawler-profile.txt",
+    "afterReport": "after-brawler-profile.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Brawler · rear",
+    "before": "before-brawler-rear.png",
+    "after": "after-brawler-rear.png",
+    "beforeReport": "before-brawler-rear.txt",
+    "afterReport": "after-brawler-rear.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Brawler · from below",
+    "before": "before-brawler-below.png",
+    "after": "after-brawler-below.png",
+    "beforeReport": "before-brawler-below.txt",
+    "afterReport": "after-brawler-below.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Brawler · ordinary encounter distance",
+    "before": "before-brawler-full.png",
+    "after": "after-brawler-full.png",
+    "beforeReport": "before-brawler-full.txt",
+    "afterReport": "after-brawler-full.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Brawler · windup",
+    "before": "before-brawler-windup.png",
+    "after": "after-brawler-windup.png",
+    "beforeReport": "before-brawler-windup.txt",
+    "afterReport": "after-brawler-windup.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Brawler · contact",
+    "before": "before-brawler-contact.png",
+    "after": "after-brawler-contact.png",
+    "beforeReport": "before-brawler-contact.txt",
+    "afterReport": "after-brawler-contact.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Gunman · aim",
+    "before": "before-gunman-aim.png",
+    "after": "after-gunman-aim.png",
+    "beforeReport": "before-gunman-aim.txt",
+    "afterReport": "after-gunman-aim.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Bat carrier · carry",
+    "before": "before-thug-carry.png",
+    "after": "after-thug-carry.png",
+    "beforeReport": "before-thug-carry.txt",
+    "afterReport": "after-thug-carry.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Bruiser · aim",
+    "before": "before-bruiser-aim.png",
+    "after": "after-bruiser-aim.png",
+    "beforeReport": "before-bruiser-aim.txt",
+    "afterReport": "after-bruiser-aim.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Hitman · aim",
+    "before": "before-hitman-aim.png",
+    "after": "after-hitman-aim.png",
+    "beforeReport": "before-hitman-aim.txt",
+    "afterReport": "after-hitman-aim.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Enforcer · aim",
+    "before": "before-enforcer-aim.png",
+    "after": "after-enforcer-aim.png",
+    "beforeReport": "before-enforcer-aim.txt",
+    "afterReport": "after-enforcer-aim.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Bakery · High 2×",
+    "before": "before-bakery-high2.png",
+    "after": "after-bakery-high2.png",
+    "beforeReport": "before-bakery-high2.txt",
+    "afterReport": "after-bakery-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Roof · High 2×",
+    "before": "before-roof-high2.png",
+    "after": "after-roof-high2.png",
+    "beforeReport": "before-roof-high2.txt",
+    "afterReport": "after-roof-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Inspector fixture, camera, quality and scale matched. Live combat frames are retained separately and are not pixel-matched."
+  }
+]

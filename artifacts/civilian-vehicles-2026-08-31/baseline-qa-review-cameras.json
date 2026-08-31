@@ -1,0 +1,5 @@
+{
+  "path": "src/testing/qa.js",
+  "sha256": "fa006c78b6de9adcb66e8fa79e189b6e2c6bd87b1a87f9e522440fc28384abf3",
+  "note": "Only the development QA car-camera controls are shared with preserved baseline, for identical world-space views. Production runtime snapshot is unchanged."
+}

@@ -22,6 +22,8 @@ import { addCrtHousing } from '../../src/render/crt-housing.js';
 import { refineConcreteBarrier } from '../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../src/render/sedan-panels.js';
+import { createCivilianVehicle } from '../../src/render/civilian-vehicles.js';
+import { buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES } from '../../src/render/storefront-kit.js';
 
 // Execute the authored builders with real Three.js math/geometry and injected
 // scene services. Their browser-facing imports are deliberately not evaluated:
@@ -81,7 +83,7 @@ function buildFixture() {
   }
   const WorldState = { bakeryLights: [], smokeSystems: [], flickerLights: [], fires: [] };
   const bindings = {
-    refineConcreteBarrier,
+    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle,
     THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, BALCONY, ROOF, APARTMENT_DOORS, DISTRICT, createInteriorProps, createDoorAssemblies,
     World, WorldState, MATS, _CG, _BG, Colliders,
     addBox, addWallZ, addSign, pushDecor, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, addCrtHousing, createSedanCabin, createSedanBumper, createSedanHood,

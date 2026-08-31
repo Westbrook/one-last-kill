@@ -1,0 +1,20 @@
+✔ sedan glass is seated in its actual shoulder and covered by the complete roof (1.738208ms)
+✔ sedan front/rear pillars and mirrors contact the sloped side glazing (0.474708ms)
+✔ sedan nose and tail support the full lamp panels instead of leaving their upper corners floating (0.820583ms)
+✔ sedan shell, glazing, roof and bumpers have closed triangle surfaces (1.443167ms)
+✔ hatchback glass is seated in its actual shoulder and covered by the complete roof (0.336875ms)
+✔ hatchback front/rear pillars and mirrors contact the sloped side glazing (0.256625ms)
+✔ hatchback nose and tail support the full lamp panels instead of leaving their upper corners floating (0.55725ms)
+✔ hatchback shell, glazing, roof and bumpers have closed triangle surfaces (1.46125ms)
+✔ wagon glass is seated in its actual shoulder and covered by the complete roof (0.615291ms)
+✔ wagon front/rear pillars and mirrors contact the sloped side glazing (0.54375ms)
+✔ wagon nose and tail support the full lamp panels instead of leaving their upper corners floating (0.520834ms)
+✔ wagon shell, glazing, roof and bumpers have closed triangle surfaces (2.096916ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 87.611458

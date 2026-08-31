@@ -1,0 +1,37 @@
+{
+  "verifiedAt": "2026-08-31T12:03:08.280Z",
+  "files": 359,
+  "mismatches": [],
+  "documentation": [
+    {
+      "path": "README.md",
+      "bytes": 27150,
+      "sha256": "5def7419dce5e36dbfd87468859335e30affaf6596c05cfbed648f38f901825f"
+    },
+    {
+      "path": "docs/architecture.md",
+      "bytes": 76155,
+      "sha256": "f3c3597077315c6d44c03fc1ac82363842d7ada0821fbca8f3459c478a2baebe"
+    },
+    {
+      "path": "docs/art-direction.md",
+      "bytes": 23086,
+      "sha256": "f636c7928257c76ac176190560fa9670fc7c2a1ccb71c49bb7f0a228e43f4378"
+    },
+    {
+      "path": "docs/cohesive-art-review.md",
+      "bytes": 9512,
+      "sha256": "d16980a4434d4f3f2441b91478a03a14397db51ad38e17f115d524d33271c07c"
+    },
+    {
+      "path": "docs/character-finish-provenance.md",
+      "bytes": 4840,
+      "sha256": "c5b58a483ac045a100d5cc5f45c86ef1f9608e2aea9d331a249769191583abcc"
+    },
+    {
+      "path": "docs/storefront-kit-provenance.md",
+      "bytes": 2968,
+      "sha256": "25e21850108254d08091b06c14ca436fb1be0a3352d9ac48218f908754ab5a24"
+    }
+  ]
+}

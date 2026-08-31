@@ -8,6 +8,8 @@ import { getBakeryProvisionMaterials } from '../../render/bakery-provision-mater
 import { refineConcreteBarrier } from '../../render/street-barrier.js';
 import { createSedanCabin } from '../../render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../render/sedan-panels.js';
+import { createCivilianVehicle } from '../../render/civilian-vehicles.js';
+import { buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES } from '../../render/storefront-kit.js';
 import { makeHumanoid, HUMANOID_PRESETS, _CG, _BG, pushDecor } from '../../render/models.js';
 import { Colliders } from '../../core/collision.js';
 import { World, WorldState, Triggers, addBox, addSign, makeSmokeSystem } from '../world.js';
@@ -56,8 +58,21 @@ function buildStreet() {
   buildStreetPracticalDetails();
 
   for (const parked of street.parkedCars) {
-    const car = spawnParkedCar(parked.x, parked.y, parked.z, parked.yaw, parked.color);
-    car.name = 'parked-sedan-' + parked.x;
+    const vehicle = createCivilianVehicle({ variant: parked.variant, paint: parked.color, finish: parked.finish });
+    const car = vehicle.group;
+    car.name = `parked-${parked.variant}-${parked.id}`;
+    car.position.set(parked.x, parked.y, parked.z);
+    car.rotation.y = parked.yaw;
+    car.updateMatrixWorld(true);
+    const center = new THREE.Vector3(), size = new THREE.Vector3();
+    car.userData.civilianVehicle = { id: parked.id, variant: parked.variant, finish: parked.finish,
+      profile: vehicle.profile, resources: vehicle.resources, visualBounds: vehicle.visualBounds };
+    car.userData.movementColliders = vehicle.movementBounds.map(localBounds => {
+      const bounds = localBounds.clone().applyMatrix4(car.matrixWorld);
+      bounds.getCenter(center); bounds.getSize(size);
+      return Colliders.addBoxBySize(center.x, center.y, center.z, size.x, size.y, size.z);
+    });
+    World.add(car);
   }
   for (const cover of street.cover) {
     const floor = street.road.floorY;
@@ -130,38 +145,14 @@ function buildClosedShop(shop) {
   const front = street.frontageZ, back = bakery.z2, floor = street.farWalk.floorY;
   const width = shop.x2 - shop.x1, x = (shop.x1 + shop.x2) / 2;
   const id = 'storefront-mass-' + shop.id;
-  addBox(x, (floor + shop.height) / 2, (front + back) / 2, width, shop.height - floor, back - front, MATS.brick, {
+  const finish = getStorefrontMaterials(MATS)[STOREFRONT_STYLES[shop.id].finish];
+  const mass = addBox(x, (floor + shop.height) / 2, (front + back) / 2, width, shop.height - floor, back - front, finish, {
     architecture: { id, kind: 'building', supportKind: 'ground' },
   });
-  const shutterWidth = width > 5 ? width - 3.3 : width - 0.7;
-  const shutterX = width > 5 ? shop.x1 + 0.45 + shutterWidth / 2 : x;
-  boxDetail(MATS.metal, shutterX, 1.62, front - 0.06, shutterWidth, 2.88, 0.11);
-  for (let y = 0.35; y < 3.02; y += 0.18) boxDetail(MATS.metal, shutterX, y, front - 0.13, shutterWidth, 0.035, 0.05);
-  for (const sx of [shop.x1 + 0.13, shop.x2 - 0.13]) boxDetail(MATS.concrete, sx, 1.85, front - 0.08, 0.26, 3.5, 0.24);
-  if (width > 5) {
-    const doorX = shop.x2 - 1.15;
-    boxDetail(MATS.wood, doorX, 1.59, front - 0.07, 1.4, 2.9, 0.12);
-    boxDetail(MATS.glass, doorX, 2.02, front - 0.144, 1.06, 1.4, 0.025);
-    for (const dx of [-0.78, 0.78]) boxDetail(MATS.metal, doorX + dx, 1.66, front - 0.11, 0.09, 3.05, 0.12);
-    boxDetail(MATS.metal, doorX + 0.43, 1.4, front - 0.185, 0.045, 0.25, 0.045);
-    const closed = addSign(doorX, 2.15, front - 0.165, 0.55, 0.21, '-z', 'CLOSED', { bg: '#322d26', fg: '#b9b7a2', font: 'bold 90px sans-serif' });
-    closed.userData.mountId = id;
-  }
-  boxDetail(MATS.wood, x, 3.7, front - 0.08, width - 0.12, 0.92, 0.18);
-  const sign = addSign(x, 3.7, front - 0.19, width - 0.7, 0.68, '-z', shop.name, {
-    bg: '#252923', fg: '#c5bd98', font: 'bold 84px serif', sub: shop.sub, subFont: '25px sans-serif',
+  mass.userData.storefront = buildClosedStorefront({
+    shop, front, floor, materials: MATS, boxGeometry: _BG.unitBox, pipeGeometry: _BG.pipe, pushDecor,
   });
-  sign.userData.mountId = id;
-  const columns = width > 5 ? 3 : 1;
-  for (let y = 5.7; y < shop.height - 1.1; y += 2.8) {
-    for (let i = 0; i < columns; i++) addFacadeWindow(shop.x1 + width * (i + 1) / (columns + 1), y, front, 1.25, 1.65);
-  }
-  for (const y of [4.3, shop.height - 0.04]) boxDetail(MATS.concrete, x, y, front - 0.10, width + 0.04, 0.2, 0.34);
   boxDetail(MATS.concrete, x, shop.height + 0.12, (front + back) / 2, width, 0.24, back - front);
-  const pipeX = shop.x2 - 0.36;
-  pushDecor(_BG.pipe, MATS.metal, pipeX, (shop.height + floor) / 2, front - 0.18, 0.055, shop.height - floor, 0.055);
-  for (let y = 1.2; y < shop.height; y += 2.7) boxDetail(MATS.metal, pipeX, y, front - 0.14, 0.17, 0.075, 0.19);
-  boxDetail(MATS.metal, shop.x1 + 0.5, 2.4, front - 0.18, 0.32, 0.44, 0.2);
 }
 
 function buildStreetPracticalDetails() {

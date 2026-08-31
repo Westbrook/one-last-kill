@@ -1,0 +1,16 @@
+{
+  "filesChecked": 402,
+  "baselineChanged": [],
+  "changedForVanPass": [
+    "README.md",
+    "docs/architecture.md",
+    "docs/art-direction.md",
+    "docs/civilian-vehicle-provenance.md",
+    "src/render/civilian-vehicles.js",
+    "src/testing/qa.js",
+    "src/world/district-layout.js",
+    "tests/unit/civilian-vehicle-fit.test.js",
+    "tests/unit/civilian-vehicle-integration.test.js"
+  ],
+  "unexpectedChanges": []
+}

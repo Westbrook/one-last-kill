@@ -1,0 +1,515 @@
+{
+  "note": "Facing angles differing by360deg describe identical orientation. FOV82 and existing lighting were unchanged; metadata in review-setup.json.",
+  "pairs": [
+    {
+      "label": "Street · High 2×",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": "Feet 24.00, 0.07, 12.20",
+          "after": "Feet 24.00, 0.07, 12.20"
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": "Yaw 90° · pitch 0°",
+          "after": "Yaw 90° · pitch 0°"
+        },
+        {
+          "pattern": "Framing .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Facing .*",
+          "before": null,
+          "after": null
+        }
+      ]
+    },
+    {
+      "label": "Street, turned toward shops · High 2×",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": "Feet 24.00, 0.07, 12.20",
+          "after": "Feet 24.00, 0.07, 12.20"
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": "Yaw 135° · pitch 0°",
+          "after": "Yaw 135° · pitch 0°"
+        },
+        {
+          "pattern": "Framing .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Facing .*",
+          "before": null,
+          "after": null
+        }
+      ]
+    },
+    {
+      "label": "Street · Automatic",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality auto · 1536 × 864 drawing buffer · ratio 1.20",
+          "after": "Quality auto · 1536 × 864 drawing buffer · ratio 1.20"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": "Feet 24.00, 0.07, 12.20",
+          "after": "Feet 24.00, 0.07, 12.20"
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": "Yaw 90° · pitch 0°",
+          "after": "Yaw 90° · pitch 0°"
+        },
+        {
+          "pattern": "Framing .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Facing .*",
+          "before": null,
+          "after": null
+        }
+      ]
+    },
+    {
+      "label": "Brawler · front",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 90° · held prop fists",
+          "after": "Facing 90° · held prop fists"
+        }
+      ]
+    },
+    {
+      "label": "Brawler · profile",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 180° · held prop fists",
+          "after": "Facing 180° · held prop fists"
+        }
+      ]
+    },
+    {
+      "label": "Brawler · rear",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 270° · held prop fists",
+          "after": "Facing 270° · held prop fists"
+        }
+      ]
+    },
+    {
+      "label": "Brawler · from below",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing lowface · same camera FOV and production materials; inspection placement only",
+          "after": "Framing lowface · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 450° · held prop fists",
+          "after": "Facing 450° · held prop fists"
+        }
+      ]
+    },
+    {
+      "label": "Brawler · ordinary encounter distance",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing body · same camera FOV and production materials; inspection placement only",
+          "after": "Framing body · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 90° · held prop fists",
+          "after": "Facing 450° · held prop fists"
+        }
+      ]
+    },
+    {
+      "label": "Brawler · windup",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 450° · held prop fists",
+          "after": "Facing 450° · held prop fists"
+        }
+      ]
+    },
+    {
+      "label": "Brawler · contact",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 450° · held prop fists",
+          "after": "Facing 450° · held prop fists"
+        }
+      ]
+    },
+    {
+      "label": "Gunman · aim",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 90° · held prop pistol",
+          "after": "Facing 90° · held prop pistol"
+        }
+      ]
+    },
+    {
+      "label": "Bat carrier · carry",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 90° · held prop bat",
+          "after": "Facing 90° · held prop bat"
+        }
+      ]
+    },
+    {
+      "label": "Bruiser · aim",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 90° · held prop shotgun",
+          "after": "Facing 90° · held prop shotgun"
+        }
+      ]
+    },
+    {
+      "label": "Hitman · aim",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 90° · held prop smg",
+          "after": "Facing 90° · held prop smg"
+        }
+      ]
+    },
+    {
+      "label": "Enforcer · aim",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Framing .*",
+          "before": "Framing portrait · same camera FOV and production materials; inspection placement only",
+          "after": "Framing portrait · same camera FOV and production materials; inspection placement only"
+        },
+        {
+          "pattern": "Facing .*",
+          "before": "Facing 90° · held prop machinegun",
+          "after": "Facing 90° · held prop machinegun"
+        }
+      ]
+    },
+    {
+      "label": "Bakery · High 2×",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": "Feet -18.20, 0.10, 29.20",
+          "after": "Feet -18.20, 0.10, 29.20"
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": "Yaw 180° · pitch 0°",
+          "after": "Yaw 180° · pitch 0°"
+        },
+        {
+          "pattern": "Framing .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Facing .*",
+          "before": null,
+          "after": null
+        }
+      ]
+    },
+    {
+      "label": "Roof · High 2×",
+      "values": [
+        {
+          "pattern": "Quality .*",
+          "before": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00",
+          "after": "Quality high · 2560 × 1440 drawing buffer · ratio 2.00"
+        },
+        {
+          "pattern": "Feet .*",
+          "before": "Feet -13.50, 14.02, -8.40",
+          "after": "Feet -13.50, 14.02, -8.40"
+        },
+        {
+          "pattern": "Yaw .*",
+          "before": "Yaw -90° · pitch 0°",
+          "after": "Yaw -90° · pitch 0°"
+        },
+        {
+          "pattern": "Framing .*",
+          "before": null,
+          "after": null
+        },
+        {
+          "pattern": "Facing .*",
+          "before": null,
+          "after": null
+        }
+      ]
+    }
+  ]
+}

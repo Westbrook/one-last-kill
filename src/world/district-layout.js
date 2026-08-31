@@ -22,10 +22,10 @@ export const DISTRICT = freezeTree({
       streetPoint(33, 23.5), streetPoint(-31, 23), streetPoint(14, 23.6), streetPoint(34, 11.5),
     ],
     parkedCars: [
-      { ...streetPoint(-29, 9.7), yaw: 0, color: 0x473c32 },
-      { ...streetPoint(-14, 9.7), yaw: Math.PI, color: 0x273839 },
-      { ...streetPoint(1, 9.7), yaw: 0, color: 0x4c4940 },
-      { ...streetPoint(-6, 23.3), yaw: Math.PI, color: 0x3d3430 },
+      { id: 'west', ...streetPoint(-30.2, 9.35), yaw: 0, variant: 'wagon', color: 0x62624c, finish: 'workhorse' },
+      { id: 'middle', ...streetPoint(-12.7, 9.50), yaw: Math.PI, variant: 'panel-van', color: 0x858276, finish: 'used' },
+      { id: 'east', ...streetPoint(1.8, 9.40), yaw: 0, variant: 'hatchback', color: 0x777366, finish: 'used' },
+      { id: 'far', ...streetPoint(-5.2, 23.60), yaw: Math.PI, variant: 'sedan', color: 0x68554b, finish: 'used' },
     ],
     cover: [
       { id: 'street-cover-west', x: -35, z: 19.5, width: 2.4, height: 1.1, depth: 1.3, material: 'metal' },

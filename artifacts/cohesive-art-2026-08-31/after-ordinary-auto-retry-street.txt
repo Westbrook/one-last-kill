@@ -1,0 +1,32 @@
+- generic "First-person game. Use keyboard and mouse, a gamepad, or enable on-screen touch controls in Settings. Open Field Notes for controls." [active]
+- main:
+  - generic: A FAN-MADE EXPERIENCE
+  - generic: SINGLE PLAYER
+  - generic: MISSION PAUSED / LITTLE SICILY
+  - 'heading "The Punisher: One Last Kill" [level=1]':
+    - generic: THE PUNISHER
+    - generic: ONE LAST
+    - generic: KILL.
+  - paragraph:
+    - text: They came for you.
+    - text: The people downstairs didn’t ask to be part of it.
+  - button "RESUME MISSION":
+    - generic: RESUME MISSION
+    - generic: ↗
+  - button "FIELD NOTES":
+    - generic: "01"
+    - text: FIELD NOTES
+  - button "SETTINGS":
+    - generic: "02"
+    - text: SETTINGS
+  - paragraph: KEYBOARD + MOUSE / GAMEPAD / TOUCH
+  - generic: "01"
+  - strong: LITTLE SICILY
+  - generic: NEW YORK CITY / 6:47 PM
+  - paragraph: Unofficial fan-made experience. Not affiliated with Marvel or Disney.
+  - text: ORIGINAL SCENARIO
+  - text: WEBGL EXPERIENCE
+- button "Audio is locked off for this silent session." [disabled]:
+  - generic: AUDIO LOCKED OFF
+- complementary "Silent development QA":
+  - button "Show QA panel"

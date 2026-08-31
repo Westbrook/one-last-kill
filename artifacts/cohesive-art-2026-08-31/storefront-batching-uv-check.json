@@ -1,0 +1,9 @@
+{
+  "method": "Actual pushDecor/flushDecor code from models.js evaluated with Three.js and real world-UV projection; no renderer or canvas pixels.",
+  "atlasMergedDraws": 1,
+  "atlasVertexCount": 76,
+  "expectedVertexCount": 76,
+  "atlasUVsRemainInset": true,
+  "glazingFrontBackVertices": 408,
+  "glazingMetricUVMaxError": 0
+}

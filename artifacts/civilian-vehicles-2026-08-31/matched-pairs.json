@@ -1,0 +1,158 @@
+[
+  {
+    "label": "Street · High 2×",
+    "before": "before-street-high2.png",
+    "after": "after-street-high2.png",
+    "beforeReport": "before-street-high2.txt",
+    "afterReport": "after-street-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Street, turned toward shops · High 2×",
+    "before": "before-street-left-high2.png",
+    "after": "after-street-left-high2.png",
+    "beforeReport": "before-street-left-high2.txt",
+    "afterReport": "after-street-left-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Street · Automatic",
+    "before": "before-street-auto.png",
+    "after": "after-street-auto.png",
+    "beforeReport": "before-street-auto.txt",
+    "afterReport": "after-street-auto.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Near row · High 2×",
+    "before": "before-row-high2.png",
+    "after": "after-row-high2.png",
+    "beforeReport": "before-row-high2.txt",
+    "afterReport": "after-row-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Near row · Automatic",
+    "before": "before-row-auto.png",
+    "after": "after-row-auto.png",
+    "beforeReport": "before-row-auto.txt",
+    "afterReport": "after-row-auto.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "West wagon · front quarter",
+    "before": "before-west-front-high2.png",
+    "after": "after-west-front-high2.png",
+    "beforeReport": "before-west-front-high2.txt",
+    "afterReport": "after-west-front-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "West wagon · rear quarter",
+    "before": "before-west-rear-high2.png",
+    "after": "after-west-rear-high2.png",
+    "beforeReport": "before-west-rear-high2.txt",
+    "afterReport": "after-west-rear-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Middle sedan · front quarter",
+    "before": "before-middle-front-high2.png",
+    "after": "after-middle-front-high2.png",
+    "beforeReport": "before-middle-front-high2.txt",
+    "afterReport": "after-middle-front-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Middle sedan · rear quarter",
+    "before": "before-middle-rear-high2.png",
+    "after": "after-middle-rear-high2.png",
+    "beforeReport": "before-middle-rear-high2.txt",
+    "afterReport": "after-middle-rear-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "East hatchback · front quarter",
+    "before": "before-east-front-high2.png",
+    "after": "after-east-front-high2.png",
+    "beforeReport": "before-east-front-high2.txt",
+    "afterReport": "after-east-front-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "East hatchback · rear quarter",
+    "before": "before-east-rear-high2.png",
+    "after": "after-east-rear-high2.png",
+    "beforeReport": "before-east-rear-high2.txt",
+    "afterReport": "after-east-rear-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Far-curb sedan",
+    "before": "before-far-high2.png",
+    "after": "after-far-high2.png",
+    "beforeReport": "before-far-high2.txt",
+    "afterReport": "after-far-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  },
+  {
+    "label": "Objective sedan · unchanged",
+    "before": "before-objective-high2.png",
+    "after": "after-objective-high2.png",
+    "beforeReport": "before-objective-high2.txt",
+    "afterReport": "after-objective-high2.txt",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "note": "Original browser captures; no image retouching. Fixed world-space camera, quality and scale matched; vehicle shapes and parking positions intentionally differ. Live combat frames are retained separately and are not pixel-matched."
+  }
+]

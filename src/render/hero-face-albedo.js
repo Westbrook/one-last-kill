@@ -107,13 +107,18 @@ export async function loadHeroFaceAlbedo({ url = HERO_FACE_ALBEDO_URL, loader = 
 }
 
 /** Keep PBR lighting/roughness; replace forward diffuse colour only, in one draw. */
-export function heroFaceMaterial(skin) {
+export function heroFaceMaterial(skin, { authored = false } = {}) {
   const material = skin.clone(); material.name = 'hero-projected-face';
   // Enumerable texture reference lets boot prewarming discover the custom sampler.
   material.heroFaceMap = uniforms.heroFaceAlbedo.value;
-  material.userData.heroFaceAlbedo = { version: 2, provenance: PROVENANCE };
-  material.customProgramCacheKey = () => 'hero-frontal-face-v2';
+  material.userData.heroFaceAlbedo = { version: 3, provenance: PROVENANCE,
+    paletteResponse: authored ? 'compressed contrast/chroma around shared body skin palette' : 'original palette-relative projection' };
+  // Material.clone does not copy custom shader hooks. Keep the same authored
+  // skin finish across the jaw, neck and hands before applying facial colour.
+  const skinCompile = skin.onBeforeCompile, skinKey = skin.customProgramCacheKey();
+  material.customProgramCacheKey = () => `${skinKey}|hero-frontal-face-v3:${authored}`;
   material.onBeforeCompile = shader => {
+    skinCompile.call(material, shader);
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>
 attribute vec4 heroFaceProjection;
@@ -135,12 +140,16 @@ if ( heroFaceEnabled > 0.5 ) {
   float grain = fract(sin(dot(floor(grainPoint), vec2(12.9898, 78.233))) * 43758.5453);
   vec2 grainFootprint = fwidth(grainPoint);
   grain = mix(grain, 0.5, smoothstep(0.65, 1.5, max(grainFootprint.x, grainFootprint.y)));
-  diffuseColor.rgb *= 1.0 - jawMask * (0.035 + grain * 0.055);
+  diffuseColor.rgb *= 1.0 - jawMask * (${authored ? '0.018 + grain * 0.025' : '0.035 + grain * 0.055'});
   float eyeMask = smoothstep(0.85, 1.35, length(vec2((abs(facePoint.x) - 0.175) / 0.086, (facePoint.y - 0.554) / 0.033)));
   float browMask = smoothstep(0.8, 1.35, length(vec2((abs(facePoint.x) - 0.175) / 0.098, (facePoint.y - 0.626) / 0.022)));
   float faceMix = vHeroFaceProjection.z * eyeMask * browMask * heroFaceStrength;
   vec3 faceSample = texture2D(heroFaceAlbedo, vHeroFaceProjection.xy).rgb;
   vec3 paletteRelative = clamp(faceSample / max(heroFaceReference, vec3(0.01)), vec3(0.16), vec3(1.85));
+  ${authored ? `// Compress the generated source's baked contrast and chroma around the
+  // same skin palette used by the neck and arms, retaining diffuse landmarks.
+  float faceLuminance = dot(paletteRelative, vec3(0.2126, 0.7152, 0.0722));
+  paletteRelative = mix(vec3(1.0), mix(vec3(faceLuminance), paletteRelative, 0.64), 0.78);` : ''}
   diffuseColor.rgb = mix(diffuseColor.rgb, diffuse * paletteRelative, faceMix);
 }`);
   };

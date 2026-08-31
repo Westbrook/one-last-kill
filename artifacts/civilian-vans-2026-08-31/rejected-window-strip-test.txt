@@ -1,0 +1,48 @@
+✔ sedan glass is seated in its actual shoulder and covered by the complete roof (2.048584ms)
+✔ sedan front/rear pillars and mirrors contact the sloped side glazing (0.445833ms)
+✔ sedan nose and tail support the full lamp panels instead of leaving their upper corners floating (0.576583ms)
+✔ sedan shell, glazing, roof and bumpers have closed triangle surfaces (1.267917ms)
+✔ hatchback glass is seated in its actual shoulder and covered by the complete roof (0.3475ms)
+✔ hatchback front/rear pillars and mirrors contact the sloped side glazing (0.565333ms)
+✔ hatchback nose and tail support the full lamp panels instead of leaving their upper corners floating (0.629875ms)
+✔ hatchback shell, glazing, roof and bumpers have closed triangle surfaces (1.122042ms)
+✔ wagon glass is seated in its actual shoulder and covered by the complete roof (0.360833ms)
+✔ wagon front/rear pillars and mirrors contact the sloped side glazing (0.268ms)
+✔ wagon nose and tail support the full lamp panels instead of leaving their upper corners floating (0.597583ms)
+✔ wagon shell, glazing, roof and bumpers have closed triangle surfaces (0.958625ms)
+✔ panel-van tall cargo/cab panels bear on the body and fit beneath one continuous roof (0.570958ms)
+✔ panel-van every side window perimeter overlaps real opaque posts, waist and header (1.256ms)
+✔ panel-van mirror arms and rear hardware are attached to actual cab/cargo surfaces (0.287666ms)
+✔ panel-van cargo, door panels and every glass pane are closed solids (0.372625ms)
+✔ passenger-van tall cargo/cab panels bear on the body and fit beneath one continuous roof (0.327209ms)
+✖ passenger-van every side window perimeter overlaps real opaque posts, waist and header (1.678833ms)
+✔ passenger-van mirror arms and rear hardware are attached to actual cab/cargo surfaces (0.219209ms)
+✔ passenger-van cargo, door panels and every glass pane are closed solids (0.488917ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 19
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 99.934375
+
+✖ failing tests:
+
+test at tests/unit/civilian-vehicle-fit.test.js:123:3
+✖ passenger-van every side window perimeter overlaps real opaque posts, waist and header (1.678833ms)
+  AssertionError [ERR_ASSERTION]: passenger-side-glass-1-right: fitted vertical jamb
+      at TestContext.<anonymous> (file:///Users/westbrook/intent/workspaces/person-create/repo/tests/unit/civilian-vehicle-fit.test.js:138:63)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1306:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:897:18)
+      at Test.postRun (node:internal/test_runner/test:1447:19)
+      at Test.run (node:internal/test_runner/test:1372:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:897:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

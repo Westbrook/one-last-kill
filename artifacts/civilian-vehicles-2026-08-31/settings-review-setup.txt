@@ -1,0 +1,90 @@
+- generic "First-person game. Use keyboard and mouse, a gamepad, or enable on-screen touch controls in Settings. Open Field Notes for controls."
+- main:
+  - generic: A FAN-MADE EXPERIENCE
+  - generic: SINGLE PLAYER
+  - generic: SOME WARS FOLLOW YOU HOME.
+  - 'heading "The Punisher: One Last Kill" [level=1]':
+    - generic: THE PUNISHER
+    - generic: ONE LAST
+    - generic: KILL.
+  - paragraph:
+    - text: They came for you.
+    - text: The people downstairs didn’t ask to be part of it.
+  - button "BEGIN MISSION":
+    - generic: BEGIN MISSION
+    - generic: ↗
+  - button "FIELD NOTES":
+    - generic: "01"
+    - text: FIELD NOTES
+  - button "SETTINGS":
+    - generic: "02"
+    - text: SETTINGS
+  - paragraph: KEYBOARD + MOUSE / GAMEPAD / TOUCH
+  - paragraph: Unofficial fan-made experience. Not affiliated with Marvel or Disney.
+  - text: ORIGINAL SCENARIO
+  - text: WEBGL EXPERIENCE
+  - dialog "MAKE IT YOUR FIGHT.":
+    - generic: 02 / PREFERENCES
+    - button "Close settings" [active]: ✕
+    - heading "MAKE IT YOUR FIGHT." [level=2]:
+      - text: MAKE IT
+      - text: YOUR FIGHT.
+    - paragraph: Changes apply immediately. Preferences save when device storage is available.
+    - group "TOUCH CONTROLS":
+      - generic: TOUCH CONTROLS
+      - text: On-screen touch controls
+      - paragraph: For tablets and phones. Show a movement stick, a swipe-to-look area, and combat buttons during play. Off by default.
+      - checkbox "On-screen touch controls"
+      - paragraph: For more screen space, add the game to your Home Screen. On iPhone or iPad, use Safari’s Share menu → Add to Home Screen, with Open as Web App enabled if shown. On Android, use your browser’s Install app or Add to Home screen option.
+    - group "AUDIO MIX":
+      - generic: AUDIO MIX
+      - paragraph: Audio is locked off for this silent session and cannot be enabled. Levels and voice preferences can still be saved.
+      - generic: Master
+      - status: 75%
+      - slider "Master": "75"
+      - paragraph: Overall volume. The channels below keep their own levels.
+      - generic: Effects
+      - status: 85%
+      - slider "Effects": "85"
+      - generic: Ambience
+      - status: 40%
+      - slider "Ambience": "40"
+      - generic: Music
+      - status: 28%
+      - slider "Music": "28"
+      - generic: Radio / voice
+      - status: 90%
+      - slider "Radio / voice": "90"
+      - text: Checkpoint voice
+      - paragraph: Play recorded checkpoint radio, with an available local device voice as fallback. On-screen text and radio tones remain when off.
+      - checkbox "Checkpoint voice" [checked]
+    - group "DISPLAY & CONTROLS":
+      - generic: DISPLAY & CONTROLS
+      - generic: Render quality
+      - combobox "Render quality":
+        - option "Automatic" [selected]
+        - option "High detail"
+        - option "Performance"
+      - paragraph: Automatic balances resolution and frame rate for your display.
+      - generic: Look sensitivity
+      - status: 1.00×
+      - slider "Look sensitivity": "1"
+      - generic: PRECISE
+      - generic: FAST
+      - generic: Field of view
+      - status: 82°
+      - slider "Field of view": "82"
+      - generic: 70°
+      - generic: 100°
+      - text: Reduced camera motion
+      - paragraph: Reduce camera movement and interface animation.
+      - checkbox "Reduced camera motion"
+    - button "RESTORE DEFAULTS"
+    - status: CURRENT PREFERENCES
+    - button "BACK TO MISSION":
+      - text: BACK TO MISSION
+      - generic: ↗
+- button "Audio is locked off for this silent session." [disabled]:
+  - generic: AUDIO LOCKED OFF
+- complementary "Silent development QA":
+  - button "Show QA panel"

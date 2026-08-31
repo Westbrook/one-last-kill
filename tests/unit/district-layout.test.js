@@ -14,6 +14,8 @@ import { getBakeryProvisionMaterials } from '../../src/render/bakery-provision-m
 import { refineConcreteBarrier } from '../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../src/render/sedan-panels.js';
+import { createCivilianVehicle } from '../../src/render/civilian-vehicles.js';
+import { buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES } from '../../src/render/storefront-kit.js';
 
 // Real authored meshes and collision run without a renderer, browser or audio.
 function buildFixture() {
@@ -58,7 +60,7 @@ function buildFixture() {
     .replace(/^export \{[^}]+\};\s*$/gm, '');
   assert.doesNotMatch(source, /^import\s/m);
   const builders = runInNewContext(source + '\n;({ buildStreet, buildBakeryAndCar });', {
-    refineConcreteBarrier,
+    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle,
     THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, DISTRICT, MATS, World, WorldState,
     _BG, _CG, Colliders, addBox, pushDecor, addSign, Triggers, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, createSedanCabin, createSedanBumper, createSedanHood,
     makeHumanoid: () => new THREE.Group(), HUMANOID_PRESETS: { shopkeeper: {}, woman: {} },

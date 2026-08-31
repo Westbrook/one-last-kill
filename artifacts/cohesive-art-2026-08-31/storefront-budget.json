@@ -1,0 +1,137 @@
+{
+  "method": "Real world builder fixture; baseline street.js read from frozen Aug 31 source. Same current unchanged non-street fixture helpers. Counts include all submitted street triangles and one color pass before camera culling; shadow/AO passes and driver memory excluded. Existing per-material flushDecor merging modeled exactly for position/normal/UV/index buffers.",
+  "before": {
+    "shopComponents": 580,
+    "shopTriangles": 7082,
+    "shopGeometryBytes": 491260,
+    "streetSubmittedTriangles": 27032,
+    "streetBatches": 9,
+    "streetIndependentDraws": 83,
+    "streetColorPassDraws": 92,
+    "streetMergedGeometryBytes": 2314704,
+    "batches": [
+      {
+        "name": "unnamed street paint",
+        "triangles": 312
+      },
+      {
+        "name": "unnamed street paint",
+        "triangles": 192
+      },
+      {
+        "name": "concrete",
+        "triangles": 1356
+      },
+      {
+        "name": "tar",
+        "triangles": 1476
+      },
+      {
+        "name": "metal",
+        "triangles": 5652
+      },
+      {
+        "name": "wood",
+        "triangles": 300
+      },
+      {
+        "name": "glass",
+        "triangles": 516
+      },
+      {
+        "name": "unnamed street paint",
+        "triangles": 60
+      },
+      {
+        "name": "plaster",
+        "triangles": 192
+      }
+    ]
+  },
+  "after": {
+    "shopComponents": 720,
+    "shopTriangles": 8718,
+    "shopGeometryBytes": 603988,
+    "streetSubmittedTriangles": 28668,
+    "streetBatches": 14,
+    "streetIndependentDraws": 70,
+    "streetColorPassDraws": 84,
+    "streetMergedGeometryBytes": 2427432,
+    "batches": [
+      {
+        "name": "unnamed street paint",
+        "triangles": 312
+      },
+      {
+        "name": "unnamed street paint",
+        "triangles": 192
+      },
+      {
+        "name": "concrete",
+        "triangles": 132
+      },
+      {
+        "name": "tar",
+        "triangles": 1756
+      },
+      {
+        "name": "metal",
+        "triangles": 1104
+      },
+      {
+        "name": "wood",
+        "triangles": 144
+      },
+      {
+        "name": "storefront-oxblood-painted-timber",
+        "triangles": 828
+      },
+      {
+        "name": "storefront-shared-painted-signs",
+        "triangles": 38
+      },
+      {
+        "name": "storefront-painted-iron",
+        "triangles": 3012
+      },
+      {
+        "name": "storefront-quiet-glazing",
+        "triangles": 612
+      },
+      {
+        "name": "storefront-ivory-trim",
+        "triangles": 2196
+      },
+      {
+        "name": "storefront-sage-painted-timber",
+        "triangles": 1140
+      },
+      {
+        "name": "unnamed street paint",
+        "triangles": 60
+      },
+      {
+        "name": "plaster",
+        "triangles": 192
+      }
+    ]
+  },
+  "delta": {
+    "shopComponents": 140,
+    "shopTriangles": 1636,
+    "shopGeometryBytes": 112728,
+    "streetSubmittedTriangles": 1636,
+    "streetBatches": 5,
+    "streetIndependentDraws": -13,
+    "streetColorPassDraws": -8,
+    "streetMergedGeometryBytes": 112728
+  },
+  "signTextures": {
+    "beforeCount": 13,
+    "beforeBaseBytes": 13631488,
+    "beforeMipBytes": 18175404,
+    "afterCount": 1,
+    "afterBaseBytes": 4194304,
+    "afterMipBytes": 5592404
+  }
+}

@@ -1,0 +1,7 @@
+VISUAL-ONLY · Parked-car walking review · COMPLETE
+Rendered phases: Walking past hatchback → Walking past panel van → Walking past wagon
+Real held-W input and normal player collision walk the near-curb lane; no position interpolation or injected velocity.
+The review camera looks toward the curb independently of the walking heading. Authored waves are stopped for this visual fixture.
+Normal materials, lighting and motion settings; no damage, healing, attacks or performance measurement.
+Actual player distance 41.41 m; road support and clear capsule checked every frame.
+RESTORED · Fresh apartment · full health · starting loadout · no fixture actors, drops or effects

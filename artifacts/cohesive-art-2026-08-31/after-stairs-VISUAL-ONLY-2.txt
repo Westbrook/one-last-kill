@@ -1,0 +1,8 @@
+VISUAL-ONLY · Actual bat-carrier stair pursuit · PLAYING · 1.43 / 10 s
+Phase: Arrival on the upper landing · paused
+Actual first-flight AI pursuit and fixed-step simulation; one prior-observation seed at setup. Player stands at the upper landing.
+Independent front-quarter review camera follows the actor. No NPC movement, repeated target refresh, damage or healing is injected.
+Arrival freezes simulation to inspect the landed pose. This review does not replace the suite’s complete four-flight traversal checks.
+Quality high · 2560 × 1440 drawing buffer · ratio 2.00
+Use Pause / resume review to hold the rendered pose. Finish review restores the apartment.
+No performance measurement · audio locked off · no AudioContext

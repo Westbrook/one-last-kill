@@ -1,0 +1,4 @@
+
+> one-last-kill@0.2.0 lint
+> eslint src tests/unit
+

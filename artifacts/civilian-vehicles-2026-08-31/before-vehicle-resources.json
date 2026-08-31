@@ -1,0 +1,510 @@
+{
+  "source": "/private/tmp/one-last-kill-vehicles-baseline-20260831",
+  "note": "Real street builder, exact vehicle batches. Geometry bytes count each shared buffer once; driver memory and repeated render passes are separate.",
+  "vehicles": [
+    {
+      "name": "parked-sedan--29",
+      "position": [
+        -29,
+        0.05,
+        9.7
+      ],
+      "yaw": 0,
+      "triangles": 4120,
+      "draws": 7,
+      "uniqueGeometryBytes": 395520,
+      "fingerprint": "78c8d573ad3d0ce31214610f3e3aa0ead5c3b7913ab553878193613eab9b9cab",
+      "visualBounds": {
+        "min": [
+          -31.299999952316284,
+          -0.02000000029802322,
+          8.670000028610229
+        ],
+        "max": [
+          -26.700000047683716,
+          1.9749999523162842,
+          10.72999997138977
+        ]
+      },
+      "finish": [
+        {
+          "color": 4668466,
+          "roughness": 0.45,
+          "metalness": 0.6,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657932,
+          "roughness": 0.7,
+          "metalness": 0.4,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 12105920,
+          "roughness": 0.25,
+          "metalness": 0.85,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 2503227,
+          "roughness": 0.19,
+          "metalness": 0.45,
+          "transparent": true,
+          "opacity": 0.88,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657930,
+          "roughness": 0.95,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 16773312,
+          "roughness": 1,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 16771232,
+          "emissiveIntensity": 0.4,
+          "vertexColors": false
+        },
+        {
+          "color": 8392720,
+          "roughness": 0.4,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 10491928,
+          "emissiveIntensity": 0.25,
+          "vertexColors": false
+        }
+      ],
+      "collision": null,
+      "resources": null
+    },
+    {
+      "name": "parked-sedan--14",
+      "position": [
+        -14,
+        0.05,
+        9.7
+      ],
+      "yaw": 3.141592653589793,
+      "triangles": 4120,
+      "draws": 7,
+      "uniqueGeometryBytes": 395520,
+      "fingerprint": "c6e51417855336a0c0b9098a4d15289a696adfde5517cd67a969efbd5f0070ff",
+      "visualBounds": {
+        "min": [
+          -16.299999952316284,
+          -0.02000000029802322,
+          8.670000028610229
+        ],
+        "max": [
+          -11.700000047683716,
+          1.9749999523162842,
+          10.72999997138977
+        ]
+      },
+      "finish": [
+        {
+          "color": 2570297,
+          "roughness": 0.45,
+          "metalness": 0.6,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657932,
+          "roughness": 0.7,
+          "metalness": 0.4,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 12105920,
+          "roughness": 0.25,
+          "metalness": 0.85,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 2503227,
+          "roughness": 0.19,
+          "metalness": 0.45,
+          "transparent": true,
+          "opacity": 0.88,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657930,
+          "roughness": 0.95,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 16773312,
+          "roughness": 1,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 16771232,
+          "emissiveIntensity": 0.4,
+          "vertexColors": false
+        },
+        {
+          "color": 8392720,
+          "roughness": 0.4,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 10491928,
+          "emissiveIntensity": 0.25,
+          "vertexColors": false
+        }
+      ],
+      "collision": null,
+      "resources": null
+    },
+    {
+      "name": "parked-sedan-1",
+      "position": [
+        1,
+        0.05,
+        9.7
+      ],
+      "yaw": 0,
+      "triangles": 4120,
+      "draws": 7,
+      "uniqueGeometryBytes": 395520,
+      "fingerprint": "3526f5486f0588f9740cfbabb084586682245b3f0cb2788461452bd6625aef97",
+      "visualBounds": {
+        "min": [
+          -1.2999999523162842,
+          -0.02000000029802322,
+          8.670000028610229
+        ],
+        "max": [
+          3.299999952316284,
+          1.9749999523162842,
+          10.72999997138977
+        ]
+      },
+      "finish": [
+        {
+          "color": 4999488,
+          "roughness": 0.45,
+          "metalness": 0.6,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657932,
+          "roughness": 0.7,
+          "metalness": 0.4,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 12105920,
+          "roughness": 0.25,
+          "metalness": 0.85,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 2503227,
+          "roughness": 0.19,
+          "metalness": 0.45,
+          "transparent": true,
+          "opacity": 0.88,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657930,
+          "roughness": 0.95,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 16773312,
+          "roughness": 1,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 16771232,
+          "emissiveIntensity": 0.4,
+          "vertexColors": false
+        },
+        {
+          "color": 8392720,
+          "roughness": 0.4,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 10491928,
+          "emissiveIntensity": 0.25,
+          "vertexColors": false
+        }
+      ],
+      "collision": null,
+      "resources": null
+    },
+    {
+      "name": "parked-sedan--6",
+      "position": [
+        -6,
+        0.05,
+        23.3
+      ],
+      "yaw": 3.141592653589793,
+      "triangles": 4120,
+      "draws": 7,
+      "uniqueGeometryBytes": 395520,
+      "fingerprint": "a59728e5ad6f948c6395b01ded5e4f5876a7c80ab84f4d97e2f778aafd022400",
+      "visualBounds": {
+        "min": [
+          -8.299999952316284,
+          -0.02000000029802322,
+          22.27000002861023
+        ],
+        "max": [
+          -3.700000047683716,
+          1.9749999523162842,
+          24.32999997138977
+        ]
+      },
+      "finish": [
+        {
+          "color": 4011056,
+          "roughness": 0.45,
+          "metalness": 0.6,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657932,
+          "roughness": 0.7,
+          "metalness": 0.4,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 12105920,
+          "roughness": 0.25,
+          "metalness": 0.85,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 2503227,
+          "roughness": 0.19,
+          "metalness": 0.45,
+          "transparent": true,
+          "opacity": 0.88,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657930,
+          "roughness": 0.95,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 16773312,
+          "roughness": 1,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 16771232,
+          "emissiveIntensity": 0.4,
+          "vertexColors": false
+        },
+        {
+          "color": 8392720,
+          "roughness": 0.4,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 10491928,
+          "emissiveIntensity": 0.25,
+          "vertexColors": false
+        }
+      ],
+      "collision": null,
+      "resources": null
+    },
+    {
+      "name": "gnucci-sedan",
+      "position": [
+        23,
+        0.05,
+        21.5
+      ],
+      "yaw": 3.141592653589793,
+      "triangles": 4120,
+      "draws": 7,
+      "uniqueGeometryBytes": 395520,
+      "fingerprint": "b66dfd6f133ff67c3a47742111b03e7c1152a7af52cfba10af2eaf3cc945770c",
+      "visualBounds": {
+        "min": [
+          20.59999990463257,
+          -0.02000000029802322,
+          20.419999957084656
+        ],
+        "max": [
+          25.40000009536743,
+          1.9749999523162842,
+          22.580000042915344
+        ]
+      },
+      "finish": [
+        {
+          "color": 1120022,
+          "roughness": 0.45,
+          "metalness": 0.6,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657932,
+          "roughness": 0.7,
+          "metalness": 0.4,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 12105920,
+          "roughness": 0.25,
+          "metalness": 0.85,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 2503227,
+          "roughness": 0.19,
+          "metalness": 0.45,
+          "transparent": true,
+          "opacity": 0.88,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 657930,
+          "roughness": 0.95,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "vertexColors": false
+        },
+        {
+          "color": 16773312,
+          "roughness": 1,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 16771232,
+          "emissiveIntensity": 2.5,
+          "vertexColors": false
+        },
+        {
+          "color": 8392720,
+          "roughness": 0.4,
+          "metalness": 0,
+          "transparent": false,
+          "opacity": 1,
+          "emissive": 10491928,
+          "emissiveIntensity": 1.4,
+          "vertexColors": false
+        }
+      ],
+      "collision": null,
+      "resources": null
+    }
+  ],
+  "uniqueGeometries": 35,
+  "uniqueMaterials": 35,
+  "uniqueTextures": 0,
+  "totals": {
+    "triangles": 20600,
+    "draws": 35,
+    "geometryBytes": 1977600
+  },
+  "totalColliders": 848
+}

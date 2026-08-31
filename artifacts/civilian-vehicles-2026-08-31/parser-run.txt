@@ -1,0 +1,107 @@
+{
+  "phases": {
+    "baseline": {
+      "runs": 6,
+      "intervals": 7204,
+      "over16_9": 0,
+      "over33_5": 0,
+      "over50": 0,
+      "longTasks": 0,
+      "rafP95RangeMs": [
+        9.1,
+        9.3
+      ],
+      "rafP99RangeMs": [
+        9.3,
+        9.4
+      ],
+      "rafMaximumRangeMs": [
+        9.4,
+        9.5
+      ],
+      "callbackP95RangeMs": [
+        4.5,
+        7.1
+      ],
+      "gpuP95RangeMs": [
+        4.2,
+        13.83
+      ]
+    },
+    "candidate": {
+      "runs": 0,
+      "intervals": 0,
+      "over16_9": 0,
+      "over33_5": 0,
+      "over50": 0,
+      "longTasks": 0,
+      "rafP95RangeMs": null,
+      "rafP99RangeMs": null,
+      "rafMaximumRangeMs": null,
+      "callbackP95RangeMs": null,
+      "gpuP95RangeMs": null
+    },
+    "final": {
+      "runs": 8,
+      "intervals": 9492,
+      "over16_9": 7,
+      "over33_5": 0,
+      "over50": 0,
+      "longTasks": 0,
+      "rafP95RangeMs": [
+        9.2,
+        16.6
+      ],
+      "rafP99RangeMs": [
+        9.4,
+        16.8
+      ],
+      "rafMaximumRangeMs": [
+        9.4,
+        25
+      ],
+      "callbackP95RangeMs": [
+        3.7,
+        7
+      ],
+      "gpuP95RangeMs": [
+        3.74,
+        17.23
+      ]
+    },
+    "control": {
+      "runs": 3,
+      "intervals": 3479,
+      "over16_9": 12,
+      "over33_5": 0,
+      "over50": 0,
+      "longTasks": 0,
+      "rafP95RangeMs": [
+        9.2,
+        16.7
+      ],
+      "rafP99RangeMs": [
+        9.3,
+        16.82
+      ],
+      "rafMaximumRangeMs": [
+        9.4,
+        25.7
+      ],
+      "callbackP95RangeMs": [
+        5.3,
+        9.9
+      ],
+      "gpuP95RangeMs": [
+        5.22,
+        18.53
+      ]
+    }
+  },
+  "excludedVisual": 13,
+  "rejected": [],
+  "outputs": [
+    "final-performance-summary.json",
+    "final-performance.csv"
+  ]
+}

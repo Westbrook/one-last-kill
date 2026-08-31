@@ -1,0 +1,8 @@
+VISUAL-ONLY · Parked-car walking review · PAUSED · 0.92 / 11 s
+Phase: Walking past hatchback
+Real held-W input and normal player collision walk the near-curb lane; no position interpolation or injected velocity.
+The review camera looks toward the curb independently of the walking heading. Authored waves are stopped for this visual fixture.
+Normal materials, lighting and motion settings; no damage, healing, attacks or performance measurement.
+Quality auto · 1536 × 864 drawing buffer · ratio 1.20
+Use Pause / resume review to hold the rendered pose. Finish review restores the apartment.
+No performance measurement · audio locked off · no AudioContext

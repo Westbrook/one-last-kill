@@ -1,0 +1,26 @@
+{
+  "date": "2026-08-31",
+  "url": "http://127.0.0.1:4173/?qa=1&mute=1",
+  "viewportCss": {
+    "width": 1280,
+    "height": 720
+  },
+  "fov": 82,
+  "reducedMotion": false,
+  "highRenderRatio": 2,
+  "highBuffer": [
+    2560,
+    1440
+  ],
+  "automaticRenderRatio": 1.2,
+  "automaticBuffer": [
+    1536,
+    864
+  ],
+  "lighting": "Existing dusk environment, interior bake, room reflections, focused shadows and roof practicals enabled. Eight-light practical budget.",
+  "surfaceDelivery": "Local ASTC 4x4 KTX2; original fallback paths untouched.",
+  "device": "ANGLE Metal Renderer: Apple M5 Max",
+  "captureMethod": "Supported in-app browser screenshot; PNG at CSS dimensions, from the reported render buffer. No image retouching.",
+  "timingMethod": "Visible QA buttons; 0.5s warmup then10s sampling. No screenshots during timing runs. Combat fixture restores health and replaces defeated actors. Starting ratio held. Callback cadence is not presented FPS.",
+  "sourceArchive": "/private/tmp/one-last-kill-art-baseline-20260831"
+}

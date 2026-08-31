@@ -1,0 +1,29 @@
+✔ four civilian vehicles preserve the objective, road alignment and compact material batches (0.834542ms)
+✔ every actual tire reaches the road and remains clear of the curb (3.438875ms)
+✔ the final car envelopes and registered movement bounds agree with their actual surfaces (0.458875ms)
+✔ relocated cars clear full arrival jitter, checkpoint approaches and the bakery crossing (2.025ms)
+✔ projectiles use actual car bodies and glazing while the open underbody stays open (6.858583ms)
+✔ the two installed sedan variants reuse cached geometry while preserving independent transforms (2.01125ms)
+✔ district contract is deeply immutable and expands street and bakery area (1.104791ms)
+✔ pavement matches authored floors and never overlays the bakery interior (0.181875ms)
+✔ end boundaries are visible and no legacy x25 or z30 wall crosses the district (0.410584ms)
+✔ all reserved street, finale and QA points have standing capsule clearance (0.586458ms)
+✔ bakery checkpoint and spawn pockets clear furniture and stay away from entry (0.236541ms)
+✔ standing route traverses the shop door and the preparation passage (0.8505ms)
+✔ every bakery spawn is connected to the entry through collision-free floor (8.453417ms)
+✔ bakery structure, furniture and facade accessories have matching supports (0.850292ms)
+✔ car remains transformable while detail parts are batched by material (0.170042ms)
+✔ main shell returns and upper facade share the authored roof envelope (0.446333ms)
+✔ pavement meets facades without covering the bakery floor and visible gates close ground edges (0.232917ms)
+✔ bakery sign, canopy and car placard have physical mounts and face their approach (0.883209ms)
+✔ table, chair and counter supports reach their surfaces and floor (2.587292ms)
+✔ apartment, neighbor and bakery checkpoint capsules remain clear (0.653792ms)
+✔ environment windows respect the envelope and the dining paper follows its actual tabletop (0.732416ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 608.374208

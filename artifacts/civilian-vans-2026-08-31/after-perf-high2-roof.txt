@@ -1,0 +1,44 @@
+CONTROLLED ROOFTOP COMBAT BENCHMARK MEASURED · Rooftop
+1201 real rAF intervals · 10.01 s measured
+Frame time: median 8.30 ms · p95 9.20 ms · p99 9.30 ms · average 8.33 ms
+Maximum rAF interval: 9.40 ms · maximum sampled CPU section: 7.10 ms
+rAF callback rate: 120.0/s average · 120.5/s median · not presented FPS
+Frames over budget: 0/1201 over 16.9 ms · 0 over 33.5 ms · 0 over 50 ms
+Fixture + simulation + render CPU: median 3.90 ms · p95 6.20 ms · average 4.11 ms
+Full sampled QA callback CPU: p95 6.30 ms · maximum 7.20 ms · 1201 samples
+Callback elapsed time includes pre-render checks and post-render QA bookkeeping; excludes final reporting/reset, separate main-loop/gamepad work, other callbacks, browser paint/compositor, and time between callbacks.
+Renderer: 471 calls/frame · 350323 triangles/frame
+Renderer resource counts: {"before":{"geometries":878,"textures":181,"retainedPrograms":102},"after":{"geometries":882,"textures":181,"retainedPrograms":102}}
+Optional JS heap bytes (performance.memory): {"before":{"usedJSHeapSize":206214527,"totalJSHeapSize":270891963,"jsHeapSizeLimit":4395630592},"after":{"usedJSHeapSize":213014395,"totalJSHeapSize":270146307,"jsHeapSizeLimit":4395630592}}
+Resource snapshots: after warmup → measurement end, before reporting/reset. Null resource counts are unavailable; programs are retained cache entries. Counts are not GPU memory or compilation timing; optional browser-reported heap includes QA data. Stable endpoints do not rule out transient allocations, compilation, or garbage collection.
+Viewport: 1280 × 720 CSS px · render ratio 2.00
+Graphics device: ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)
+Compressed texture support: WEBGL_compressed_texture_astc, EXT_texture_compression_bptc, WEBGL_compressed_texture_etc
+Surface delivery: {"requestedMode":"ktx2","state":"complete","materials":{"plaster":{"status":"ready","source":"polyhaven","format":"ktx2","assetId":"plastered_wall_03","tileMeters":4,"mipCount":11,"gpuFormats":{"map":37808,"normalMap":37808,"roughnessMap":37808},"gpuFormatNames":{"map":"ASTC 4x4","normalMap":"ASTC 4x4","roughnessMap":"ASTC 4x4"},"compressedBytes":4194384,"textureBytes":3145728,"textureBytesWithMipmaps":4194384,"downloadBytes":2832460,"fallback":false,"fallbackReason":null},"brick":{"status":"ready","source":"polyhaven","format":"ktx2","assetId":"red_brick","tileMeters":1.4,"mipCount":11,"gpuFormats":{"map":37808,"normalMap":37808,"roughnessMap":37808},"gpuFormatNames":{"map":"ASTC 4x4","normalMap":"ASTC 4x4","roughnessMap":"ASTC 4x4"},"compressedBytes":4194384,"textureBytes":3145728,"textureBytesWithMipmaps":4194384,"downloadBytes":3096559,"fallback":false,"fallbackReason":null}}}
+Graphics startup: 2470 ms to ready · 185 ms maps · 499 ms world build (local cache/network state applies)
+Interior bake ON: 101 receivers · 560 charts · 512² atlas · 133617 rays
+Bake startup: 414.5 ms CPU / 528.7 ms wall · 29 yields · 1.00 MiB atlas · 250 KiB UVs
+Directional shadows: focused (visible-receivers-fit) · 2.00× linear texel density · 2.53 × 2.24 cm/texel
+Shadow coverage: {"enabled":true,"disposed":false,"mode":"focused","reason":"visible-receivers-fit","shadowsEnabled":true,"fraction":0.5,"areaFraction":0.25,"linearResolutionGain":2,"mapSize":{"width":2048,"height":2048},"region":{"left":-51.80378866294419,"right":-7.105427357601002e-15,"bottom":-18.71185886133567,"top":27.237645872495804,"width":51.803788662944186,"height":45.949504733831475,"near":34.99503737750902,"far":119.45883923295351},"texelSize":{"x":0.025294818683078216,"y":0.02243628160831615},"referenceTexelSize":{"x":0.05058963736615643,"y":0.0448725632166323},"receiverBounds":{"minX":-51.80378866294421,"maxX":-22.3395347832682,"minY":-14.53342842154218,"maxY":23.671893509624148},"receiverFloor":-2.2,"coverageMargin":1.5,"casterBounds":{"min":[-39.724999994039536,-1.7,-25.62999999523163],"max":[39.724999994039536,20.7,44.60999999940395]},"updates":2709,"coverageEvaluations":415,"projectionRevisions":8,"tierChanges":6,"clipEdges":48,"casterAudit":null}
+Local reflections: {"status":"ready","captures":3,"faces":18,"faceSize":64,"residentBytes":2064384,"temporaryCubeBytes":294912,"temporaryInstanceBytes":376236,"shadowSize":512,"staticMeshes":733,"staticPracticalSources":22,"lightBudget":8,"receivers":24,"materialVariants":25,"captureDrawCalls":4545,"captureElapsedMs":178,"compileElapsedMs":82.40000009536743,"elapsedMs":200.20000004768372,"probes":[{"id":"apartment-kitchen","receivers":9,"drawCalls":1572,"elapsedMs":165.89999985694885,"width":336,"height":256,"bytes":688128},{"id":"neighbor-kitchen","receivers":10,"drawCalls":1781,"elapsedMs":7.299999952316284,"width":336,"height":256,"bytes":688128},{"id":"bakery-preparation","receivers":5,"drawCalls":1192,"elapsedMs":4.800000190734863,"width":336,"height":256,"bytes":688128}],"perFrameCaptures":0,"addedDrawCalls":0,"enabled":true}
+Roof task lighting: {"status":"ready","enabled":true,"serviceFixture":"matched","legacyMatches":null,"addedLightSources":1,"retunedLightSources":1,"addedMeshes":2,"addedTriangles":324,"geometryBytes":10920,"addedTextures":0,"addedShadowCasters":0,"newShadowMaps":0,"extraFullscreenPasses":0,"perFrameWork":0,"service":{"position":[-0.06,16.04,-9.64],"intensity":2,"distance":7.5},"exit":{"position":[24.6,14.95,-3.55],"intensity":1.5,"distance":6.5}}
+Facial albedo: {"status":"ready","review":"accepted-2026-08-29","requestedEnabled":true,"url":"/assets/characters/face-albedo-trial.png","width":1254,"height":1254,"memoryBytes":8386752,"enabled":true,"strength":0.78,"referenceColor":"#d7a07f","materials":7,"provenance":"AI-generated fictional facial albedo accepted after in-game front/profile review; mild source shading remains; original authored geometry and projection, not a calibrated scan; no derived normal map"}
+GPU elapsed: median 2.81 ms · p95 4.35 ms · 1200 completed samples (1200 total)
+GPU queries: 1 pending · 0 skipped frames · 0 disjoint events · 0 discarded results
+Main-thread long tasks: 0 · 0.0 ms total during measurement
+Presentation (1201 frames): quality high · AO ON (active) · 1 world + 5 post passes
+Drawing buffer: 2560 × 1440 px · ratio 2.00
+Targets (active): beauty 2560 × 1440 px · AO 1280 × 720 px
+Samples: AO 12 · denoise 8 · target MSAA 4
+Shadow crop fraction: 0.5 · baked interiors ON
+Render ratio held at the start value during this controlled measurement.
+Review scale: explicit QA override, not a device capability claim.
+Health screen cue: normal · current player health 100.00
+Simulation CPU: median 0.40 ms · p95 2.90 ms
+Render CPU: median 3.40 ms · p95 4.00 ms
+10.01 s simulated · 84 actual shots · 84 hits · 10 kills
+4–5 live contacts · 10 replacement spawns · up to 5 NPCs attacking
+Fixture: fixed camera; player health replenished 50 times (485 damage absorbed); real magazines and reloads.
+Controlled workload, not an ordinary playthrough or an input-latency/INP score. The simulation retains its normal stall limits.
+Audio locked off on every sampled frame · no AudioContext
+RESTORED · Fresh apartment · starting loadout · full health · no fixture enemies or effects

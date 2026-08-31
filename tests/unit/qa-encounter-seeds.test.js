@@ -80,7 +80,7 @@ function qaHarness({
     dispose() { record('ui.dispose'); context.uiDisposed = true; },
   };
   context = {
-    busy, disposed, abortSuite: null, abortBenchmark: null,
+    busy, disposed, abortSuite: null, abortBenchmark: null, abortVisualReview: null,
     inspectedActor: null, visualFixtureActive: false, restoreFixtureTriggers: null,
     testing: false, inspection: false, uiDisposed: false,
     EncounterSeeds: seeds, ui, freshApartment,

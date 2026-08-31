@@ -47,6 +47,7 @@ import {
   applyPlayerDamage, HealPickups, WaveDirector, StreetChoice, Endings, surfaceTopAt,
 } from '../game/mission.js';
 import { Blood, FX } from '../render/effects.js';
+import { createCivilianVehicle, CIVILIAN_VEHICLE_PROFILES } from '../render/civilian-vehicles.js';
 import { getHumanoidVisualBounds, resetHumanoidPose, updateHumanoidPose } from '../render/humanoid-rig.js';
 import { HUD, IntroCard } from '../ui/hud.js';
 import { World, WorldState, Triggers, triggersUpdate } from '../world/world.js';
@@ -748,10 +749,22 @@ function createPanel() {
     ['health', 'Health case'], ['armor', 'Intact armor vest · 100%'], ['armor-damaged', 'Damaged armor vest · 50%'],
     ['pistol', 'Dropped pistol'], ['shotgun', 'Dropped shotgun'],
     ['smg', 'Dropped SMG'], ['machinegun', 'Dropped machine gun'], ['knife', 'Dropped knife'],
-    ['car', 'Sedan cabin'], ['tank', 'Water tank'], ['barrier', 'Street barrier'],
+    ['car', 'Objective sedan'], ['civilian-west', 'Civilian west · front quarter'],
+    ['civilian-west-rear', 'Civilian west · rear quarter'],
+    ['civilian-middle', 'Civilian middle · front quarter'],
+    ['civilian-middle-rear', 'Civilian middle · rear quarter'],
+    ['civilian-east', 'Civilian east · front quarter'],
+    ['civilian-east-rear', 'Civilian east · rear quarter'],
+    ['civilian-far', 'Civilian far curb'], ['civilian-row', 'Civilian near row'],
+    ['tank', 'Water tank'], ['barrier', 'Street barrier'],
     ['drops', 'Full drop pool (16)'],
   ]);
   const objectActions = document.createElement('div');
+  const vehicleDesign = inspectionSelect(objectPanel, 'qa-vehicle-design', 'Civilian design (individual views)', [
+    ['authored', 'Authored street vehicle'],
+    ...Object.keys(CIVILIAN_VEHICLE_PROFILES).map(variant => [variant,
+      variant.split('-').map(word => word[0].toUpperCase() + word.slice(1)).join(' ')]),
+  ]);
   objectActions.className = 'qa-row'; objectPanel.append(objectActions);
   const healthPanel = document.createElement('details');
   const healthTitle = document.createElement('summary');
@@ -794,7 +807,7 @@ function createPanel() {
     toggle.textContent = body.hidden ? 'Show QA panel' : 'Hide QA panel';
     toggle.setAttribute('aria-expanded', String(!body.hidden));
   });
-  const controls = [select, quality, renderScale, surfaceMode, interiorLight, interiorReflection, heroFace, focusedShadow, roofTaskLight, actorType, actorPose, actorFraming, heldType, heldPose, heldSide, heldAim, objectType, healthSample, armorSample];
+  const controls = [select, quality, renderScale, surfaceMode, interiorLight, interiorReflection, heroFace, focusedShadow, roofTaskLight, actorType, actorPose, actorFraming, heldType, heldPose, heldSide, heldAim, objectType, vehicleDesign, healthSample, armorSample];
   function button(parent, text, id, onClick) {
     const element = document.createElement('button');
     element.type = 'button';
@@ -807,7 +820,7 @@ function createPanel() {
   }
   return { panel, report, select, quality, renderScale, surfaceMode, interiorLight, interiorReflection, heroFace, focusedShadow, roofTaskLight, controls, button, inspectionRow, directions, actions,
     actorType, actorPose, actorFraming, actorActions, heldType, heldPose, heldSide, heldAim, heldActions,
-    objectType, objectActions, healthSample, healthActions, armorSample, armorActions,
+    objectType, vehicleDesign, objectActions, healthSample, healthActions, armorSample, armorActions,
     dispose() { panel.remove(); style.remove(); } };
 }
 
@@ -832,14 +845,39 @@ export function installQA(api) {
   let disposed = false;
   let abortBenchmark = null;
   let abortSuite = null;
+  let abortVisualReview = null;
+  let toggleVisualReview = null;
   let restoreFixtureTriggers = null;
   let inspectedActor = null;
   let inspectedWeapon = null;
   let visualFixtureActive = false;
+  // QA-only preview groups are prepared before play and reused by selection.
+  // Production builds only the silhouettes installed in the district.
+  const vehiclePreviews = new Map(Object.keys(CIVILIAN_VEHICLE_PROFILES).map(variant =>
+    [variant, createCivilianVehicle({ variant, paint: 0x858276, finish: 'used' }).group]));
+  let vehiclePreview = null;
+  function clearVehiclePreview() {
+    if (!vehiclePreview) return;
+    vehiclePreview.group.removeFromParent();
+    vehiclePreview.original.visible = vehiclePreview.wasVisible;
+    vehiclePreview = null;
+  }
+  function showVehicleDesign(original, design) {
+    clearVehiclePreview();
+    const preview = vehiclePreviews.get(design);
+    assert(preview, 'Choose an available civilian design');
+    preview.position.copy(original.position); preview.quaternion.copy(original.quaternion);
+    preview.visible = true; preview.userData.ballistics = false;
+    preview.updateMatrixWorld(true);
+    vehiclePreview = { group: preview, original, wasVisible: original.visible };
+    original.visible = false; World.add(preview);
+    return preview;
+  }
 
   // Hide only specimen-obscuring overlays, without changing HUD timers or
   // classes. Removing this QA mode restores their normal game presentation.
   function setNPCInspection(active) {
+    clearVehiclePreview();
     if (inspectedWeapon) {
       Weapons.cancelAttack();
       Weapons.restore(inspectedWeapon.restoreWeapon);
@@ -858,6 +896,10 @@ export function installQA(api) {
   function setBusy(value) {
     busy = value;
     for (const control of ui.controls) control.disabled = value;
+    if (ui.visualPause) ui.visualPause.disabled = !toggleVisualReview;
+    if (ui.visualFinish) ui.visualFinish.disabled = !abortVisualReview;
+    if (ui.vehiclePause) ui.vehiclePause.disabled = !toggleVisualReview;
+    if (ui.vehicleFinish) ui.vehicleFinish.disabled = !abortVisualReview;
   }
   function pausedRender() {
     assert(!Input.active, 'Scene inspection must never render active gameplay');
@@ -1711,6 +1753,29 @@ export function installQA(api) {
         near(status.foot.y, CHECKPOINTS[zone].y + 0.02, `${zone} supporting floor`, 0.16);
       }
       return ZONE_ORDER.map(zone => ZONE_LABELS[zone]).join(', ');
+    }],
+    ['Civilian design previews restore the authored vehicle and physical world', () => {
+      controlledStreet();
+      const original = World.children.find(object => object.userData.civilianVehicle?.id === 'middle');
+      assert(original?.visible, 'The authored middle vehicle must be available for design review');
+      const colliderCount = Colliders.list.length, revision = Colliders.revision;
+      const transform = original.matrixWorld.elements.slice();
+      try {
+        for (const design of Object.keys(CIVILIAN_VEHICLE_PROFILES)) {
+          const preview = showVehicleDesign(original, design);
+          assert(preview === vehiclePreviews.get(design) && preview.parent === World && !original.visible,
+            'Each design must reuse its prepared preview and replace only the selected visible vehicle');
+          near(Colliders.list.length, colliderCount, 'A visual preview cannot register new collision');
+          near(Colliders.revision, revision, 'A visual preview cannot invalidate navigation collision');
+          clearVehiclePreview();
+          assert(original.visible && preview.parent === null, 'Clearing a preview restores the real vehicle and removes the substitute');
+          same(original.matrixWorld.elements, transform, 'Design review must preserve the authored parking transform');
+        }
+        const hit = Ballistics.raycast(new Vector3(original.position.x, 1.2, original.position.z + 2),
+          new Vector3(0, 0, -1), 3, 'bullet', createBallisticHit());
+        assert(hit && original.children.includes(hit.object), 'After preview cleanup, projectiles must hit the authored vehicle again');
+      } finally { clearVehiclePreview(); }
+      return `${vehiclePreviews.size} cached designs swapped and restored; unchanged collision count/revision, parking transform and actual projectile target`;
     }],
     ['Boot ballistics follows rendered furniture and open stair guards', () => {
       const topology = () => Object.fromEntries(Object.entries(Ballistics.snapshot()).filter(([key]) => key !== 'lastQuery'));
@@ -3959,7 +4024,7 @@ export function installQA(api) {
     if (busy || disposed) return;
     try {
       const type = ui.objectType.value;
-      const zone = ['car', 'barrier', 'drops'].includes(type) ? 'street' : 'roof';
+      const zone = ['car', 'barrier', 'drops'].includes(type) || type.startsWith('civilian-') ? 'street' : 'roof';
       freshApartment();
       controlledArea(zone);
       visualFixtureActive = true;
@@ -4015,6 +4080,35 @@ export function installQA(api) {
         Player.pos.set(DISTRICT.car.x - 4, DISTRICT.car.y + 1.55, DISTRICT.car.z - 3.6);
         pointCameraAt({ x: DISTRICT.car.x, y: DISTRICT.car.y + 0.9, z: DISTRICT.car.z });
         details.push('Actual finale sedan, with its original environment lighting and material batches.');
+      } else if (type.startsWith('civilian-')) {
+        // Fixed world-space cameras also match the previous vehicle placement.
+        // Keep these independent of the editable parking layout and variant bounds.
+        const views = {
+          'civilian-west': [[-25, 1.7, 14.0], [-29, 0.85, 9.7]],
+          'civilian-west-rear': [[-33, 1.7, 14.0], [-29, 0.85, 9.7]],
+          'civilian-middle': [[-18, 1.7, 14.0], [-14, 0.85, 9.7]],
+          'civilian-middle-rear': [[-10, 1.7, 14.0], [-14, 0.85, 9.7]],
+          'civilian-east': [[5, 1.7, 14.0], [1, 0.85, 9.7]],
+          'civilian-east-rear': [[-3, 1.7, 14.0], [1, 0.85, 9.7]],
+          'civilian-far': [[-10, 1.7, 18.8], [-6, 0.85, 23.3]],
+          'civilian-row': [[8, 2.3, 16.5], [-11, 0.85, 9.7]],
+        };
+        const view = views[type];
+        assert(view, 'Choose an authored civilian car camera');
+        if (type !== 'civilian-row') {
+          const id = type.split('-')[1];
+          specimen = World.children.find(object => object.userData.civilianVehicle?.id === id);
+          assert(specimen, 'The authored civilian parking slot must exist');
+          if (ui.vehicleDesign.value !== 'authored') {
+            specimen = showVehicleDesign(specimen, ui.vehicleDesign.value);
+            details.push(`DESIGN PREVIEW · ${ui.vehicleDesign.value} · neutral used paint. Cached render-only substitute; authored collision is retained and gameplay stays paused.`);
+          }
+        }
+        Player.pos.set(...view[0]);
+        pointCameraAt({ x: view[1][0], y: view[1][1], z: view[1][2] });
+        details.push(type === 'civilian-row' ? 'Authored parked-car row; the design selector applies only to individual vehicle views.'
+          : 'Fixed world-space camera and authored parking transform. Return to game menu restores any design preview before play.');
+        details.push(`Camera anchor ${view[0].join(', ')} · look target ${view[1].join(', ')} m.`);
       } else if (type === 'tank') {
         Player.pos.set(-11.5, ROOF.floorY + 3, -6.3);
         pointCameraAt({ x: -8, y: ROOF.floorY + 3.3, z: -2 });
@@ -4040,6 +4134,27 @@ export function installQA(api) {
         'Explicit camera/placement fixture; use Return to game menu to reset before ordinary play.']);
       assertSilent();
     } catch (error) { report('fail', error instanceof Error ? error.message : String(error)); }
+  }
+
+  function frameActor(actor, framing = ui.actorFraming.value) {
+    const actorPosition = actor.pos, height = actor.height, floorY = actorPosition.y;
+    // Close framing is an explicit review camera, never a playable body position.
+    if (framing === 'lowface') {
+      Player.pos.set(actorPosition.x + 0.58, floorY + height * 0.78, actorPosition.z + 0.06);
+      pointCameraAt({ x: actorPosition.x, y: floorY + height * 0.925, z: actorPosition.z });
+    } else if (framing === 'face') {
+      Player.pos.set(actorPosition.x + 0.55, floorY + height * 0.925, actorPosition.z + 0.06);
+      pointCameraAt({ x: actorPosition.x, y: floorY + height * 0.925, z: actorPosition.z });
+    } else if (framing === 'portrait') {
+      Player.pos.set(actorPosition.x + 0.95, floorY + height * 0.91, actorPosition.z + 0.18);
+      pointCameraAt({ x: actorPosition.x, y: floorY + height * 0.89, z: actorPosition.z });
+    } else if (framing === 'grip') {
+      Player.pos.set(actorPosition.x + 1.15, floorY + height * 0.72, actorPosition.z + 0.65);
+      pointCameraAt({ x: actorPosition.x + 0.25, y: floorY + height * 0.69, z: actorPosition.z });
+    } else {
+      Player.pos.set(actorPosition.x + 3.5, floorY + Player.eyeHeight + 0.02, actorPosition.z);
+      pointCameraAt({ x: actorPosition.x, y: floorY + height * 0.57, z: actorPosition.z });
+    }
   }
 
   function inspectActor({ rotate = 0, advance = false } = {}) {
@@ -4071,25 +4186,7 @@ export function installQA(api) {
       }
       assertRigSegments(inspectedActor.mesh, `${inspectedActor.type} inspection`);
       const framing = ui.actorFraming.value;
-      const actorPosition = inspectedActor.pos, height = inspectedActor.height;
-      // Close framing is an explicit paused camera placement, never a playable
-      // body position. The specimen guard requires a reset before normal play.
-      if (framing === 'lowface') {
-        Player.pos.set(actorPosition.x + 0.58, BALCONY.floorY + height * 0.78, actorPosition.z + 0.06);
-        pointCameraAt({ x: actorPosition.x, y: BALCONY.floorY + height * 0.925, z: actorPosition.z });
-      } else if (framing === 'face') {
-        Player.pos.set(actorPosition.x + 0.55, BALCONY.floorY + height * 0.925, actorPosition.z + 0.06);
-        pointCameraAt({ x: actorPosition.x, y: BALCONY.floorY + height * 0.925, z: actorPosition.z });
-      } else if (framing === 'portrait') {
-        Player.pos.set(actorPosition.x + 0.95, BALCONY.floorY + height * 0.91, actorPosition.z + 0.18);
-        pointCameraAt({ x: actorPosition.x, y: BALCONY.floorY + height * 0.89, z: actorPosition.z });
-      } else if (framing === 'grip') {
-        Player.pos.set(actorPosition.x + 1.15, BALCONY.floorY + height * 0.72, actorPosition.z + 0.65);
-        pointCameraAt({ x: actorPosition.x + 0.25, y: BALCONY.floorY + height * 0.69, z: actorPosition.z });
-      } else {
-        Player.pos.set(actorPosition.x + 3.5, BALCONY.floorY + Player.eyeHeight + 0.02, actorPosition.z);
-        pointCameraAt({ x: actorPosition.x, y: BALCONY.floorY + height * 0.57, z: actorPosition.z });
-      }
+      frameActor(inspectedActor, framing);
       pausedRender();
       const rig = inspectedActor.mesh.userData.rig;
       const soles = ['L', 'R'].map(side => rig.anchors[`sole${side}`].getWorldPosition(new Vector3()).y - BALCONY.floorY);
@@ -4109,6 +4206,274 @@ export function installQA(api) {
     } catch (error) {
       setNPCInspection(false);
       report('fail', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  // Separate from every benchmark: screenshot capture, pause and a tracking
+  // camera are deliberate parts of these visual reviews. No timing is reported.
+  function runVisualReview({ label, duration, advance, draw = pausedRender, details, complete = () => [] }) {
+    let frameId = null, previous = null, elapsed = 0, paused = false, finished = false;
+    let phase = 'Ready', lastReportedPhase = null;
+    const phases = new Set();
+    function describe() {
+      report('running', [
+        `VISUAL-ONLY · ${label} · ${paused ? 'PAUSED' : 'PLAYING'} · ${elapsed.toFixed(2)} / ${duration} s`,
+        `Phase: ${phase}`, ...details,
+        `Quality ${Settings.get('quality')} · ${renderer.domElement.width} × ${renderer.domElement.height} drawing buffer · ratio ${renderer.getPixelRatio().toFixed(2)}`,
+        'Use Pause / resume review to hold the rendered pose. Finish review restores the apartment.',
+        'No performance measurement · audio locked off · no AudioContext',
+      ]);
+    }
+    function finish(error = null, stopped = false) {
+      if (finished) return;
+      finished = true;
+      cancelAnimationFrame(frameId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      removeEventListener('resize', onResize);
+      abortVisualReview = toggleVisualReview = null;
+      const result = [`VISUAL-ONLY · ${label} · ${stopped ? 'STOPPED' : 'COMPLETE'}`,
+        `Rendered phases: ${[...phases].join(' → ')}`, ...details];
+      try { if (!error && !stopped) result.push(...complete()); }
+      catch (failure) { error = failure; }
+      try {
+        freshApartment();
+        ui.select.value = 'apartment';
+        if (!disposed) pausedRender();
+        result.push('RESTORED · Fresh apartment · full health · starting loadout · no fixture actors, drops or effects');
+      } catch (failure) { error = error || failure; }
+      api.setTesting(false);
+      setBusy(false);
+      if (error) result.push(`REVIEW INTERRUPTED · ${error instanceof Error ? error.message : String(error)}`);
+      if (!disposed) report(error ? 'fail' : 'pass', result);
+    }
+    function onVisibility() {
+      if (document.hidden) finish(new Error('Tab became hidden; replay in a visible tab'));
+    }
+    function onResize() { finish(new Error('Viewport changed; replay at the intended review dimensions')); }
+    function sample(timestamp) {
+      if (finished || disposed) return;
+      try {
+        assertSilent();
+        assert(!renderer.getContext().isContextLost(), 'Graphics context lost during visual review');
+        const dt = previous === null ? 0 : Math.min(0.05, Math.max(0, (timestamp - previous) / 1000));
+        previous = timestamp;
+        if (!paused && dt > 0) {
+          elapsed = Math.min(duration, elapsed + dt);
+          phase = advance(elapsed, dt) || phase;
+          phases.add(phase);
+        }
+        draw();
+        if (phase !== lastReportedPhase) { describe(); lastReportedPhase = phase; }
+        if (elapsed >= duration) { finish(); return; }
+        frameId = requestAnimationFrame(sample);
+      } catch (error) { finish(error); }
+    }
+    abortVisualReview = () => finish(null, true);
+    toggleVisualReview = () => { paused = !paused; previous = null; describe(); };
+    api.setTesting(true);
+    setBusy(true);
+    describe();
+    document.addEventListener('visibilitychange', onVisibility);
+    addEventListener('resize', onResize);
+    frameId = requestAnimationFrame(sample);
+  }
+
+  function reviewActorMotion() {
+    if (busy || disposed) return;
+    inspectActor();
+    if (!inspectedActor?.alive) return;
+    let actor = inspectedActor;
+    const root = actor.mesh, slot = actor.poolSlot, type = actor.type;
+    const anchor = { x: actor.pos.x, y: actor.pos.y, z: actor.pos.z }, yaw = root.rotation.y;
+    const framing = ui.actorFraming.value, before = CombatStats.snapshot();
+    const resources = () => {
+      const result = [];
+      root.traverse(object => result.push([object.uuid, object.geometry?.uuid,
+        ...(Array.isArray(object.material) ? object.material : [object.material]).filter(Boolean).map(material => material.uuid)]));
+      return result;
+    };
+    const originalResources = resources();
+    const mode = actor.def.attack === 'hitscan' ? 'ranged' : actor.def.weaponType === 'fists' ? 'fist' : 'bat';
+    const pose = { mode, speed: 0, forward: 1, alert: 0, aim: 0, swingProgress: -1, swingSide: 'R' };
+    let recycled = false, collapseBounds = null;
+    resetHumanoidPose(root);
+    runVisualReview({
+      label: `${type} motion / collapse / reuse`, duration: 17,
+      details: [
+        '0–3 s in-place walking/carry; 3–5 s turn; 5–7 s guard; 7–12 s attack poses; 12–14.5 s real collapse; 14.5–17 s same-slot reuse.',
+        'Living motion uses the production pose driver with disclosed visual inputs; AI, hit tests and attack damage are paused. The in-place stride is not a traversal test.',
+        `Selected ${framing} framing and initial rotation; collapse widens to show floor contact. Environment lighting and materials are unchanged.`,
+      ],
+      advance(elapsed, dt) {
+        if (elapsed < 12) {
+          let phase;
+          pose.speed = 0; pose.alert = 1; pose.aim = 1; pose.swingProgress = -1;
+          actor.yaw = yaw;
+          if (elapsed < 3) {
+            phase = 'Walking and weapon carry'; pose.speed = 2.4; pose.alert = 0; pose.aim = 0;
+          } else if (elapsed < 5) {
+            phase = 'Turning through front / profile / rear';
+            actor.yaw = yaw + (elapsed - 3) * Math.PI;
+          } else if (elapsed < 7) phase = 'Guard / aim';
+          else if (mode === 'ranged') {
+            phase = 'Carry / raise / aim / lower';
+            pose.aim = (1 - Math.cos((elapsed - 7) * Math.PI * 1.3)) * 0.5;
+          } else {
+            const duration = actor.def.swingTime, cycle = duration + 0.5;
+            const within = (elapsed - 7) % cycle;
+            pose.swingProgress = within < duration ? within / duration : -1;
+            pose.swingSide = mode === 'fist' && Math.floor((elapsed - 7) / cycle) % 2 ? 'L' : 'R';
+            phase = pose.swingProgress < 0 ? 'Guard between attacks' : pose.swingProgress < 0.4 ? 'Attack windup'
+              : pose.swingProgress < 0.62 ? 'Attack contact' : 'Attack recovery';
+          }
+          root.rotation.y = actor.yaw;
+          updateHumanoidPose(root, pose, dt);
+          assertRigSegments(root, `${type} moving review`);
+          return phase;
+        }
+        if (elapsed < 14.5) {
+          if (actor.alive) assert(killEnemy(actor), 'Visual review must enter the real death path');
+          enemiesUpdate(dt);
+          Player.pos.set(anchor.x + 3.2, anchor.y + 1.7, anchor.z + 0.18);
+          pointCameraAt({ x: anchor.x, y: anchor.y + 0.35, z: anchor.z });
+          return 'Real authored collapse and floor contact';
+        }
+        if (!recycled) {
+          collapseBounds = getHumanoidVisualBounds(root, new Box3());
+          assert(collapseBounds.min.y >= actor.floorY - 0.012, 'The reviewed corpse must remain above its support floor');
+          assert(Enemies.remove(actor), 'The reviewed corpse must release its owned slot');
+          actor = spawnFixtureEnemy(type, anchor, 'balcony');
+          assert(actor.poolSlot === slot && actor.mesh === root, 'Motion review must reuse the identical pooled rig');
+          actor.pos.y = anchor.y; actor.mesh.position.copy(actor.pos);
+          actor.yaw = yaw; actor.mesh.rotation.y = yaw;
+          assertNeutralRig(actor);
+          same(resources(), originalResources, 'Visible pooled reuse retains all objects, geometry and material identities');
+          inspectedActor = actor;
+          recycled = true;
+          frameActor(actor, framing);
+        }
+        pose.speed = 0; pose.swingProgress = -1; pose.aim = 1; pose.alert = 1;
+        updateHumanoidPose(root, pose, dt);
+        assertRigSegments(root, `${type} recycled review`);
+        return 'Same-slot recycled actor in guard';
+      },
+      complete() {
+        assert(recycled && actor.alive, 'The complete motion review must show a living recycled actor');
+        assertNoPlayerCombatCredit(before);
+        return [`Same pooled slot and mesh resources verified; collapsed skin minimum ${(collapseBounds.min.y - anchor.y).toFixed(3)} m above floor.`,
+          'Real kill/drop/release paths were used without player kill credit. The living pose sequence does not verify attack timing.'];
+      },
+    });
+  }
+
+  function reviewStairMotion() {
+    if (busy || disposed) return;
+    try {
+      freshApartment();
+      controlledArea('stairwell');
+      const flight = STAIRS.flights[0], goal = { x: flight.x, y: flight.toY, z: STAIRS.turns.southZ };
+      placeOnClearFloor(goal);
+      const actor = spawnFixtureEnemy('thug', { x: flight.x, y: flight.fromY, z: flight.zStart - 0.4 }, 'stairwell');
+      actor.lastSeenPlayer = true;
+      actor.lastSeenPosition.copy(Player.pos);
+      actor.lastSeenFootY = goal.y;
+      actor.timeSinceSeen = 0;
+      const before = CombatStats.snapshot(), initialHealth = Player.health;
+      let arrived = false;
+      visualFixtureActive = true;
+      ui.select.value = 'stairwell';
+      setNPCInspection(true);
+      // Mark the fixture busy before Input.activate dispatches playstatechange;
+      // the normal specimen guard otherwise correctly pauses this review.
+      api.setTesting(true);
+      setBusy(true);
+      startSimulation();
+      runVisualReview({
+        label: 'Actual bat-carrier stair pursuit', duration: 10,
+        details: [
+          'Actual first-flight AI pursuit and fixed-step simulation; one prior-observation seed at setup. Player stands at the upper landing.',
+          'Independent front-quarter review camera follows the actor. No NPC movement, repeated target refresh, damage or healing is injected.',
+          'Arrival freezes simulation to inspect the landed pose. This review does not replace the suite’s complete four-flight traversal checks.',
+        ],
+        advance(elapsed, dt) {
+          if (!arrived) {
+            assert(Input.active, 'Stair review requires active real simulation until arrival');
+            api.stepFrame(dt);
+            assert(actor.alive && !actor.removed && !PlayerState.dead, 'Stair review must retain living actors');
+            assert(capsuleHasClearance(actor.pos, actor.radius, actor.height, Colliders.list, 0.003),
+              'Stair review body must stay clear of risers, walls and overhead flights');
+            near(actor.mesh.position.distanceTo(actor.pos), 0, 'Stair review rig follows its real capsule', 1e-5);
+            assertRigSegments(actor.mesh, 'Actual reviewed stair movement');
+            arrived = actor.pos.z > flight.zEnd + actor.radius + 0.1 && actor.body.onGround && Math.abs(actor.pos.y - goal.y) < 0.03;
+            if (arrived) { pauseSilently(); api.setInspection(true); }
+          }
+          return arrived ? 'Arrival on the upper landing · paused' : 'Actual AI walking up fourteen risers';
+        },
+        draw() {
+          camera.position.set(actor.pos.x + 0.7, actor.pos.y + 1.85, Math.min(-0.3, actor.pos.z + 2.45));
+          camera.lookAt(actor.pos.x, actor.pos.y + actor.height * 0.58, actor.pos.z);
+          camera.updateMatrixWorld();
+          api.render();
+        },
+        complete() {
+          assert(arrived, 'The reviewed actor must reach and settle on the real upper landing');
+          assertNoPlayerCombatCredit(before);
+          return [`All ${flight.steps} risers completed by the real AI; final supporting floor ${actor.floorY.toFixed(3)} m; actual incoming damage ${(initialHealth - Player.health).toFixed(1)}.`];
+        },
+      });
+    } catch (error) {
+      freshApartment(); api.setTesting(false); setBusy(false);
+      report('fail', `VISUAL-ONLY · Stair review setup failed · ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  function reviewVehicleWalk() {
+    if (busy || disposed) return;
+    try {
+      freshApartment();
+      controlledStreet();
+      const startX = 8, endX = -33.2, feet = new Vector3();
+      placePlayer({ x: startX, y: DISTRICT.street.road.floorY, z: 12.1, yaw: Math.PI / 2 });
+      const before = CombatStats.snapshot();
+      visualFixtureActive = true;
+      ui.select.value = 'street';
+      document.body.classList.add('qa-scene-inspection');
+      api.setTesting(true); setBusy(true); startSimulation();
+      Input.keyDown('KeyW');
+      runVisualReview({
+        label: 'Parked-car walking review', duration: 11,
+        details: [
+          'Real held-W input and normal player collision walk the near-curb lane; no position interpolation or injected velocity.',
+          'The review camera looks toward the curb independently of the walking heading. Authored waves are stopped for this visual fixture.',
+          'Normal materials, lighting and motion settings; no damage, healing, attacks or performance measurement.',
+        ],
+        advance(elapsed, dt) {
+          if (Player.pos.x <= endX) Input.keyUp('KeyW');
+          // The visual harness supplies bounded frame deltas; simulation uses
+          // its existing fixed-step clock and production movement code.
+          api.stepFrame(dt);
+          feet.copy(Player.pos); feet.y -= Player._eyeH;
+          near(feet.y, DISTRICT.street.road.floorY, 'Walking review remains supported by the street', 0.035);
+          assert(capsuleHasClearance(feet, Player.radius, Player._bodyH, Colliders.list, 0.003),
+            'Walking review must not pass through a parked vehicle or other obstacle');
+          const parkingId = Player.pos.x < -25 ? 'west' : Player.pos.x < -7 ? 'middle' : 'east';
+          return 'Walking past ' + DISTRICT.street.parkedCars.find(car => car.id === parkingId).variant.replaceAll('-', ' ');
+        },
+        draw() {
+          camera.position.copy(Player.pos);
+          camera.position.y += Player._bobOffset - Player._stepOffset;
+          camera.lookAt(Player.pos.x - 3, 0.95, 9.4);
+          camera.updateMatrixWorld(); api.render();
+        },
+        complete() {
+          assert(startX - Player.pos.x >= 39, 'The real player must traverse the complete parked-car row');
+          assertNoPlayerCombatCredit(before);
+          return [`Actual player distance ${(startX - Player.pos.x).toFixed(2)} m; road support and clear capsule checked every frame.`];
+        },
+      });
+    } catch (error) {
+      freshApartment(); api.setTesting(false); setBusy(false);
+      report('fail', `VISUAL-ONLY · Vehicle review setup failed · ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -4410,7 +4775,7 @@ export function installQA(api) {
             `${intervals.length} real rAF intervals · ${(elapsed / 1000).toFixed(2)} s measured`,
             `Frame time: median ${time.median.toFixed(2)} ms · p95 ${time.p95.toFixed(2)} ms · p99 ${time.p99.toFixed(2)} ms · average ${time.average.toFixed(2)} ms`,
             `Maximum rAF interval: ${time.maximum.toFixed(2)} ms · maximum sampled CPU section: ${cpu.maximum.toFixed(2)} ms`,
-            `Measured rate: ${(1000 / time.average).toFixed(1)} FPS average · ${(1000 / time.median).toFixed(1)} FPS median`,
+            `rAF callback rate: ${(1000 / time.average).toFixed(1)}/s average · ${(1000 / time.median).toFixed(1)}/s median · not presented FPS`,
             `Frames over budget: ${intervals.filter(value => value > 16.9).length}/${intervals.length} over 16.9 ms · ${intervals.filter(value => value > 33.5).length} over 33.5 ms · ${intervals.filter(value => value > 50).length} over 50 ms`,
             `${combat ? 'Fixture + simulation + render' : 'Render'} CPU: median ${cpu.median.toFixed(2)} ms · p95 ${cpu.p95.toFixed(2)} ms · average ${cpu.average.toFixed(2)} ms`,
             `Full sampled QA callback CPU: p95 ${callbackCpu.p95.toFixed(2)} ms · maximum ${callbackCpu.maximum.toFixed(2)} ms · ${callbackTimes.length} samples`,
@@ -4665,10 +5030,19 @@ export function installQA(api) {
   ui.button(ui.actorActions, 'Rotate NPC left', 'qa-npc-left', () => inspectActor({ rotate: Math.PI / 4 }));
   ui.button(ui.actorActions, 'Rotate NPC right', 'qa-npc-right', () => inspectActor({ rotate: -Math.PI / 4 }));
   ui.button(ui.actorActions, 'Advance pose', 'qa-npc-advance', () => inspectActor({ advance: true }));
+  ui.button(ui.actorActions, 'Play NPC motion review', 'qa-npc-motion', reviewActorMotion);
+  ui.button(ui.actorActions, 'Play stair pursuit review', 'qa-npc-stairs', reviewStairMotion);
+  ui.visualPause = ui.button(ui.actorActions, 'Pause / resume review', 'qa-review-pause', () => toggleVisualReview?.());
+  ui.visualFinish = ui.button(ui.actorActions, 'Finish review', 'qa-review-finish', () => abortVisualReview?.());
+  ui.visualPause.disabled = ui.visualFinish.disabled = true;
   ui.button(ui.heldActions, 'Inspect held weapon', 'qa-held-inspect', () => inspectHeldWeapon());
   ui.button(ui.heldActions, 'Next attack pose', 'qa-held-next', () => inspectHeldWeapon({ next: true }));
   ui.button(ui.heldActions, 'Inspect off-hand punch', 'qa-offhand-inspect', inspectOffhandPunch);
   ui.button(ui.objectActions, 'Inspect world object', 'qa-object-inspect', inspectWorldObject);
+  ui.button(ui.objectActions, 'Play parked-car walk review', 'qa-vehicle-walk', reviewVehicleWalk);
+  ui.vehiclePause = ui.button(ui.objectActions, 'Pause / resume vehicle review', 'qa-vehicle-pause', () => toggleVisualReview?.());
+  ui.vehicleFinish = ui.button(ui.objectActions, 'Finish vehicle review', 'qa-vehicle-finish', () => abortVisualReview?.());
+  ui.vehiclePause.disabled = ui.vehicleFinish.disabled = true;
   ui.button(ui.healthActions, 'Inspect health warning', 'qa-health-inspect', inspectHealthWarning);
   ui.button(ui.healthActions, 'Preview health in current view', 'qa-health-current', () => inspectHealthWarning({ keepView: true }));
   ui.button(ui.healthActions, 'Inspect rage ready', 'qa-rage-ready', () => inspectRage());
@@ -4720,6 +5094,7 @@ export function installQA(api) {
       disposed = true;
       abortSuite?.();
       abortBenchmark?.();
+      abortVisualReview?.();
       renderer.domElement.removeEventListener('click', blockSpecimenClick, true);
       document.removeEventListener('playstatechange', guardSpecimenSession);
       document.removeEventListener('playstatechange', restoreGameplayScale);

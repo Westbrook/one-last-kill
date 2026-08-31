@@ -1,0 +1,23 @@
+
+> one-last-kill@0.2.0 build
+> vite build
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 152 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/punisher-game.html                         0.23 kB │ gzip:   0.17 kB
+dist/index.html                                21.31 kB │ gzip:   6.20 kB
+dist/assets/basis_transcoder-o4Hde_L7.js       57.52 kB
+dist/assets/basis_transcoder-VXdx5NbI.wasm    527.33 kB │ gzip: 248.94 kB
+dist/assets/main-BdhnaVlf.css                  40.31 kB │ gzip:   9.57 kB
+dist/assets/KTX2Loader-Bh4uWzay.js             59.00 kB │ gzip:  24.22 kB │ map:   127.16 kB
+dist/assets/main-CLyMBOJk.js                1,233.81 kB │ gzip: 380.55 kB │ map: 5,098.87 kB
+
+✓ built in 422ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 900 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

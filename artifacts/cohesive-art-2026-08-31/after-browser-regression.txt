@@ -1,0 +1,118 @@
+PASSED · 58/58 checks · 13.23 s
+PASS · Silent audio policy, real mix controls and checkpoint captions
+  Five real mix sliders and the voice checkbox update settings without unlocking sound; all eight checkpoint subtitles survive paused/active steps. Preferences, inventory and supply ledgers are preserved; no context, voices, sample work or queued radio
+PASS · Initial load and full reset start with empty hands
+  Actual boot snapshot and a full reset both contain fists, zero loaded rounds and zero reserve; checkpoint retry cannot grant an unearned starter gun
+PASS · Low-health screen feedback follows damage, healing, pause and retry
+  Real damage path crosses 40/39/20/19 HP, persistent cue survives damage-flash expiry, pause hides it, an actual health pickup recovers it, death/retry clears it; disclosed fixture damage, no fabricated combat credit
+PASS · Settings and Field Notes prevent starting play
+  Actual Settings/Field Notes buttons open protected modals; play is rejected until they close
+PASS · All eight checkpoint floors and capsule clearances
+  Apartment, Neighboring apartment, Balcony, Stairwell, Rooftop, Scaffolding, Street, Bakery
+PASS · Boot ballistics follows rendered furniture and open stair guards
+  37 real bidirectional rendered-surface queries distinguish chair/TV solids and four stair rails from visible air; boot index 859 objects / 130772 unique-geometry triangles remains unchanged
+PASS · Registered architecture matches visible bounds and connected supports
+  498 selected structural records, 840 support links, 26 ground roots and 4 matched screens; not a whole-building engineering claim
+PASS · Boot surface ownership preserves floor caps and ceiling finishes
+  11 boot-finalized meshes / 16 signed faces match their actual indexed fragments (33.42 m² removed overlap); 12 selected floor, wall-cap and ceiling patches keep their finishes, exposed strips and lightwell void
+PASS · Stone and metal thresholds keep one flush visible finish
+  7 actual indexed-surface patches retain the complete 0.80 m² stone and 1.97 m² metal finishes, their adjacent floor textures and the open drop; no coplanar overlap or unintended hole in the audited joins
+PASS · Balcony combat lane has no visible structural obstructions
+  Registered braces, standards, ledgers and guards leave the body-height gallery corridor open, including decorative members without colliders
+PASS · Authored openings remain clear at their actual supporting floors
+  5 actual door/parapet openings clear a standing player capsule
+PASS · Exterior doors share their interior frames, hardware and collision
+  One supported closed entry slab and paired latch hardware stop both approaches in a door-only fixture (story fires excluded locally, live colliders unchanged); the neighbor terrace shares one aligned frame and a flush threshold traversed both ways
+PASS · Breach jump through built apartment geometry
+  Full capsule clears the sill and lands in the neighboring apartment
+PASS · Apartment rooms connect through the breach and neighboring doorway
+  Real capsule crosses both rooms, makes the sole required breach jump, turns through the interior partition and reaches the balcony without furniture penetration
+PASS · Neighbor gate resets and reuses its original resources
+  Real entry enables two blockers; full reset removes them and clears the jump route; reentry reuses identical resources and keeps exactly eight visible practical lights
+PASS · Balcony route and stairwell entrance
+  Supported east terrace → shared wrap centerline → stairwell, without falling or wall penetration
+PASS · Every enemy rig has grounded anatomy and articulated combat poses
+  6 actual pooled archetypes, 36 pose samples; measured body heights, soles, rigid limb lengths and wrist-mounted props
+PASS · Pooled fist and bat rigs reset every joint and ownership flag
+  Actual brawler/thug death → release → same-slot respawn restores anatomy, attack state and weapon visibility without allocating replacement rigs; fixture damage earns no player credit
+PASS · Balcony corpses settle above the floor and inside the gallery
+  Real thug/brawler death ticks relax attack poses; actual deformed skin vertices settle within 12 mm of the floor and inside both end caps. Hidden proxies are excluded; no ragdoll simulation or player kill credit
+PASS · Actual balcony fists, dropped bat pickup and bat contact
+  3 actual fist body hits → real thug bat drop → E pickup → one actual bat body hit; two earned kills, no fixture-applied damage or health refill
+PASS · Balcony encounters retain three front pairs and two finite rear contacts
+  Three visible front pairs commit atomically; two separate rear contacts preserve the eight-slot budget and three-actor cap. The old rear survives the next front pair and blocks a second rear. Disclosed 67 HP fixture proves no early healing; 8 actual contacts cleared with 430 fixture-applied damage, zero fabricated player kills
+PASS · Balcony rear arrivals adapt loadouts without expanding the finite roster
+  Four real director fixtures preserve both front actors: fists, bat and empty pistol add a rear brawler; a loaded pistol adds a bat carrier. Actual AI respects observed arrival grace, supported lanes and the eight-contact budget. 1090 explicitly fixture-applied cleanup damage; no player kill credit, ammunition change or health refill
+PASS · Fixed encounter seeds vary safe balcony arrivals without expanding the roster
+  Seeds 0, 0x71e6b20d and 0xdeadbeef plus an exact seed-0 replay each finish eight safe contacts, with atomic visible front pairs, protected rear arrivals and frozen pause timers. 1720 explicitly fixture-applied damage; no player kill credit or ammunition changes; prior seed mode restored
+PASS · A stair rear contact climbs the real flight before attacking
+  One actual director-created rear brawler walks the 14-riser flight and lands one real fist hit after grace; the visible HUD reports HIT FROM BEHIND. Eight-contact budget and pending front slot remain intact, then real retry clears actor and alert. No injected damage, AI target refresh, health refill or enemy reposition
+PASS · Offscreen attack feedback follows real windups, hits, pause and cancellation
+  Actual rear AI drives accessible ATTACK/HIT FROM BEHIND text and arrow. Pause freezes it; seeing the attacker acknowledges the hit without resurrection, stagger cancels windup, and removing the actor clears feedback. Exactly one NPC fist hit and one explicitly fixture-applied damage point; no fabricated player credit
+PASS · All four stair flights and roof doorway
+  4 authored flights of 14 treads; every turning platform and the supported roof threshold remain traversable
+PASS · The stair-to-roof floor has no overlapping visible top faces
+  4 actual upward-facing triangles cover 1.240 m² of the threshold continuously, with no duplicate coplanar surface; this checks geometry, not a perceived-flicker rating
+PASS · A real stair-to-roof crossing keeps the body and rendered camera stable
+  89 actual simulation/render frames cross the doorway in both directions; feet stay on the 14 m floor and the roof trigger fires once. Largest observed camera-Y change 1.25 mm includes intentional bob; no visual-smoothness or FPS claim
+PASS · Stair landings give a standing player room to turn
+  Four real 2.8 m landings support complete turning loops; no stair guard, tread, beam or registered brace passes through standing headroom
+PASS · Fast stair ascent retires only unspawned contacts and preserves living pursuers
+  Disclosed fast placements, deliberate views and real W-input steps retire four unspawned contacts without rewards; hidden-forward fallbacks respect their finite wait, and living pursuers retain identity/cap slots until actual deaths. Fixture applied 200 damage, zero player kill credit; 63/90-HP bypass checks are separate from stationary arrival waits, which protected health against 124.0 actual incoming damage
+PASS · Real NPC movement steps onto the street curb and climbs the first flight
+  2 actual AI traversals: 0.09 m pavement step and all 14 authored risers, with matching collision body, floor and planted rig foot. One prior-observation seed per fixture; no injected NPC movement, repeated memory refresh, damage or healing
+PASS · A real rooftop NPC detours around the mechanical house
+  19.1 m walked in 7.68 simulated seconds; 1 real searches, 429 frames reusing routes, ≤96 expansions per slice. One disclosed prior-observation seed; no injected paths, movement, refreshed memory, damage or healing
+PASS · Roof sentries unlock finite overlapping reinforcements within capacity
+  12 actual contacts across 4 groups and 6 weapon roles; opening pair, pause and arrival delays verified; peak 5/5 live. Fixture applied 850 damage and refreshed health 40 times, with zero fabricated player kills
+PASS · Roof and scaffold descent to street
+  Roof service-wing route and each expanded scaffold tier remain walkable; every drop lands on its real receiving deck before the open street exit
+PASS · Expanded street and bakery rooms form one supported route
+  Actual capsule reaches the car approach, crosses the expanded road, steps onto the far pavement and walks through both bakery rooms without passing through counters or the partition
+PASS · Floor ammo boxes stay supported and conserve their finite budgets through E
+  Three low cases rest on actual floors with top-centre interaction points. Actual E arbitration, melee/full reserve preservation and all four firearm costs conserve the balcony budget through exhaustion. Fixture equips inventories and stages one 5-round drop; magazines never auto-fill
+PASS · Ammo cache access and checkpoint retry preserve one atomic inventory
+  One actual shot, timed reload and E refill verify reserve conservation; the real stair wall blocks access. Revisiting does not refresh supply, retry restores weapon + cache atomically, and only a full mission reset restores the starting budget
+PASS · Both rooftop ammo boxes refill through E without sharing or renewing stock
+  Actual E input collects the west and east rooftop cases independently; each keeps its empty body, neither renews on revisit or weapon swap, and the balcony stock remains unchanged. Inventory equipment and approach placements are declared fixtures
+PASS · Exact weapon snapshot and ammunition conservation
+  4 weapon types preserve exact magazines and total ammunition
+PASS · Pause freezes the actual simulation
+  Active control advances; paused time, health, position, windup, waves and reload remain identical
+PASS · Real pistol input hits a contact and stops at a wall
+  Input → simulation → camera/raycast → torso damage; solid bakery wall blocks the next shot; two rounds consumed
+PASS · Player melee waits for visual contact and hits only once
+  Real J fists/bat and V offhand input remain harmless until authored contact, then deal one body hit; holding through recovery adds no hit or shot. Fixture equips loadouts and tracks the torso; no damage or health is injected
+PASS · Melee rechecks target distance and actual walls at contact
+  Two disclosed target repositions during a real bat windup: beyond reach, and behind a real bakery partition while initially still within reach. Original aim is unchanged; contact rays miss without damage or fabricated credit
+PASS · Dropping, retrying and dying cancel a pending player attack
+  Actual G equip, checkpoint retry and player death invalidate windups; subsequent frames cannot damage old or replacement targets. The death case explicitly applies lethal fixture damage to the player
+PASS · Pausing a player swing freezes contact and resumes it once
+  A real bat windup survives three paused seconds unchanged, then commits exactly one hit after the remaining simulation time
+PASS · The first firearm is earned from a real melee defeat and pickup
+  2 actual fist hits → real pistol drop → E pickup with 9 total rounds; no free gun, direct damage or health refill
+PASS · Dropped armor follows hit locations, collection, damage and checkpoint retry
+  Actual enemy damage/death creates 100% head-only and 50% body-damaged vests; active frames collect once, paused frames preserve them, weaker/equal vests never stack. 40 damage removes 30 armor; breaking hits spill only their unabsorbed damage into health. Retry restores collected 50% armor and clears spare drops. Four directly damaged enemy fixtures; no player-shot or kill credit fabricated.
+PASS · Headshot multiplier applies exactly once
+  20 base → 50 head damage; body remains 20
+PASS · Cleared and restarted melee cannot land late
+  A live control hits; clear and checkpoint retry cancel old references and windups
+PASS · Corpse limits, expiry and rig reuse
+  Oldest corpse reused; live rigs preserved; corpse cap and 18 s expiry release ownership
+PASS · Car ending checkpoint retry
+  8 contacts preserved across initial and future waves; branch lock and exact weapon snapshot restored
+PASS · Bakery ending checkpoint retry
+  18 contacts preserved across initial and future waves; branch lock and exact weapon snapshot restored; timer resets to 180 s
+PASS · Car resolution requires a cleared squad and arrival
+  Fixture applied 540 body damage to 8 real guards (no player kill credit); alive guards and distance block completion; clear + arrival resolves Vengeance
+PASS · Clearing the bakery resolves the protector ending
+  Fixture applied 1165 body damage to 18 real raiders (no player kill credit); clearing them before the deadline displays Protector
+PASS · Bakery timeout uses its authored simulation deadline and respects pause
+  180 s through stepFrame; pause preserves deadline; live raiders cause Too Late. Fixture replenished player health 465 times; no player shots or kills were invented
+PASS · Empty safe-spawn attempts cannot win encounters
+  Both expanded finales and the roof defer real blocked pool requests, retain all future waves and refuse an empty victory
+PASS · Both rooftop crossings provide finite health supplies and preserve full health
+  Front and north crossings each retain two fixed 30 HP packs on complete supported routes. Actual simulation preserves them at full health, heals the disclosed 65 HP fixture once per pack, and retry reuses all four props; ammunition is unchanged
+PASS · Health supplies heal only when needed
+  Full health preserves the pack; low health consumes it; retry restores it
+RESTORED · Fresh apartment · prior encounter seed mode · full health · starting loadout · audio off

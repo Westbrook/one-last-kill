@@ -1,0 +1,4274 @@
+{
+  "schemaVersion": 1,
+  "title": "One Last Kill · civilian van art review",
+  "scope": "Fresh baseline after the civilian car pass. Only the middle sedan becomes the panel van; four parking centres and headings stay fixed. The objective sedan is unchanged.",
+  "middleParkingTransform": {
+    "position": [
+      -12.7,
+      0.05,
+      9.5
+    ],
+    "yawRadians": 3.141592653589793
+  },
+  "runSetup": {
+    "settings": [
+      {
+        "report": "control-visible-settings.txt",
+        "sha256": "7b516417373b1cd5cfae3b344c7011f15bedb7940739e7c238dffb819bf837fd",
+        "fovDegrees": 82,
+        "reducedMotion": false
+      },
+      {
+        "report": "final-visible-settings.txt",
+        "sha256": "7b516417373b1cd5cfae3b344c7011f15bedb7940739e7c238dffb819bf837fd",
+        "fovDegrees": 82,
+        "reducedMotion": false
+      }
+    ],
+    "viewport": {
+      "report": "final-viewport.json",
+      "sha256": "45a2fb6d2a7c711c6341b7758b435fa78fc0c4f891ea32e4d6bf587fd411a23b",
+      "canvases": [
+        {
+          "height": 1440,
+          "width": 2560
+        }
+      ],
+      "cssHeight": 720,
+      "cssWidth": 1280
+    },
+    "scope": "Run-level control/final records; individual capture reports do not export FOV, reduced motion or CSS viewport."
+  },
+  "comparisonLimits": [
+    "These are paused surface comparisons. All seven pairs show a different lower-left HUD hint, and row/objective views include changed pickup orientation. HUD values, overlays, particles and transient effects are not synchronized; they are not evidence of an asset regression.",
+    "Feet and yaw/pitch are rounded by the visible QA report. Row and middle-bay reports also include the explicit camera anchor and look target. Street and objective reports do not include those two vectors.",
+    "Separate control/final settings records confirm run setup at FOV 82° with reduced camera motion off. Each individual capture report omits both fields; their continuity across the capture sequence depends on the retained review setup. Exposure and the current selected practical lights are not exported.",
+    "The final DOM viewport record directly confirms 1280×720 CSS pixels and a 2560×1440 canvas. Each individual report omits CSS dimensions; drawing buffer divided by ratio consistently implies 1280×720, matching the original capture dimensions.",
+    "The recorded bake, directional-shadow projection, reflection configuration and roof-light settings match within each pair. Initialization timings and cumulative update counters differ and are excluded from the lighting comparison.",
+    "Original browser capture bytes are preserved. The files retain their .png names but their encoded format is JPEG, so compression limits pixel-level or fine texture judgments.",
+    "Automatic images are paused snapshots at the recorded 1.20× device/preset scale. They do not establish resolution adaptation or motion quality during ordinary gameplay.",
+    "Screenshot sessions do not supply performance conclusions. The separate timing CSV reports callback cadence and CPU/GPU measurements; callback rate is not presented FPS."
+  ],
+  "pairs": [
+    {
+      "label": "Street · High 2×",
+      "stem": "street-high2",
+      "before": {
+        "image": "before-street-high2.png",
+        "report": "before-street-high2.txt",
+        "sha256": {
+          "image": "de73e8f97fce0f501c5c652e23c412b9a7288d444a598e597b7f5502581c62ca",
+          "report": "8ecdbf32b566c10f516bf832b8892ce1b7b61f6dc02e5a0b1d8fa719c4aa262f"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            24,
+            0.07,
+            12.2
+          ],
+          "reportedYawDegrees": 90,
+          "reportedPitchDegrees": 0,
+          "anchor": null,
+          "lookTarget": null,
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -25.860852105872688,
+              "maxX": 51.80378866294418,
+              "minY": -45.949504733831475,
+              "maxY": 26.3765176169043
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "after": {
+        "image": "after-street-high2.png",
+        "report": "after-street-high2.txt",
+        "sha256": {
+          "image": "442bc1fda65be903fa12e4ea889c1c3a6db29bfc67a267ac3ddee7d49e8a699f",
+          "report": "4fe3ad0b1f3b34e1cdda3ee4914dffbb774b1134469cb47b8d29c91a76d8b546"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            24,
+            0.07,
+            12.2
+          ],
+          "reportedYawDegrees": 90,
+          "reportedPitchDegrees": 0,
+          "anchor": null,
+          "lookTarget": null,
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -25.860852105872688,
+              "maxX": 51.80378866294418,
+              "minY": -45.949504733831475,
+              "maxY": 26.3765176169043
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      }
+    },
+    {
+      "label": "Street · Automatic",
+      "stem": "street-auto",
+      "before": {
+        "image": "before-street-auto.png",
+        "report": "before-street-auto.txt",
+        "sha256": {
+          "image": "b822c4b3e8d0f1238f3266c4ddb352d1d59ed6d14aee479e4ff228891b4054a4",
+          "report": "6113d9ab005d9ce7ad515bb2d03d9baf0f6305566076f72aa8980df14fe19edd"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            24,
+            0.07,
+            12.2
+          ],
+          "reportedYawDegrees": 90,
+          "reportedPitchDegrees": 0,
+          "anchor": null,
+          "lookTarget": null,
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "auto",
+          "drawingBuffer": {
+            "width": 1536,
+            "height": 864
+          },
+          "pixelRatio": 1.2,
+          "reviewScale": "device/preset",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -25.860852105872688,
+              "maxX": 51.80378866294418,
+              "minY": -45.949504733831475,
+              "maxY": 26.3765176169043
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "after": {
+        "image": "after-street-auto.png",
+        "report": "after-street-auto.txt",
+        "sha256": {
+          "image": "0b69aee93deaa76f5bddf91047bffb026f1bc53c1c42222d9bd64858a13dfbbc",
+          "report": "a45b10f86df79c4463f0ad4b651659b2b5f09b03892ba20f1059fe9d76d35009"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            24,
+            0.07,
+            12.2
+          ],
+          "reportedYawDegrees": 90,
+          "reportedPitchDegrees": 0,
+          "anchor": null,
+          "lookTarget": null,
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "auto",
+          "drawingBuffer": {
+            "width": 1536,
+            "height": 864
+          },
+          "pixelRatio": 1.2,
+          "reviewScale": "device/preset",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -25.860852105872688,
+              "maxX": 51.80378866294418,
+              "minY": -45.949504733831475,
+              "maxY": 26.3765176169043
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      }
+    },
+    {
+      "label": "Near row · High 2×",
+      "stem": "row-high2",
+      "before": {
+        "image": "before-row-high2.png",
+        "report": "before-row-high2.txt",
+        "sha256": {
+          "image": "e9f3db4c700fb94acbd66a82cb1e1e74bb4cdd698e60a06f9f9be55741a5e00c",
+          "report": "c890be9dc2ee19742f57da71a4db9f6ea390aad1cdd52705f7687008efeba516"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            8,
+            0.58,
+            16.5
+          ],
+          "reportedYawDegrees": 70,
+          "reportedPitchDegrees": -4,
+          "anchor": [
+            8,
+            2.3,
+            16.5
+          ],
+          "lookTarget": [
+            -11,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -25.048778366051835,
+              "maxX": 51.80378866294418,
+              "minY": -45.949504733831475,
+              "maxY": 8.436222519056736
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "after": {
+        "image": "after-row-high2.png",
+        "report": "after-row-high2.txt",
+        "sha256": {
+          "image": "96ef413a903caa1926684c6b9e0b9ebdd143cc12dc2a18c8db6b8ebb8e2b0947",
+          "report": "54917ba2847a8b7242125399d75d303039466c734e93d2e54b2543e35f44addb"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            8,
+            0.58,
+            16.5
+          ],
+          "reportedYawDegrees": 70,
+          "reportedPitchDegrees": -4,
+          "anchor": [
+            8,
+            2.3,
+            16.5
+          ],
+          "lookTarget": [
+            -11,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -25.048778366051835,
+              "maxX": 51.80378866294418,
+              "minY": -45.949504733831475,
+              "maxY": 8.436222519056736
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      }
+    },
+    {
+      "label": "Near row · Automatic",
+      "stem": "row-auto",
+      "before": {
+        "image": "before-row-auto.png",
+        "report": "before-row-auto.txt",
+        "sha256": {
+          "image": "2f5a48bfdba44b4a975b2125f52fe101f12b56fa6e711ae0c4911f48c1e0ae52",
+          "report": "abe9654f33e6f4fc2fa2fe61a264740d4dde85f28133c0dad3138239cd4a126c"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            8,
+            0.58,
+            16.5
+          ],
+          "reportedYawDegrees": 70,
+          "reportedPitchDegrees": -4,
+          "anchor": [
+            8,
+            2.3,
+            16.5
+          ],
+          "lookTarget": [
+            -11,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "auto",
+          "drawingBuffer": {
+            "width": 1536,
+            "height": 864
+          },
+          "pixelRatio": 1.2,
+          "reviewScale": "device/preset",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -25.048778366051835,
+              "maxX": 51.80378866294418,
+              "minY": -45.949504733831475,
+              "maxY": 8.436222519056736
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "after": {
+        "image": "after-row-auto.png",
+        "report": "after-row-auto.txt",
+        "sha256": {
+          "image": "5a7433d089bbe036fd352c21102529ec4661e7502c1df2a76c8c66d4dcdabb7c",
+          "report": "90e84d293f2d4cda369f514e79dc2be6c3b13ae09436e5223aceaabb0fadd70f"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            8,
+            0.58,
+            16.5
+          ],
+          "reportedYawDegrees": 70,
+          "reportedPitchDegrees": -4,
+          "anchor": [
+            8,
+            2.3,
+            16.5
+          ],
+          "lookTarget": [
+            -11,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "auto",
+          "drawingBuffer": {
+            "width": 1536,
+            "height": 864
+          },
+          "pixelRatio": 1.2,
+          "reviewScale": "device/preset",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -25.048778366051835,
+              "maxX": 51.80378866294418,
+              "minY": -45.949504733831475,
+              "maxY": 8.436222519056736
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      }
+    },
+    {
+      "label": "Middle bay · front quarter",
+      "stem": "middle-front-high2",
+      "before": {
+        "image": "before-middle-front-high2.png",
+        "report": "before-middle-front-high2.txt",
+        "sha256": {
+          "image": "452f40aaad6ece175bc124440e0f06a3c090d12e865842e32ce39c3d1fbe4d14",
+          "report": "33a59851a158fe0b93b710ef112b885b987afb2c9570b98270d745ee148ea266"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            -18,
+            -0.02,
+            14
+          ],
+          "reportedYawDegrees": -43,
+          "reportedPitchDegrees": -8,
+          "anchor": [
+            -18,
+            1.7,
+            14
+          ],
+          "lookTarget": [
+            -14,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -51.80378866294421,
+              "maxX": 15.314139630219374,
+              "minY": -40.963431993631616,
+              "maxY": 35.68155972796755
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "after": {
+        "image": "after-middle-front-high2.png",
+        "report": "after-middle-front-high2.txt",
+        "sha256": {
+          "image": "812d203b80dbb670a0529d3fc5e4d602848eab4018b5f4a8a5b49c1ea5bd2801",
+          "report": "6fb0d7675ef4881d81e2ac481d19a3f2b3d94063d0ec69444d418440cfd8f158"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            -18,
+            -0.02,
+            14
+          ],
+          "reportedYawDegrees": -43,
+          "reportedPitchDegrees": -8,
+          "anchor": [
+            -18,
+            1.7,
+            14
+          ],
+          "lookTarget": [
+            -14,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -51.80378866294421,
+              "maxX": 15.314139630219374,
+              "minY": -40.963431993631616,
+              "maxY": 35.68155972796755
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      }
+    },
+    {
+      "label": "Middle bay · rear quarter",
+      "stem": "middle-rear-high2",
+      "before": {
+        "image": "before-middle-rear-high2.png",
+        "report": "before-middle-rear-high2.txt",
+        "sha256": {
+          "image": "8234d936ff8d3d8be712166f426f435b622f7c05f04dce7c7e9f3c845e01af34",
+          "report": "54cbc8066d1f3508d55ce62b99d31526dc7392b4c1da477ef9653589da71024c"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            -10,
+            -0.02,
+            14
+          ],
+          "reportedYawDegrees": 43,
+          "reportedPitchDegrees": -8,
+          "anchor": [
+            -10,
+            1.7,
+            14
+          ],
+          "lookTarget": [
+            -14,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "focused (visible-receivers-fit) · 1.33× linear texel density · 3.79 × 3.37 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "focused",
+            "reason": "visible-receivers-fit",
+            "shadowsEnabled": true,
+            "fraction": 0.75,
+            "areaFraction": 0.562362696040055,
+            "linearResolutionGain": 1.33349609375,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -28.8515424959129,
+              "right": 48.8446560992608,
+              "bottom": -45.949504733831475,
+              "top": 22.966339788238727,
+              "width": 77.6961985951737,
+              "height": 68.9158445220702,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.03793759697029966,
+              "y": 0.03365031470804209
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -26.33110765103804,
+              "maxX": 33.960842853096985,
+              "minY": -45.949504733831475,
+              "maxY": -8.506220912155499
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "after": {
+        "image": "after-middle-rear-high2.png",
+        "report": "after-middle-rear-high2.txt",
+        "sha256": {
+          "image": "d9d3f41ad79871e9a933846640836bb74f750702873cccc531ad64269c77fea2",
+          "report": "2ccaa27ddd8f91a1bba9f04823496dcc9bbc6500446942a7886b91e4aa5237dc"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            -10,
+            -0.02,
+            14
+          ],
+          "reportedYawDegrees": 43,
+          "reportedPitchDegrees": -8,
+          "anchor": [
+            -10,
+            1.7,
+            14
+          ],
+          "lookTarget": [
+            -14,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "focused (visible-receivers-fit) · 1.33× linear texel density · 3.79 × 3.37 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "focused",
+            "reason": "visible-receivers-fit",
+            "shadowsEnabled": true,
+            "fraction": 0.75,
+            "areaFraction": 0.562362696040055,
+            "linearResolutionGain": 1.33349609375,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -28.8515424959129,
+              "right": 48.8446560992608,
+              "bottom": -45.949504733831475,
+              "top": 22.966339788238727,
+              "width": 77.6961985951737,
+              "height": 68.9158445220702,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.03793759697029966,
+              "y": 0.03365031470804209
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -26.33110765103804,
+              "maxX": 33.960842853096985,
+              "minY": -45.949504733831475,
+              "maxY": -8.506220912155499
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      }
+    },
+    {
+      "label": "Objective sedan · unchanged",
+      "stem": "objective-high2",
+      "before": {
+        "image": "before-objective-high2.png",
+        "report": "before-objective-high2.txt",
+        "sha256": {
+          "image": "1c06f9e2f4096ea9555b95d01d096ad10afa6585c11d603fffe5200bdc006542",
+          "report": "6a9690b0268494e62cb572ae6daf815a8cfac64221aedae0aec98b913283de53"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            19,
+            -0.12,
+            17.9
+          ],
+          "reportedYawDegrees": -132,
+          "reportedPitchDegrees": -7,
+          "anchor": null,
+          "lookTarget": null,
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "focused (visible-receivers-fit) · 1.33× linear texel density · 3.79 × 3.37 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "focused",
+            "reason": "visible-receivers-fit",
+            "shadowsEnabled": true,
+            "fraction": 0.75,
+            "areaFraction": 0.562362696040055,
+            "linearResolutionGain": 1.33349609375,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -45.24058438708235,
+              "right": 32.45561420809135,
+              "bottom": -22.966339788238727,
+              "top": 45.949504733831475,
+              "width": 77.6961985951737,
+              "height": 68.9158445220702,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.03793759697029966,
+              "y": 0.03365031470804209
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -37.62238351051534,
+              "maxX": 27.94668372352175,
+              "minY": 9.62557336197555,
+              "maxY": 45.949504733831475
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "after": {
+        "image": "after-objective-high2.png",
+        "report": "after-objective-high2.txt",
+        "sha256": {
+          "image": "a71104b08980ccc11af13411222c57e116a09db84d498817c991bae1ba0e5a38",
+          "report": "75bb46848775b501f3cec76139e24462640fe135472d7f3e22ddcbd00418a924"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            19,
+            -0.12,
+            17.9
+          ],
+          "reportedYawDegrees": -132,
+          "reportedPitchDegrees": -7,
+          "anchor": null,
+          "lookTarget": null,
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "focused (visible-receivers-fit) · 1.33× linear texel density · 3.79 × 3.37 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "focused",
+            "reason": "visible-receivers-fit",
+            "shadowsEnabled": true,
+            "fraction": 0.75,
+            "areaFraction": 0.562362696040055,
+            "linearResolutionGain": 1.33349609375,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -45.24058438708235,
+              "right": 32.45561420809135,
+              "bottom": -22.966339788238727,
+              "top": 45.949504733831475,
+              "width": 77.6961985951737,
+              "height": 68.9158445220702,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.03793759697029966,
+              "y": 0.03365031470804209
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -37.62238351051534,
+              "maxX": 27.94668372352175,
+              "minY": 9.62557336197555,
+              "maxY": 45.949504733831475
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      }
+    }
+  ],
+  "designs": [
+    {
+      "label": "Front quarter",
+      "panel": {
+        "image": "after-middle-front-high2.png",
+        "report": "after-middle-front-high2.txt",
+        "sha256": {
+          "image": "812d203b80dbb670a0529d3fc5e4d602848eab4018b5f4a8a5b49c1ea5bd2801",
+          "report": "6fb0d7675ef4881d81e2ac481d19a3f2b3d94063d0ec69444d418440cfd8f158"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            -18,
+            -0.02,
+            14
+          ],
+          "reportedYawDegrees": -43,
+          "reportedPitchDegrees": -8,
+          "anchor": [
+            -18,
+            1.7,
+            14
+          ],
+          "lookTarget": [
+            -14,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -51.80378866294421,
+              "maxX": 15.314139630219374,
+              "minY": -40.963431993631616,
+              "maxY": 35.68155972796755
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "passenger": {
+        "image": "after-passenger-front-high2.png",
+        "report": "after-passenger-front-high2.txt",
+        "sha256": {
+          "image": "ef3a4f85fc0009946d391c1770964425d130e272e71fdc4007f2c0ac3e467cb6",
+          "report": "b75198105fdd633adb7e4eaa0b6e7acc510991bd38759ed86c39b99a98d83003"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            -18,
+            -0.02,
+            14
+          ],
+          "reportedYawDegrees": -43,
+          "reportedPitchDegrees": -8,
+          "anchor": [
+            -18,
+            1.7,
+            14
+          ],
+          "lookTarget": [
+            -14,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "static (full-coverage-required) · 1.00× linear texel density · 5.06 × 4.49 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "static",
+            "reason": "full-coverage-required",
+            "shadowsEnabled": true,
+            "fraction": 1,
+            "areaFraction": 1,
+            "linearResolutionGain": 1,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -51.80378866294419,
+              "right": 51.80378866294418,
+              "bottom": -45.949504733831475,
+              "top": 45.94950473383148,
+              "width": 103.60757732588837,
+              "height": 91.89900946766295,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -51.80378866294421,
+              "maxX": 15.314139630219374,
+              "minY": -40.963431993631616,
+              "maxY": 35.68155972796755
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": "passenger-van · neutral used paint. Cached render-only substitute; authored collision is retained and gameplay stays paused."
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      },
+      "note": "Design comparison, not before/after. Panel is installed; passenger is a paused render-only factory option at the same parking transform. Its preview retains authored panel-van collision and does not demonstrate passenger gameplay integration."
+    },
+    {
+      "label": "Rear quarter",
+      "panel": {
+        "image": "after-middle-rear-high2.png",
+        "report": "after-middle-rear-high2.txt",
+        "sha256": {
+          "image": "d9d3f41ad79871e9a933846640836bb74f750702873cccc531ad64269c77fea2",
+          "report": "2ccaa27ddd8f91a1bba9f04823496dcc9bbc6500446942a7886b91e4aa5237dc"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            -10,
+            -0.02,
+            14
+          ],
+          "reportedYawDegrees": 43,
+          "reportedPitchDegrees": -8,
+          "anchor": [
+            -10,
+            1.7,
+            14
+          ],
+          "lookTarget": [
+            -14,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "focused (visible-receivers-fit) · 1.33× linear texel density · 3.79 × 3.37 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "focused",
+            "reason": "visible-receivers-fit",
+            "shadowsEnabled": true,
+            "fraction": 0.75,
+            "areaFraction": 0.562362696040055,
+            "linearResolutionGain": 1.33349609375,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -28.8515424959129,
+              "right": 48.8446560992608,
+              "bottom": -45.949504733831475,
+              "top": 22.966339788238727,
+              "width": 77.6961985951737,
+              "height": 68.9158445220702,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.03793759697029966,
+              "y": 0.03365031470804209
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -26.33110765103804,
+              "maxX": 33.960842853096985,
+              "minY": -45.949504733831475,
+              "maxY": -8.506220912155499
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": null
+      },
+      "passenger": {
+        "image": "after-passenger-rear-high2.png",
+        "report": "after-passenger-rear-high2.txt",
+        "sha256": {
+          "image": "cbd0bddcdfdbded5b3200e2077d6f132fc1527416627f7b34e80596091754e1f",
+          "report": "36a5ff737790eca100641affa5178ab37ac1381aab563c490d2ec9f34783124c"
+        },
+        "encodedImage": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720
+        },
+        "camera": {
+          "reportedFeet": [
+            -10,
+            -0.02,
+            14
+          ],
+          "reportedYawDegrees": 43,
+          "reportedPitchDegrees": -8,
+          "anchor": [
+            -10,
+            1.7,
+            14
+          ],
+          "lookTarget": [
+            -14,
+            0.85,
+            9.7
+          ],
+          "fovDegrees": null
+        },
+        "rendering": {
+          "quality": "high",
+          "drawingBuffer": {
+            "width": 2560,
+            "height": 1440
+          },
+          "pixelRatio": 2,
+          "reviewScale": "explicit QA override (not saved)",
+          "inferredCssViewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+          "surfaceDelivery": {
+            "requestedMode": "ktx2",
+            "state": "complete",
+            "materials": {
+              "plaster": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "plastered_wall_03",
+                "tileMeters": 4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 2832460,
+                "fallback": false,
+                "fallbackReason": null
+              },
+              "brick": {
+                "status": "ready",
+                "source": "polyhaven",
+                "format": "ktx2",
+                "assetId": "red_brick",
+                "tileMeters": 1.4,
+                "mipCount": 11,
+                "gpuFormats": {
+                  "map": 37808,
+                  "normalMap": 37808,
+                  "roughnessMap": 37808
+                },
+                "gpuFormatNames": {
+                  "map": "ASTC 4x4",
+                  "normalMap": "ASTC 4x4",
+                  "roughnessMap": "ASTC 4x4"
+                },
+                "compressedBytes": 4194384,
+                "textureBytes": 3145728,
+                "textureBytesWithMipmaps": 4194384,
+                "downloadBytes": 3096559,
+                "fallback": false,
+                "fallbackReason": null
+              }
+            }
+          }
+        },
+        "recordedLighting": {
+          "interiorBake": "ON: 101 receivers · 560 charts · 512² atlas · 133617 rays",
+          "directionalShadows": "focused (visible-receivers-fit) · 1.33× linear texel density · 3.79 × 3.37 cm/texel",
+          "shadowConfiguration": {
+            "enabled": true,
+            "mode": "focused",
+            "reason": "visible-receivers-fit",
+            "shadowsEnabled": true,
+            "fraction": 0.75,
+            "areaFraction": 0.562362696040055,
+            "linearResolutionGain": 1.33349609375,
+            "mapSize": {
+              "width": 2048,
+              "height": 2048
+            },
+            "region": {
+              "left": -28.8515424959129,
+              "right": 48.8446560992608,
+              "bottom": -45.949504733831475,
+              "top": 22.966339788238727,
+              "width": 77.6961985951737,
+              "height": 68.9158445220702,
+              "near": 34.99503737750902,
+              "far": 119.45883923295351
+            },
+            "texelSize": {
+              "x": 0.03793759697029966,
+              "y": 0.03365031470804209
+            },
+            "referenceTexelSize": {
+              "x": 0.05058963736615643,
+              "y": 0.0448725632166323
+            },
+            "receiverBounds": {
+              "minX": -26.33110765103804,
+              "maxX": 33.960842853096985,
+              "minY": -45.949504733831475,
+              "maxY": -8.506220912155499
+            },
+            "receiverFloor": -2.2,
+            "coverageMargin": 1.5,
+            "casterBounds": {
+              "min": [
+                -39.724999994039536,
+                -1.7,
+                -25.62999999523163
+              ],
+              "max": [
+                39.724999994039536,
+                20.7,
+                44.60999999940395
+              ]
+            }
+          },
+          "reflections": {
+            "status": "ready",
+            "enabled": true,
+            "captures": 3,
+            "faces": 18,
+            "faceSize": 64,
+            "residentBytes": 2064384,
+            "shadowSize": 512,
+            "staticPracticalSources": 22,
+            "lightBudget": 8,
+            "receivers": 24,
+            "materialVariants": 25,
+            "perFrameCaptures": 0,
+            "addedDrawCalls": 0,
+            "probes": [
+              {
+                "id": "apartment-kitchen",
+                "receivers": 9,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "neighbor-kitchen",
+                "receivers": 10,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              },
+              {
+                "id": "bakery-preparation",
+                "receivers": 5,
+                "width": 336,
+                "height": 256,
+                "bytes": 688128
+              }
+            ]
+          },
+          "roofTaskLighting": {
+            "status": "ready",
+            "enabled": true,
+            "serviceFixture": "matched",
+            "legacyMatches": null,
+            "addedLightSources": 1,
+            "retunedLightSources": 1,
+            "addedMeshes": 2,
+            "addedTriangles": 324,
+            "geometryBytes": 10920,
+            "addedTextures": 0,
+            "addedShadowCasters": 0,
+            "newShadowMaps": 0,
+            "extraFullscreenPasses": 0,
+            "perFrameWork": 0,
+            "service": {
+              "position": [
+                -0.06,
+                16.04,
+                -9.64
+              ],
+              "intensity": 2,
+              "distance": 7.5
+            },
+            "exit": {
+              "position": [
+                24.6,
+                14.95,
+                -3.55
+              ],
+              "intensity": 1.5,
+              "distance": 6.5
+            }
+          }
+        },
+        "simulationPaused": true,
+        "audioLockedOff": true,
+        "designPreview": "passenger-van · neutral used paint. Cached render-only substitute; authored collision is retained and gameplay stays paused."
+      },
+      "match": {
+        "recordedCameraMatches": true,
+        "renderSettingsMatch": true,
+        "recordedLightingMatches": true,
+        "imageDimensionsMatch": true,
+        "independentlyRecordedFov": false,
+        "directlyRecordedCssViewport": false
+      },
+      "note": "Design comparison, not before/after. Panel is installed; passenger is a paused render-only factory option at the same parking transform. Its preview retains authored panel-van collision and does not demonstrate passenger gameplay integration."
+    }
+  ]
+}
