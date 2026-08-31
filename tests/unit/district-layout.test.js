@@ -7,6 +7,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { DISTRICT } from '../../src/world/district-layout.js';
 import { BUILDING } from '../../src/world/layout.js';
+import { FINAL_ENCOUNTERS, ZONE_WAVE_CONFIG } from '../../src/game/mission-data.js';
 import { Architecture, boxBounds, signYaw } from '../../src/world/architecture.js';
 import { Colliders, capsuleHasClearance } from '../../src/core/collision.js';
 import { addBakeryBread, addBakeryPackage } from '../../src/render/bakery-provisions.js';
@@ -15,6 +16,9 @@ import { refineConcreteBarrier } from '../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../src/render/sedan-panels.js';
 import { createCivilianVehicle } from '../../src/render/civilian-vehicles.js';
+import { buildStreetVehicleAftermath } from '../../src/render/street-vehicle-aftermath.js';
+import { buildStreetAftermath } from '../../src/render/street-aftermath.js';
+import { placeCivilianVehicle } from '../../src/render/parked-vehicle-placement.js';
 import { buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES } from '../../src/render/storefront-kit.js';
 
 // Real authored meshes and collision run without a renderer, browser or audio.
@@ -60,11 +64,16 @@ function buildFixture() {
     .replace(/^export \{[^}]+\};\s*$/gm, '');
   assert.doesNotMatch(source, /^import\s/m);
   const builders = runInNewContext(source + '\n;({ buildStreet, buildBakeryAndCar });', {
-    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle,
-    THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, DISTRICT, MATS, World, WorldState,
+    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, placeCivilianVehicle,
+    THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, DISTRICT, MATS, World, WorldState, buildStreetVehicleAftermath, buildStreetAftermath,
     _BG, _CG, Colliders, addBox, pushDecor, addSign, Triggers, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, createSedanCabin, createSedanBumper, createSedanHood,
     makeHumanoid: () => new THREE.Group(), HUMANOID_PRESETS: { shopkeeper: {}, woman: {} },
     makeSmokeSystem: () => ({ points: new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()) }),
+    spawnFire(x, y, z) {
+      const group = new THREE.Group(), light = new THREE.PointLight();
+      group.position.set(x, y, z); group.userData.ballistics = false; group.add(light); World.add(group);
+      return { group, light, smoke: { points: new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()) } };
+    },
   }, { filename: 'street.js' });
   builders.buildStreet();
   builders.buildBakeryAndCar();
@@ -126,6 +135,51 @@ test('all reserved street, finale and QA points have standing capsule clearance'
     DISTRICT.street.qa.firstGun, ...DISTRICT.street.qa.benchmark, DISTRICT.street.qa.wallShot,
   ];
   for (const point of points) assert.ok(clear(point), JSON.stringify(point));
+});
+
+test('the relocated car bay clears the complete randomized street and bodyguard arrivals', () => {
+  for (const config of [ZONE_WAVE_CONFIG.street, FINAL_ENCOUNTERS.car]) {
+    for (const point of config.spawns) {
+      const envelope = new THREE.Box3(
+        new THREE.Vector3(point.x - config.variation.jitterX - 0.48, point.y + 0.02, point.z - config.variation.jitterZ - 0.48),
+        new THREE.Vector3(point.x + config.variation.jitterX + 0.48, point.y + 2.02, point.z + config.variation.jitterZ + 0.48),
+      );
+      assert.ok(fixture.boxes.every(box => !box.intersectsBox(envelope)),
+        `${config.variation.key}: the entire arrival envelope at ${point.x},${point.z} clears the car and street furniture`);
+    }
+  }
+});
+
+test('street arrival can cross straight ahead or reach the bakery without entering the car choice', () => {
+  const { street, bakery, car } = DISTRICT;
+  const start = { x: street.checkpoint.x, y: street.road.floorY, z: street.road.z1 + 2 };
+  const crossingZ = 18.7;
+  const routes = [
+    [start, street.checkpoint, { x: start.x, y: street.farWalk.floorY, z: 26.5 }],
+    [start, street.checkpoint, { x: start.x, y: start.y, z: crossingZ },
+      { x: bakery.accessRoute[0].x, y: start.y, z: crossingZ }, ...bakery.accessRoute],
+  ];
+  for (const route of routes) for (let index = 1; index < route.length; index++) {
+    const from = route[index - 1], to = route[index];
+    const steps = Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.1);
+    for (let step = 0; step <= steps; step++) {
+      const fraction = step / steps;
+      const point = { x: from.x + (to.x - from.x) * fraction, y: Math.max(from.y, to.y), z: from.z + (to.z - from.z) * fraction };
+      assert.ok(clear(point), `The street-to-bakery route remains clear at ${point.x},${point.z}`);
+      assert.ok(Math.hypot(point.x - car.x, point.z - car.z) > car.commitRadius + 0.32,
+        'The full player footprint stays outside the car commitment area');
+    }
+  }
+  const bakeryTrigger = fixture.Triggers.list.find(trigger => trigger.name === 'bakery');
+  assert.ok(new THREE.Box3(bakeryTrigger.min, bakeryTrigger.max).containsPoint(new THREE.Vector3(
+    bakery.accessRoute[1].x, bakery.accessRoute[1].y + 1.72, bakery.accessRoute[1].z,
+  )), 'The accessible entrance route reaches the real bakery zone trigger');
+  assert.ok(Math.hypot(car.approach.x - car.x, car.approach.z - car.z) < car.commitRadius,
+    'A deliberate walk to the relocated car still chooses her branch');
+  assert.ok(Math.hypot(car.x - start.x, car.z - start.z) > 15,
+    'The car sits well beyond the scaffold landing');
+  assert.ok(Math.hypot(car.x - (bakery.door.x1 + bakery.door.x2) / 2, car.z - bakery.door.z) > 50,
+    'The car has its own end of the block away from the bakery');
 });
 
 test('bakery checkpoint and spawn pockets clear furniture and stay away from entry', () => {

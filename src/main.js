@@ -28,7 +28,7 @@ import { AmmoSupplies } from './game/ammo-supplies.js';
 import { ArmorPickups } from './game/armor-pickups.js';
 import { Enemies, EnemyPool, enemiesUpdate } from './game/enemies.js';
 import {
-  initMission, WaveDirector, HealPickups, StreetChoice, Endings,
+  initMission, WaveDirector, HealPickups, StreetChoice, Endings, FireHazards,
   CHECKPOINTS, saveCheckpoint, restartFromZone,
 } from './game/mission.js';
 import { CombatStats } from './game/combat-stats.js';
@@ -90,7 +90,7 @@ function updateAudioScene(dt) {
   // traversal, or hidden-tab time can advance the score outside simulation.
   let pressure = 0;
   for (const enemy of Enemies.list) {
-    if (!enemy.alive || enemy.zone !== currentZone) continue;
+    if (!enemy.alive) continue;
     const distance = Math.hypot(enemy.pos.x - Player.pos.x, enemy.pos.y - Player.pos.y, enemy.pos.z - Player.pos.z);
     if (distance < 28) pressure += (1 - distance / 28) * (enemy.state === 'attack' ? 0.42 : 0.22);
   }
@@ -111,6 +111,13 @@ function stepFrame(realDt) {
     Weapons.tick(clock.step);
     syncTouchContext();
     playerUpdate(clock.step);
+    FireHazards.update(clock.step);
+    if (PlayerState.dead) {
+      // Lethal contact cannot collect a supply or commit a checkpoint/ending.
+      HUD.update(clock.step);
+      progressed += clock.step;
+      continue;
+    }
     enemiesUpdate(clock.step);
     WaveDirector.update(clock.step);
     triggersUpdate();

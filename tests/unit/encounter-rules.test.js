@@ -944,31 +944,42 @@ test('frame subdivision and extra failed probes do not reroll a seeded initial a
   }
 });
 
-test('scaffold departure retires living and queued contacts without a cleared-wave reward', () => {
+test('scaffold departure retains living contacts and retires only queued arrivals without a reward', () => {
   const settings = ZONE_WAVE_CONFIG.scaffolding;
   const game = driveEncounter(settings, 10), plan = game.schedule;
   game.tick(settings.firstWave);
   assert.equal(game.alive.length, 3);
+  const upperContacts = [...game.alive];
   let event = game.tick(0, { footY: 7 });
   assert.deepEqual(event.retiredWaves, [0]);
   assert.deepEqual(event.clearedWaves, []);
-  assert.equal(game.alive.length, 0);
-  assert.equal(plan.skipped, 3);
+  assert.deepEqual(game.alive, upperContacts);
+  assert.equal(plan.skipped, 0);
   assert.equal(plan.timer, settings.stageTransitionDelay);
   game.tick(settings.stageTransitionDelay - 0.25, { footY: 7 });
   assert.equal(plan.waveIndex, 1);
   game.tick(0.25, { footY: 7 });
   assert.equal(plan.waveIndex, 2);
   assert.equal(game.alive.length, 3);
+  assert.deepEqual(game.alive, upperContacts, 'Survivors keep their slots under the live cap');
+  assert.deepEqual(plan.pendingTypes, settings.waves[1]);
+  game.clear(0);
+  event = game.tick(0, { footY: 7 });
+  assert.deepEqual(event.clearedWaves, [], 'Abandoning a platform cannot grant recovery credit later');
   assert.deepEqual(plan.pendingTypes, settings.waves[1].slice(3));
+  const middleContacts = [...game.alive];
   event = game.tick(0, { footY: 4 });
   assert.deepEqual(event.retiredWaves, [1]);
   assert.deepEqual(event.clearedWaves, []);
-  assert.equal(plan.skipped, 7);
+  assert.equal(plan.skipped, 1);
   assert.equal(plan.clearedWaves, 0);
   assert.deepEqual(plan.pendingTypes, []);
-  assert.equal(game.alive.length, 0);
+  assert.deepEqual(game.alive, middleContacts);
   game.tick(settings.stageTransitionDelay, { footY: 4 });
+  assert.deepEqual(game.alive, middleContacts);
+  assert.deepEqual(plan.pendingTypes, settings.waves[2]);
+  game.clear(1);
+  game.tick(0, { footY: 4 });
   assert.deepEqual(game.alive.map(enemy => enemy.type), settings.waves[2]);
 });
 

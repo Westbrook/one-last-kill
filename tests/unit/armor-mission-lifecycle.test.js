@@ -13,12 +13,12 @@ const zoneChange = source.match(/^function handleZoneChange\([^]*?^\}/m)?.[0];
 assert.ok(endingStart >= 0 && endingEnd > endingStart && zoneChange, 'exercise actual branch and zone lifecycles');
 const noOp = () => {};
 
-test('committing the bakery branch on the street makes its armor collectible before and after the zone trigger', () => {
+test('committing the bakery branch keeps survivor and bakery vests collectible across its zone trigger', () => {
   const player = { health: 100, armor: 0, pos: new Vector3(0, 1.72, 0), _eyeH: 1.72 };
   const pickups = createArmorPickups();
   pickups.init({ world: new Group(), player, colliders: [] });
   pickups.setZone('street');
-  const oldStreetVest = pickups.spawn(0, 0, 0, 100, 'street');
+  const oldStreetVest = pickups.spawn(2, 0, 0, 100, 'street');
   const checkpoints = [];
   // Run the complete production ending/zone handlers; encounter scheduling and
   // presentation are sinks so this regression isolates pickup accessibility.
@@ -45,13 +45,17 @@ ${zoneChange}
   mission.Endings.beginBakery();
   assert.deepEqual(checkpoints, [['bakery', 'bakery']]);
   const bakeryVest = pickups.spawn(0, 0, 0, 50, 'bakery');
-  assert.equal(oldStreetVest.mesh.visible, false);
+  assert.equal(oldStreetVest.mesh.visible, true);
   assert.equal(bakeryVest.mesh.visible, true);
-  // Once committed, the ordinary zone handler returns early; the branch must
-  // already have changed pickup visibility before the player crosses inside.
-  mission.handleZoneChange('bakery');
   pickups.update(1 / 120);
   assert.equal(player.armor, 50);
   assert.equal(bakeryVest.active, false);
   assert.equal(oldStreetVest.active, true);
+  // Once committed, the ordinary zone handler returns early. Physical loot
+  // remains available on either side of that trigger, regardless of origin.
+  mission.handleZoneChange('bakery');
+  player.pos.x = 2;
+  pickups.update(1 / 120);
+  assert.equal(player.armor, 100);
+  assert.equal(oldStreetVest.active, false);
 });

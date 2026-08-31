@@ -359,7 +359,8 @@ test('health effect is a static full-screen layer below reticle text and respect
   assert.doesNotMatch(rule, /(?:backdrop-filter|filter|will-change):/);
   assert.match(styles, /#healthvignette\[data-level="critical"\]/);
   assert.match(styles, /body:has\(#overlay:not\(\.hidden\)\) #hud, body:has\(#introcard\.show\) #hud, body:has\(#endcard\.show\) #hud \{ visibility: hidden; \}/);
-  assert.match(styles, /body:has\(#deathscreen\.show\) #healthvignette, body:has\(#deathscreen\.show\) #healthwarning \{ display: none; \}/);
+  assert.match(styles, /body:has\(#deathscreen\.show\) #healthvignette \{ display: none; \}/);
+  assert.match(styles, /body:has\(#deathscreen\.show\) #healthwarning \{ visibility: hidden; \}/);
 });
 
 test('switching from a firearm to fists clears the ammunition presentation', () => {

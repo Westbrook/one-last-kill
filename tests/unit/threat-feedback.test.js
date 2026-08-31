@@ -80,6 +80,7 @@ function missionHarness() {
     getCheckpointStatus: () => checkpointStatus,
     saveCheckpoint() { throw new Error('The fixture already provides a saved checkpoint'); },
     WaveDirector: { stop: record('waveStop'), reset: record('waveReset'), start: record('waveStart') },
+    FireHazards: { reset: record('fireReset') },
     Endings: { reset: record('endingsReset') },
     StreetChoice: { dismiss: record('choiceDismiss'), reset: record('choiceReset'), arm: record('choiceArm'),
       commitCar: record('carCommit'), commitBakery: record('bakeryCommit') },
@@ -247,6 +248,21 @@ test('legacy positional damage and source-free damage still work without an atta
   assert.equal(h.Player.health, 88);
   assert.equal(h.calls.hitSources.length, 1, 'Source-free damage invents no direction or actor');
   assert.equal(h.update(0), null);
+});
+
+test('fire damage bypasses the vest and uses blood feedback without inventing an enemy direction', () => {
+  const h = missionHarness(), fireSource = new THREE.Vector3(0, 1, 2);
+  h.Player.armor = 100;
+  h.applyPlayerDamage(5, fireSource, null, { kind: 'fire' });
+  assert.equal(h.Player.health, 95); assert.equal(h.Player.armor, 100);
+  assert.deepEqual(h.calls.health, [95]); assert.deepEqual(h.calls.armor, [100]);
+  assert.equal(h.calls.blood.length, 1);
+  assert.equal(h.calls.directions.length, 0); assert.equal(h.calls.hitSources.length, 0);
+  assert.equal(h.update(), null);
+  h.applyPlayerDamage(5, fireSource, null, { kind: 'fire', feedback: false });
+  assert.equal(h.Player.health, 90); assert.equal(h.calls.blood.length, 1);
+  h.applyPlayerDamage(200, fireSource, null, { kind: 'fire' });
+  assert.equal(h.Player.health, 0); assert.equal(h.PlayerState.dead, true);
 });
 
 test('invalid damage and damage after death leave health and all feedback unchanged', () => {

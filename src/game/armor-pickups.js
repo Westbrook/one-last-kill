@@ -13,7 +13,6 @@ export function createArmorPickups() {
   const list = [];
   const playerCenter = new Vector3();
   let world, player, canCollect, onCollect, colliders;
-  let activeZone = 'apartment';
   let elapsed = 0;
 
   function remove(pickup) {
@@ -30,7 +29,6 @@ export function createArmorPickups() {
     init(options) {
       this.clearAll();
       ({ world, player, canCollect = () => true, onCollect = () => {}, colliders = Colliders.list } = options);
-      activeZone = 'apartment';
     },
     spawn(x, floorY, z, amount = MAX_ARMOR, zone = null) {
       const strength = clampArmor(amount);
@@ -41,14 +39,14 @@ export function createArmorPickups() {
       mesh.userData.armorStrength = strength;
       mesh.position.set(x, floorY + HOVER_HEIGHT, z);
       const pickup = { mesh, amount: strength, zone, active: true, baseY: mesh.position.y, phase: Math.random() * Math.PI * 2 };
-      mesh.visible = !zone || zone === activeZone;
       list.push(pickup);
       world.add(mesh);
       return pickup;
     },
-    setZone(zone) {
-      activeZone = zone;
-      for (const pickup of list) pickup.mesh.visible = pickup.active && (!pickup.zone || pickup.zone === zone);
+    setZone() {
+      // A pursuer can die beyond its original encounter. Keep that metadata
+      // for feedback, while physical distance and cover govern collection.
+      for (const pickup of list) pickup.mesh.visible = pickup.active;
     },
     clearAll() {
       while (list.length) remove(list[list.length - 1]);

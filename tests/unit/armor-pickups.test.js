@@ -50,12 +50,26 @@ test('the strongest nearby vest wins, and equal or weaker vests remain available
   assert.equal(h.player.armor, 50);
 });
 
-test('zone changes, pause, death and invalid simulation steps cannot award armor', () => {
+test('vests dropped before or after a checkpoint change remain available at their physical location', () => {
+  for (const changeBeforeDrop of [false, true]) {
+    const h = fixture();
+    h.player.pos.x = 2;
+    if (changeBeforeDrop) h.pickups.setZone('scaffolding');
+    const drop = h.spawn(50, 'roof');
+    if (!changeBeforeDrop) h.pickups.setZone('scaffolding');
+    assert.equal(drop.zone, 'roof', 'The encounter metadata remains intact');
+    assert.equal(drop.mesh.visible, true);
+    h.step();
+    assert.equal(h.player.armor, 0, 'A zone transition cannot award a distant vest');
+    h.player.pos.x = 0;
+    h.step();
+    assert.equal(h.player.armor, 50);
+    assert.deepEqual(h.collected, [drop]);
+  }
+});
+
+test('pause, death and invalid simulation steps cannot award armor', () => {
   const h = fixture(), drop = h.spawn();
-  h.pickups.setZone('stairwell'); h.step();
-  assert.equal(drop.mesh.visible, false);
-  h.pickups.setZone('roof');
-  assert.equal(drop.mesh.visible, true);
   h.gate.active = false;
   const position = drop.mesh.position.clone(), yaw = drop.mesh.rotation.y;
   h.step();

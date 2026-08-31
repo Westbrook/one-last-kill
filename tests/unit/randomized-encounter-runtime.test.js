@@ -9,7 +9,7 @@ import { Colliders, capsuleHasClearance } from '../../src/core/collision.js';
 import { createEncounterSeedSource } from '../../src/game/encounter-session.js';
 import { EncounterSchedule, EncounterRouteProgress } from '../../src/game/encounter-rules.js';
 import { selectEncounterSpawn, selectEncounterFrontPair } from '../../src/game/encounter-spawns.js';
-import { CHECKPOINTS, ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS, createCheckpoint } from '../../src/game/mission-data.js';
+import { CHECKPOINTS, ZONE_ORDER, ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS, createCheckpoint } from '../../src/game/mission-data.js';
 import { isSegmentOccluded } from '../../src/game/combat-rules.js';
 import { describeOffscreenThreat } from '../../src/game/offscreen-threats.js';
 import { hasPairBearingSeparation } from '../../src/game/rear-encounter-rules.js';
@@ -31,7 +31,7 @@ function actualFunction(name) {
 }
 const spawnStart = source.indexOf('function playerFootPosition()');
 const spawnEnd = source.indexOf('\nfunction handleZoneChange(', spawnStart);
-const endingStart = source.indexOf('const Endings = (() => {');
+const endingStart = source.indexOf('const StreetChoice = (() => {');
 const endingEnd = source.indexOf('\nfunction initMission()', endingStart);
 assert.ok(spawnStart >= 0 && spawnEnd > spawnStart && endingStart >= 0 && endingEnd > endingStart);
 
@@ -62,23 +62,22 @@ const bindings = {
   AmmoSupplies: ai.supplies, HealPickups: { setZone: noOp, restoreZone: noOp },
   ArmorPickups: { clearAll: noOp, setZone: noOp },
   WeaponDrops: { clearAll: noOp }, Input: { reset: noOp }, Audio: { reset: noOp },
+  FireHazards: { reset: noOp },
   ThreatFeedback: { clear: noOp }, ZoneCull: { setHidden: noOp },
   HUD: { setHealth: noOp, setArmor: noOp, setObjective: noOp, showDeath: noOp, message: (...values) => messages.push(values) },
   EndCard: { hide: noOp, show: noOp }, ObjectiveBanner: { show: noOp },
-  StreetChoice: {
-    reset: noOp, dismiss: noOp, arm: noOp, isPresented: () => false,
-    isCommitted: () => mission.Endings.isCommitted(), getDelay: () => null,
-    commitCar: () => mission.Endings.beginCar(), commitBakery: () => mission.Endings.beginBakery(),
+  document: { getElementById: () => ({ classList: { add: noOp, remove: noOp } }) },
+  zoneChanged(zone) {
+    bindings.currentZone = zone; checkpointCalls.push(zone); mission.handleZoneChange(zone);
   },
-  zoneChanged(zone) { bindings.currentZone = zone; checkpointCalls.push(zone); },
   resetPlayerMotion() { ai.player.vel.set(0, 0, 0); ai.player._eyeH = ai.player.eyeHeight; ai.player.onGround = true; },
 };
 mission = runInNewContext('let checkpoint = null, restoringCheckpoint = false; const initialized = true;\n'
   + 'const spawnCursors = new Map(); const routePlayerFoot = {x:0,y:0,z:0};\n'
-  + ['saveCheckpoint', 'getCheckpointStatus', 'restartFromZone'].map(actualFunction).join('\n')
+  + ['saveCheckpoint', 'getCheckpointStatus', 'restartFromZone', 'handleZoneChange'].map(actualFunction).join('\n')
   + '\n' + source.slice(spawnStart, spawnEnd) + '\n' + source.slice(endingStart, endingEnd)
   + '\n' + actualFunction('getMissionState')
-  + '\n;({WaveDirector,Endings,spawnScheduled,spawnCursors,pickSafeSpawn,spawnConcealed,'
+  + '\n;({WaveDirector,StreetChoice,Endings,handleZoneChange,spawnScheduled,spawnCursors,pickSafeSpawn,spawnConcealed,'
   + 'saveCheckpoint,restartFromZone,getMissionState});', bindings, { filename: 'src/game/mission.js:seeded-runtime' });
 
 function place(point, yaw = point.yaw ?? Math.PI / 2) {
@@ -87,7 +86,7 @@ function place(point, yaw = point.yaw ?? Math.PI / 2) {
   camera.position.copy(ai.player.pos); camera.rotation.set(0, yaw, 0, 'YXZ'); camera.updateMatrixWorld(true);
 }
 function reset(seed, zone = 'balcony', point = CHECKPOINTS[zone], yaw = point.yaw) {
-  mission.Endings.reset(); mission.WaveDirector.reset(); ai.reset();
+  mission.Endings.reset(); mission.StreetChoice.reset(); mission.WaveDirector.reset(); ai.reset();
   seeds.setOverride(seed); messages.length = 0; checkpointCalls.length = 0;
   weapon = { current: 'fists', loaded: 0, reserve: 0 };
   bindings.currentZone = zone; ai.player.health = 100;
@@ -349,4 +348,86 @@ test('actual starts, checkpoint retries and final branches draw new normal seeds
     near(restarted.deadline, FINAL_ENCOUNTERS[branch].deadlineSeconds);
     assert.equal(restarted.remaining, FINAL_ENCOUNTERS[branch].waves.flat().length);
   }
+});
+
+test('every forward checkpoint preserves the previous area’s living enemies without healing or loot', () => {
+  for (let index = 1; index < ZONE_ORDER.length; index++) {
+    const previousZone = ZONE_ORDER[index - 1], nextZone = ZONE_ORDER[index];
+    reset(null, previousZone);
+    const survivor = ai.spawn('gunman', CHECKPOINTS[previousZone], { zone: previousZone });
+    survivor.health = 23;
+    survivor.encounterKey = previousZone; survivor.encounterWave = 0;
+    const slot = survivor.poolSlot, position = survivor.pos.clone();
+    ai.player.health = 41;
+    place(CHECKPOINTS[nextZone]);
+    bindings.zoneChanged(nextZone);
+    assert.equal(survivor.alive, true, `${previousZone} → ${nextZone}`);
+    assert.equal(survivor.removed, false);
+    assert.equal(survivor.health, 23);
+    assert.equal(survivor.poolSlot, slot);
+    assert.equal(slot.owner, survivor);
+    assert.ok(survivor.pos.equals(position), 'A checkpoint cannot relocate the survivor');
+    assert.equal(ai.player.health, 41);
+    assert.equal(ai.drops.length, 0);
+    assert.equal(ai.armorDrops.length, 0);
+    assert.equal(mission.getMissionState().checkpoint.zone, nextZone);
+    assert.equal(mission.getMissionState().checkpoint.branch, nextZone === 'bakery' ? 'bakery' : null);
+  }
+});
+
+test('the actual scaffold director keeps upper contacts and their occupied slots after a drop', () => {
+  reset(null, 'scaffolding');
+  mission.WaveDirector.update(ZONE_WAVE_CONFIG.scaffolding.firstWave);
+  const upper = living();
+  assert.ok(upper.length > 0);
+  const slots = upper.map(enemy => enemy.poolSlot);
+  ai.player.health = 41;
+  place({ x: 9.5, y: 7, z: 3.2 });
+  mission.WaveDirector.update(0);
+  mission.WaveDirector.update(ZONE_WAVE_CONFIG.scaffolding.stageTransitionDelay);
+  for (const [index, enemy] of upper.entries()) {
+    assert.ok(enemy.alive && !enemy.removed);
+    assert.equal(enemy.poolSlot, slots[index]);
+    assert.equal(slots[index].owner, enemy);
+  }
+  assert.equal(mission.WaveDirector.schedule.skipped, 0);
+  assert.equal(ai.player.health, 41);
+  assert.ok(living().length <= ZONE_WAVE_CONFIG.scaffolding.maxAlive);
+  assert.equal(ai.drops.length, 0);
+});
+
+test('both physical final approaches preserve ordinary street contacts; retries clear the previous life', () => {
+  for (const branch of ['car', 'bakery']) {
+    reset(null, 'street');
+    mission.WaveDirector.update(ZONE_WAVE_CONFIG.street.firstWave);
+    const survivors = living();
+    assert.ok(survivors.length > 0);
+    place(branch === 'car' ? DISTRICT.car.approach : DISTRICT.bakery.accessRoute[0]);
+    mission.StreetChoice.update(0);
+    assert.equal(mission.Endings.getMode(), branch);
+    assert.equal(mission.getMissionState().checkpoint.branch, branch);
+    assert.ok(survivors.every(enemy => enemy.alive && !enemy.removed && enemy.poolSlot.owner === enemy));
+    assert.equal(mission.WaveDirector.active, false, 'Old arrivals stop while existing contacts remain');
+    const checkpointBefore = mission.getMissionState().checkpoint;
+    const deadlineBefore = mission.Endings.getStatus().deadline;
+    bindings.zoneChanged(branch === 'car' ? 'bakery' : 'street');
+    assert.deepEqual(mission.getMissionState().checkpoint, checkpointBefore);
+    assert.equal(mission.Endings.getStatus().deadline, deadlineBefore);
+    assert.ok(survivors.every(enemy => enemy.alive && !enemy.removed));
+    assert.equal(mission.restartFromZone(), true);
+    assert.ok(survivors.every(enemy => enemy.removed && enemy.poolSlot === null));
+    assert.equal(mission.Endings.getMode(), branch);
+    assert.equal(mission.Endings.getStatus().remaining, FINAL_ENCOUNTERS[branch].totalContacts);
+  }
+});
+
+test('a street gunman can still attack through the bakery entrance after its checkpoint commits', () => {
+  reset(null, 'street', { x: -18.75, y: DISTRICT.bakery.floorY, z: 29.5 });
+  const survivor = ai.spawn('gunman', { x: -18.75, y: DISTRICT.street.farWalk.floorY, z: 25.5 },
+    { zone: 'street', prime: true });
+  bindings.zoneChanged('bakery');
+  assert.equal(mission.Endings.getMode(), 'bakery');
+  for (let tick = 0; tick < 4 / STEP && !ai.damage.some(hit => hit.attacker === survivor); tick++) ai.step(STEP);
+  assert.ok(survivor.alive && !survivor.removed);
+  assert.ok(ai.damage.some(hit => hit.attacker === survivor), 'The old contact remains a live combat threat');
 });

@@ -166,7 +166,7 @@ test('four stair pairs use separate authored landings and progressively higher a
 
 test('scaffold contacts stay on four decks with explicit irreversible departure thresholds', () => {
   const config = ZONE_WAVE_CONFIG.scaffolding;
-  assert.equal(config.retireLive, true, 'Irreversible drops still release the abandoned upper deck');
+  assert.equal(config.retireLive, false, 'Dropping from a platform must preserve its living contacts');
   assert.deepEqual(config.waves.map(group => group.length), [3, 4, 3, 4]);
   assert.equal(config.spawns.length, 20);
   for (const [index, stage] of config.stages.entries()) {

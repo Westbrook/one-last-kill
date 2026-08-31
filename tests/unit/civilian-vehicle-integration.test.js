@@ -28,8 +28,8 @@ const own = (vehicle, object) => {
   return false;
 };
 
-function actualPartBounds(vehicle, name) {
-  const bounds = new THREE.Box3(), point = new THREE.Vector3();
+function actualPartSurface(vehicle, name) {
+  const bounds = new THREE.Box3(), point = new THREE.Vector3(), bottom = new THREE.Vector3(0, Infinity, 0);
   let vertices = 0;
   for (const mesh of meshes(vehicle)) {
     for (const part of mesh.geometry.userData.civilianParts || []) {
@@ -37,65 +37,75 @@ function actualPartBounds(vehicle, name) {
       const position = mesh.geometry.attributes.position;
       for (let vertex = part.vertexStart; vertex < part.vertexStart + part.vertexCount; vertex++) {
         point.fromBufferAttribute(position, vertex).applyMatrix4(mesh.matrixWorld);
-        bounds.expandByPoint(point); vertices++;
+        bounds.expandByPoint(point);
+        if (point.y < bottom.y) bottom.copy(point);
+        vertices++;
       }
     }
   }
   assert.ok(vertices > 10 && !bounds.isEmpty(), `${name}: sample the actual merged surface`);
-  return bounds;
+  return { bounds, bottom };
 }
 
-test('four civilian vehicles preserve the objective, road alignment and compact material batches', () => {
+test('four civilian vehicles use distinct abandoned angles and preserve the separate objective', () => {
   assert.equal(vehicles.length, 4);
   assert.deepEqual(vehicles.map(vehicle => info(vehicle).profile.variant).sort(), ['hatchback', 'panel-van', 'sedan', 'wagon']);
   const van = vehicles.find(vehicle => info(vehicle).profile.variant === 'panel-van');
-  near(van.position.x, -12.7, 'The van occupies the middle near-curb space');
-  near(van.position.z, 9.5, 'The van stays behind the opening street sightlines');
+  assert.ok(van.position.z < 12, 'The taller van stays behind the opening street sightlines');
   assert.ok(objective && !objective.userData.civilianVehicle, 'The objective keeps its separate idling sedan');
-  for (const [axis, expected] of [['x', 23], ['y', 0.05], ['z', 21.5]]) {
-    near(DISTRICT.car[axis], expected, `Objective contract ${axis}`);
-    near(objective.position[axis], expected, `Actual objective ${axis}`);
+  for (const axis of ['x', 'y', 'z']) {
+    near(objective.position[axis], DISTRICT.car[axis], `Actual objective ${axis}`);
   }
   near(DISTRICT.car.yaw, Math.PI, 'Objective heading');
   near(objective.rotation.y, Math.PI, 'Actual objective heading');
   near(DISTRICT.car.length, 4.6, 'Objective length'); near(DISTRICT.car.width, 1.9, 'Objective width');
-  near(DISTRICT.car.approach.x, 23, 'Objective approach x'); near(DISTRICT.car.approach.z, 18.7, 'Objective approach z');
+  assert.ok(capsuleHasClearance(new THREE.Vector3(DISTRICT.car.approach.x, DISTRICT.car.approach.y + 0.02,
+    DISTRICT.car.approach.z), 0.32, 1.84, fixture.colliders), 'The relocated objective approach stays walkable');
   for (const vehicle of vehicles) {
-    near(Math.sin(vehicle.rotation.y), 0, `${vehicle.name}: parallel parking`);
-    near(vehicle.position.y, road.bounds.max.y, `${vehicle.name}: road anchor`);
+    const placement = DISTRICT.street.parkedCars.find(parked => parked.id === info(vehicle).id);
+    near(vehicle.position.x, placement.x, `${vehicle.name}: authored x`);
+    near(vehicle.position.z, placement.z, `${vehicle.name}: authored z`);
+    assert.ok(Math.abs(Math.sin(vehicle.rotation.y)) > 0.15, `${vehicle.name}: visibly skewed from the curb`);
+    if (!placement.curb) near(vehicle.position.y, road.bounds.max.y, `${vehicle.name}: road anchor`);
     assert.ok(meshes(vehicle).length > 0 && meshes(vehicle).length <= 8, 'Keep bounded material batches per civilian vehicle');
     assert.ok(vehicle.children.every(object => object.isMesh), 'Civilian cars introduce no live lights or per-part scene nodes');
   }
 });
 
-test('every actual tire reaches the road and remains clear of the curb', () => {
+test('every actual tire contacts its real road or apron triangle without intersecting the curb', () => {
+  const apron = fixture.records.get('near-apron');
+  let raisedWheels = 0;
   for (const vehicle of vehicles) {
     const { profile } = info(vehicle);
     assert.equal(profile.wheels.length, 4);
     for (const wheel of profile.wheels) {
-      const bounds = actualPartBounds(vehicle, wheel.surfaceName || `tire:${wheel.name}`);
-      near(bounds.min.y, road.bounds.max.y, `${vehicle.name}/${wheel.name}: tire ground`, 0.004);
-      assert.ok(bounds.min.x >= road.bounds.min.x && bounds.max.x <= road.bounds.max.x);
-      assert.ok(bounds.min.z > road.bounds.min.z + 0.075 && bounds.max.z < road.bounds.max.z - 0.075,
-        `${vehicle.name}/${wheel.name}: whole tire stays on road, beyond the curb lip`);
-      const center = localPoint(vehicle, wheel.center);
-      near(center.y - bounds.min.y, wheel.radius, `${vehicle.name}/${wheel.name}: actual support radius`, 0.004);
-      const supportRay = new THREE.Raycaster(new THREE.Vector3(center.x, bounds.min.y + 0.1, center.z), new THREE.Vector3(0, -1, 0), 0, 0.2);
-      const support = supportRay.intersectObject(road.mesh, false)[0];
-      assert.ok(support, `${vehicle.name}/${wheel.name}: a real road triangle supports the wheel`);
-      near(support.point.y, bounds.min.y, `${vehicle.name}/${wheel.name}: tire/road contact`, 0.004);
+      const { bounds, bottom } = actualPartSurface(vehicle, wheel.surfaceName || `tire:${wheel.name}`);
+      const surface = bottom.z < road.bounds.min.z ? apron : road;
+      if (surface === apron) raisedWheels++;
+      assert.ok(bounds.min.x >= surface.bounds.min.x && bounds.max.x <= surface.bounds.max.x);
+      assert.ok(bounds.min.z > surface.bounds.min.z + 0.075 && bounds.max.z < surface.bounds.max.z - 0.075,
+        `${vehicle.name}/${wheel.name}: the entire tire clears the curb lip on its own surface`);
+      const supportRay = new THREE.Raycaster(bottom.clone().add(new THREE.Vector3(0, 0.1, 0)), new THREE.Vector3(0, -1, 0), 0, 0.2);
+      const support = supportRay.intersectObject(surface.mesh, false)[0];
+      assert.ok(support, `${vehicle.name}/${wheel.name}: a real pavement triangle supports the lowest tire vertex`);
+      near(support.point.y, bottom.y, `${vehicle.name}/${wheel.name}: tire/pavement contact`, 1e-5);
     }
   }
+  assert.equal(raisedWheels, 2, 'One abandoned car rests with a full side on the raised pavement');
+  const curbCar = vehicles.find(vehicle => info(vehicle).id === 'east');
+  assert.ok(curbCar.rotation.x > 0.04 && curbCar.position.y > road.bounds.max.y,
+    'The whole curb car tilts and rises with its supported tires');
 });
 
 test('the final car envelopes and registered movement bounds agree with their actual surfaces', () => {
   for (const vehicle of vehicles) {
-    const { profile, visualBounds } = info(vehicle), colliders = vehicle.userData.movementColliders;
+    const { profile, visualBounds, worldBounds } = info(vehicle), colliders = vehicle.userData.movementColliders;
     assert.equal(colliders.length, 2, 'Each car registers only its lower body and variant cabin boxes');
     assert.ok(colliders.every(box => fixture.colliders.includes(box)), 'Review metadata points to actual registered collision');
     assert.ok(visualBounds?.isBox3, 'The asset exposes its measured local visual envelope');
-    const actual = new THREE.Box3().setFromObject(vehicle), declared = visualBounds.clone().applyMatrix4(vehicle.matrixWorld);
-    for (const side of ['min', 'max']) for (const axis of ['x', 'y', 'z']) near(actual[side][axis], declared[side][axis], `${vehicle.name}: ${side}.${axis}`);
+    const actual = new THREE.Box3().setFromObject(vehicle, true), declared = visualBounds.clone().applyMatrix4(vehicle.matrixWorld);
+    assert.ok(declared.clone().expandByScalar(1e-6).containsBox(actual), 'The transformed local envelope contains every rotated surface');
+    for (const side of ['min', 'max']) for (const axis of ['x', 'y', 'z']) near(actual[side][axis], worldBounds[side][axis], `${vehicle.name}: measured ${side}.${axis}`);
     const union = colliders.reduce((box, collider) => box.union(collider), new THREE.Box3());
     assert.ok(actual.min.x >= union.min.x - 0.12 && actual.max.x <= union.max.x + 0.12
       && actual.min.z >= union.min.z - 0.12 && actual.max.z <= union.max.z + 0.12,

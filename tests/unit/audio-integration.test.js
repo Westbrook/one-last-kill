@@ -193,6 +193,7 @@ function mainHarness(audio, { updateNavigation = noOp } = {}) {
     Weapons: { tick: record('weapon'), update: record('viewmodel'), def: () => ({ kind: 'ranged' }) },
     playerUpdate: record('player'), enemiesUpdate: record('enemy'), triggersUpdate: record('triggers'),
     WaveDirector: { update: record('wave') }, HealPickups: { update: record('heal') }, ArmorPickups: { update: record('armor') },
+    FireHazards: { update: record('fire'), reset: noOp },
     StreetChoice: { update: record('choice') }, CombatStats: { update: record('stats'), snapshot: () => ({}) },
     HUD: { update: record('hud'), setRage: noOp, setHealth: noOp, message: noOp },
     Blood: { update: record('blood') }, FX: { update: record('fx') },
@@ -312,7 +313,7 @@ test('actual settings subscription updates every mix bus and voice preference wi
   }
 });
 
-test('actual main hook supplies current listener, zone and bounded local enemy pressure', async () => {
+test('actual main hook supplies bounded local enemy pressure including surviving contacts from other checkpoints', async () => {
   const { audio, calls } = lockedAudio(), h = mainHarness(audio);
   await audio.resume();
   const point = (distance, changes = {}) => ({
@@ -323,13 +324,13 @@ test('actual main hook supplies current listener, zone and bounded local enemy p
   h.camera.position.y += 0.15; h.Player.yaw = -1.2;
   near(h.stepFrame(STEP), STEP);
   const tick = h.ticks.at(-1);
-  near(tick.threat, 0.53); near(tick.dt, STEP); near(tick.yaw, -1.2);
+  near(tick.threat, 0.75); near(tick.dt, STEP); near(tick.yaw, -1.2);
   assert.equal(tick.listenerPosition, h.camera.position, 'The listener follows the real eased camera rather than a copied player eye');
   assert.equal(tick.zone, 'roof'); assert.equal(tick.paused, false); assert.equal(tick.dead, false);
   h.Enemies.list.push(...Array.from({ length: 8 }, () => point(0, { state: 'attack' })));
   h.updateAudioScene(0); near(h.ticks.at(-1).threat, 1);
   h.setZone('bakery'); h.updateAudioScene(0);
-  assert.equal(h.ticks.at(-1).zone, 'bakery'); near(h.ticks.at(-1).threat, 0.22);
+  assert.equal(h.ticks.at(-1).zone, 'bakery'); near(h.ticks.at(-1).threat, 1);
   assertLocked(audio, calls);
 });
 

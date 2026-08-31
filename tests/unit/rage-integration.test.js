@@ -12,9 +12,12 @@ import { createRageState } from '../../src/game/rage-rules.js';
 import { applyArmorDamage, clampArmor } from '../../src/game/armor-rules.js';
 import { createCombatStats } from '../../src/game/combat-stats.js';
 import { WEAPON_DEFS } from '../../src/game/weapon-data.js';
+import { createFireHazards } from '../../src/game/fire-hazards.js';
 
 const mainSource = readFileSync(new URL('../../src/main.js', import.meta.url), 'utf8');
 const missionSource = readFileSync(new URL('../../src/game/mission.js', import.meta.url), 'utf8');
+const fireInitialization = missionSource.match(/  FireHazards = createFireHazards\(\{[^]*?\n  \}\);/)?.[0];
+assert.ok(fireInitialization, 'Exercise the production fire controller and damage callback wiring');
 const playerSource = readFileSync(new URL('../../src/game/player.js', import.meta.url), 'utf8')
   .replace(/^import .*;\s*$/gm, '').replace(/^export \{[^}]+\};\s*$/gm, '');
 assert.doesNotMatch(playerSource, /^import\s|^export\s/m, 'Keep the explicit player fixture bindings current');
@@ -32,7 +35,7 @@ function fixture(options) {
   const Rage = createRageState(options), CombatStats = createCombatStats({ rage: Rage });
   const Input = createInputState(), clock = new FixedStepClock(), GameTime = { elapsed: 0 };
   Input.activate();
-  const calls = { health: [], armor: [], rage: [], messages: [], attacks: 0, audioTime: [], touchContexts: [] };
+  const calls = { health: [], armor: [], rage: [], messages: [], blood: [], attacks: 0, audioTime: [], touchContexts: [] };
   Input.setTouchContext = value => calls.touchContexts.push({ ...value });
   const noop = () => {}, hooks = { attack: noop, enemy: noop, input: noop };
   const conditions = { intro: false, ending: false };
@@ -43,10 +46,11 @@ function fixture(options) {
     setArmor(value) { calls.armor.push(value); },
     setRage(value) { calls.rage.push({ ...value }); },
     message(value) { calls.messages.push(value); },
-    bloodFlash: noop, showDeath: noop, update: noop,
+    bloodFlash(value) { calls.blood.push(value); }, showDeath: noop, update: noop,
   };
   const bindings = {
     THREE, lerp, clamp, Rage, CombatStats, Input, clock, GameTime, HUD, applyArmorDamage, clampArmor,
+    createFireHazards, WorldState: { fires: [] },
     camera: new THREE.PerspectiveCamera(82, 16 / 9, 0.05, 300),
     Colliders: { list: [new THREE.Box3(new THREE.Vector3(-100, -1, -100), new THREE.Vector3(100, 0, 100))] },
     capsuleHasClearance, moveCapsule, createBallisticHit, Ballistics: { raycast: () => null },
@@ -61,6 +65,7 @@ function fixture(options) {
     enemiesUpdate(dt) { hooks.enemy(dt); },
     Enemies: { list: [], clearAll: noop },
     WaveDirector: { update: noop, stop: noop, reset: noop, start: noop },
+    FireHazards: { update: noop, reset: noop },
     HealPickups: { update: noop, restoreZone: noop },
     ArmorPickups: { update: noop, clearAll: noop, setZone: noop },
     StreetChoice: { update: noop, dismiss: noop, reset: noop, arm: noop },
@@ -81,7 +86,7 @@ function fixture(options) {
     .map(name => actualFunction(missionSource, name)).join('\n');
   const api = runInNewContext(`${playerSource}\nlet hudTimer = 0;\n`
     + 'let checkpoint = checkpointSeed; let restoringCheckpoint = false;\n'
-    + `${simulation}\n${lifecycle}\n`
+    + `${simulation}\n${lifecycle}\n${fireInitialization}\n`
     + ';({ Player, PlayerState, playerInit, playerUpdate, stepFrame, applyPlayerDamage, playerDie, restartFromZone });',
   bindings, { filename: 'actual-player-main-mission:rage' });
   api.Player.pos.set(0, api.Player.eyeHeight, 0);
@@ -114,6 +119,50 @@ test('mission damage consumes armor before health and keeps the HUD and checkpoi
   delete h.bindings.checkpointSeed.armor;
   h.restartFromZone();
   assert.equal(h.Player.armor, 0, 'a checkpoint without armor cannot grant it');
+});
+
+function addContactFire(h) {
+  h.bindings.WorldState.fires.push({ active: true,
+    damageBounds: new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1)),
+    damageSource: new THREE.Vector3(0, 1, 0),
+  });
+}
+
+test('production fire damage uses gameplay time, bypasses armor, and stops on exit without changing combat credit', () => {
+  const h = fixture(); addContactFire(h);
+  h.Player.armor = 75;
+  const before = h.CombatStats.snapshot();
+  h.steps(Math.round(1 / h.clock.step));
+  assert.ok(Math.abs(h.Player.health - 80) < 1e-8);
+  assert.equal(h.Player.armor, 75);
+  assert.ok(h.calls.blood.length >= 4 && h.calls.blood.length <= 5, 'Contact feedback is throttled, not flashed every tick');
+  h.Input.pause(); h.stepFrame(30);
+  assert.ok(Math.abs(h.Player.health - 80) < 1e-8, 'Paused wall time cannot burn or accumulate damage');
+  h.Input.activate(); h.steps();
+  assert.ok(Math.abs(h.Player.health - (80 - 20 * h.clock.step)) < 1e-8);
+  h.Player.pos.x = 3;
+  const escapedHealth = h.Player.health;
+  h.steps(Math.round(1 / h.clock.step));
+  assert.equal(h.Player.health, escapedHealth, 'There is no residual burn after leaving');
+  assert.deepEqual(h.CombatStats.snapshot(), before);
+});
+
+test('lethal fire runs normal death and retry without activating checkpoints or collecting supplies that tick', () => {
+  const h = fixture(); addContactFire(h);
+  h.Player.health = 0.1; h.Player.armor = 75;
+  h.bindings.checkpointSeed.armor = 50;
+  h.bindings.triggersUpdate = () => assert.fail('A dead player cannot save a new checkpoint');
+  h.bindings.HealPickups.update = () => assert.fail('A dead player cannot collect a health supply');
+  h.bindings.StreetChoice.update = () => assert.fail('A dead player cannot commit a final branch');
+  h.steps();
+  assert.equal(h.PlayerState.dead, true); assert.equal(h.Player.health, 0);
+  assert.equal(h.Input.active, false);
+  assert.equal(h.bindings.FireHazards.snapshot().touching, false);
+  assert.equal(h.stepFrame(5), 0);
+  h.bindings.WorldState.fires[0].active = false;
+  h.restartFromZone();
+  assert.equal(h.PlayerState.dead, false); assert.equal(h.Player.health, 100); assert.equal(h.Player.armor, 50);
+  assert.equal(h.bindings.FireHazards.snapshot().touching, false);
 });
 
 test('the main loop exposes sights only for a held firearm and refreshes availability after a weapon change', () => {

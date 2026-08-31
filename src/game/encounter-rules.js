@@ -165,8 +165,8 @@ export class EncounterSchedule {
     }
 
     // Passing a platform abandons its unspawned contacts without clear credit.
-    // Reversible stairs retain living pursuers; irreversible scaffold drops
-    // retire them too. Ascent needs ground support so a jump cannot skip a pair.
+    // Living contacts remain threats on stairs and scaffolding alike. Ascent
+    // needs ground support so a jump cannot skip a pair.
     for (const group of this.groups) {
       const stage = this.config.stages?.[group.index];
       if (group.cleared || group.retired || !hasDepartedStage(stage, footY, grounded)) continue;

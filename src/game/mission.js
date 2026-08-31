@@ -5,13 +5,14 @@ import { Input, engageLock } from '../core/input.js';
 import { Colliders, capsuleHasClearance } from '../core/collision.js';
 import { Player, PlayerState, resetPlayerMotion } from './player.js';
 import { HUD, ObjectiveBanner, EndCard } from '../ui/hud.js';
-import { World, currentZone, zoneChanged, onZoneChange, ZoneCull } from '../world/world.js';
+import { World, WorldState, currentZone, zoneChanged, onZoneChange, ZoneCull } from '../world/world.js';
 import { Enemies, isBlocked, primeEnemyInvestigation } from './enemies.js';
 import { Weapons, WeaponDrops } from './weapons.js';
 import { AmmoSupplies } from './ammo-supplies.js';
 import { ArmorPickups } from './armor-pickups.js';
 import { applyArmorDamage, clampArmor } from './armor-rules.js';
 import { Rage } from './rage-rules.js';
+import { createFireHazards } from './fire-hazards.js';
 import {
   CHECKPOINTS, ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS,
   createCheckpoint,
@@ -29,16 +30,19 @@ import { createHealthPickupModel } from '../render/health-pickup-model.js';
 let checkpoint = null;
 let initialized = false;
 let restoringCheckpoint = false;
+let FireHazards = null;
 const spawnCursors = new Map();
 const routePlayerFoot = { x: 0, y: 0, z: 0 };
 
-function applyPlayerDamage(amount, source = null, attacker = null) {
+function applyPlayerDamage(amount, source = null, attacker = null, { kind = 'attack', feedback = true } = {}) {
   if (PlayerState.dead || !Number.isFinite(amount) || amount <= 0) return;
-  const healthDamage = applyArmorDamage(Player, amount);
+  // A ballistic vest does not absorb contact with open flames.
+  const healthDamage = kind === 'fire' ? Math.min(Player.health, amount) : applyArmorDamage(Player, amount);
+  if (kind === 'fire') Player.health -= healthDamage;
   HUD.setArmor(Player.armor);
   HUD.setHealth(Player.health);
-  if (healthDamage > 0) HUD.bloodFlash(Math.min(1, 0.35 + healthDamage / 25));
-  if (source) {
+  if (feedback && healthDamage > 0) HUD.bloodFlash(Math.min(1, 0.35 + healthDamage / 25));
+  if (source && kind !== 'fire') {
     const angle = Math.atan2(source.x - Player.pos.x, -(source.z - Player.pos.z)) + Player.yaw;
     HUD.damageDirection?.(angle);
     ThreatFeedback.hit(attacker || { pos: { x: source.x, y: source.y, z: source.z }, height: 1.8, radius: 0.35 });
@@ -49,6 +53,7 @@ function applyPlayerDamage(amount, source = null, attacker = null) {
 function playerDie() {
   if (PlayerState.dead) return;
   PlayerState.dead = true;
+  FireHazards?.reset();
   Player.health = 0;
   Player.armor = 0;
   HUD.setArmor(0);
@@ -115,6 +120,7 @@ function restartFromZone() {
   Rage.reset();
   HUD.setRage?.({});
 
+  FireHazards?.reset();
   PlayerState.dead = false;
   Player.health = 100;
   Player.armor = clampArmor(saved.armor);
@@ -486,10 +492,8 @@ function handleZoneChange(zone) {
   // The initial apartment trigger can fire after initMission has already
   // saved its loadout. Do not capture an already-fired shot as starting ammo.
   if (checkpoint?.zone === zone && WaveDirector.zone === zone) return;
-  for (let i = Enemies.list.length - 1; i >= 0; i--) {
-    const enemy = Enemies.list[i];
-    if (enemy.zone && enemy.zone !== zone) Enemies.remove(enemy);
-  }
+  // Stop the old arrival schedule, but keep its living contacts in the world.
+  // Only a checkpoint retry clears them; crossing a trigger is not a kill.
   saveCheckpoint(zone);
   HealPickups.setZone(zone);
   ArmorPickups.setZone(zone);
@@ -625,7 +629,7 @@ const StreetChoice = (() => {
       const carDistance = Math.hypot(Player.pos.x - DISTRICT.car.x, Player.pos.z - DISTRICT.car.z);
       const bakeryX = (DISTRICT.bakery.door.x1 + DISTRICT.bakery.door.x2) / 2;
       const bakeryDistance = Math.hypot(Player.pos.x - bakeryX, Player.pos.z - DISTRICT.bakery.door.z);
-      if (carDistance < 4.5) this.commitCar();
+      if (carDistance < DISTRICT.car.commitRadius) this.commitCar();
       else if (bakeryDistance < 5.5) this.commitBakery();
     },
   };
@@ -651,7 +655,7 @@ const Endings = (() => {
     objectiveTimer = 0;
     resolved = false;
     WaveDirector.lockFinal();
-    Enemies.clearAll();
+    // A branch commits the next encounter without erasing existing threats.
     const zone = branch === 'car' ? 'street' : 'bakery';
     const key = 'final-' + branch;
     saveCheckpoint(zone, branch);
@@ -737,12 +741,12 @@ const Endings = (() => {
         if (schedule.cleared && nearCar && onStreet) {
           resolved = true;
           EndCard.show('— VENGEANCE —', 'THE LAST RIDE',
-            'Gnucci tries the door. It is already open.<br>You climb in beside him. He stops talking.<br>The car never makes it past the corner of Carmine and Mulberry.<br><br>This ends here. Tonight. The way you promised.');
+            'Gnucci tries the door. It is already open.<br>You climb in beside her. She stops talking.<br>The car never makes it past the corner of Carmine and Mulberry.<br><br>This ends here. Tonight. The way you promised.');
         }
       } else if (schedule.cleared) {
         resolved = true;
         EndCard.show('— PROTECTOR —', 'A PAPER ROSE',
-          'The shopkeeper lowers her broken broom. Inside the back room, Charli is shaking.<br>She hands you a folded paper rose, the corner singed by smoke.<br>You go back out into the street. Gnucci is gone. Tomorrow you will hunt him.<br><br>Tonight, you stayed.');
+          'The shopkeeper lowers her broken broom. Inside the back room, Charli is shaking.<br>She hands you a folded paper rose, the corner singed by smoke.<br>You go back out into the street. Gnucci is gone. Tomorrow you will hunt her.<br><br>Tonight, you stayed.');
       } else if (bakeryDeadline <= 0) {
         resolved = true;
         EndCard.show('— TOO LATE —', 'A QUIET HOUSE',
@@ -755,6 +759,11 @@ const Endings = (() => {
 function initMission() {
   if (initialized) return;
   initialized = true;
+  FireHazards = createFireHazards({
+    player: Player, fires: WorldState.fires, colliders: Colliders.list,
+    canDamage: () => Input.active && !PlayerState.dead,
+    applyDamage: (amount, source, { feedback }) => applyPlayerDamage(amount, source, null, { kind: 'fire', feedback }),
+  });
   onZoneChange(handleZoneChange);
   AmmoSupplies.setZone('apartment');
   // Explicit initialization avoids cross-module access before World and the
@@ -813,5 +822,5 @@ export {
   applyPlayerDamage, playerDie, restartFromZone,
   ZONE_WAVE_CONFIG, WaveDirector, surfaceTopAt, hasGroundBelow,
   pickSafeSpawn, countAliveInZone, spawnGnucciBodyguards, spawnBakeryRaiders,
-  HealPickups, StreetChoice, Endings,
+  HealPickups, StreetChoice, Endings, FireHazards,
 };

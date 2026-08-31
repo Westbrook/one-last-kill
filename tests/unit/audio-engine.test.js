@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createAudioController } from '../../src/core/audio.js';
 import { DEFAULT_AUDIO_MIX, normalizeAudioMix, audioSurface, surfaceSoundProfile, describeAudioEvent } from '../../src/core/audio-model.js';
 import { createLocalSpeechAdapter } from '../../src/core/local-speech.js';
+import { STREET_ATMOSPHERE } from '../../src/core/street-atmosphere.js';
 
 // Pure in-memory audio graph. No device, browser, fetch, speech service, or timer
 // is used. The test advances its own clock and records every allocation/call.
@@ -99,6 +100,26 @@ function advance(audio, fake, duration, state = {}) {
     const step = Math.min(0.05, remaining); fake.advance(step); audio.tick(step, state);
   }
 }
+const streetState = (zone = 'street') => ({ zone, threat: 0,
+  listener: { position: { x: 8, y: 1.77, z: 18 }, yaw: 0 } });
+function atmosphereSources(fake, kind) {
+  const frequencies = kind ? [STREET_ATMOSPHERE[kind].frequency]
+    : Object.values(STREET_ATMOSPHERE).map(profile => profile.frequency);
+  return fake.sources.filter(source => source.kind === 'oscillator'
+    && frequencies.includes(source.frequency.events[0]?.[1]));
+}
+function atmosphereGraph(source) {
+  const filter = source.connections[0], envelope = filter.connections[0];
+  const spatial = envelope.connections[0], panner = spatial.connections[0];
+  assert.equal(filter.kind, 'filter'); assert.equal(spatial.kind, 'gain'); assert.equal(panner.kind, 'panner');
+  return { filter, envelope, spatial, panner, bus: panner.connections[0] };
+}
+async function activeStreet(options) {
+  const h = await makeActive(options);
+  h.audio.setMix({ effects: 0, music: 0 });
+  h.audio.startAmbient();
+  return h;
+}
 const allEffects = [
   'gunshot', 'pistolShot', 'shotgunShot', 'smgShot', 'machinegunShot', 'footstep',
   'meleeHit', 'meleeSwing', 'movement', 'impact', 'surfaceImpact', 'weaponMechanical',
@@ -144,6 +165,7 @@ test('every new feature remains allocation-free under immutable hard mute', asyn
       for (const name of allEffects) audio[name]({ surface: 'metal', action: 'land' });
       audio.announceCheckpoint({ id: String(i), text: 'Hold position.', sampleId: 'radio:ready' });
       audio.tick(0.1, { zone: 'roof', threat: 1 });
+      for (const zone of ['street', 'bakery']) for (let tick = 0; tick < 200; tick++) audio.tick(0.25, streetState(zone));
       await audio.suspend();
     }
     await audio.reset(); await settle();
@@ -156,6 +178,114 @@ test('every new feature remains allocation-free under immutable hard mute', asyn
     assert.equal(audio.isHardMuted(), true);
     assert.equal(audio.isMuted(), true);
   }
+});
+
+test('street alarm and distant siren are sparse positional ambience with no samples or effect-bus output', async () => {
+  let loads = 0;
+  const { audio, fake } = await activeStreet({ sampleLoader: () => { loads++; throw new Error('Atmosphere must be synthesized'); } });
+  const state = streetState();
+  advance(audio, fake, 11.05, state);
+  assert.equal(atmosphereSources(fake, 'car-alarm').length, 3, 'One short alarm cluster precedes a long quiet gap');
+  assert.equal(atmosphereSources(fake, 'distant-siren').length, 1);
+  assert.equal(loads, 0); assert.equal(fake.counts.decodes, 0);
+  assert.ok(audio.getStatus().resources.voices <= 3, 'Room tone plus at most one short atmospheric source');
+  for (const [kind, profile] of Object.entries(STREET_ATMOSPHERE)) {
+    const source = atmosphereSources(fake, kind)[0], graph = atmosphereGraph(source);
+    assert.equal(source.type, profile.waveform);
+    assert.equal(graph.bus, fake.gains[3], 'The existing ambience slider owns the cue');
+    assert.equal(source.frequency.events.filter(event => event[0] === 'linear').length, profile.frequencyAutomation.length);
+    assert.ok(source.stops[0] - source.starts[0][0] <= 5.1, 'Every cue has a bounded native-audio lifetime');
+  }
+  const siren = atmosphereSources(fake, 'distant-siren')[0], graph = atmosphereGraph(siren);
+  const farGain = graph.spatial.gain.value, farPan = graph.panner.pan.value;
+  assert.ok(farGain > 0 && farGain < 0.1); assert.ok(farPan < 0, 'The siren is beyond the west end of the block');
+  const origin = STREET_ATMOSPHERE['distant-siren'].pos;
+  state.listener.position = { x: origin.x + 4, y: 1.77, z: origin.z + 4 };
+  audio.tick(0.01, state);
+  assert.ok(graph.spatial.gain.value > farGain * 4, 'Approaching the source changes distance attenuation');
+  const nearPan = graph.panner.pan.value;
+  state.listener.yaw = Math.PI;
+  audio.tick(0.01, state);
+  assert.ok(nearPan < 0 && graph.panner.pan.value > 0, 'An already playing cue follows listener rotation');
+});
+
+test('street-to-bakery transitions muffle active atmosphere without restarting it and other zones stop it', async () => {
+  const { audio, fake } = await activeStreet();
+  const state = streetState();
+  advance(audio, fake, 11.05, state);
+  const siren = atmosphereSources(fake, 'distant-siren')[0], graph = atmosphereGraph(siren);
+  const level = graph.spatial.gain.value, cutoff = graph.filter.frequency.value;
+  const envelopeEvents = [...graph.envelope.gain.events], before = audio.getStatus().streetAtmosphere;
+  state.zone = 'bakery'; audio.tick(0.05, state);
+  assert.ok(Math.abs(graph.spatial.gain.value - level * 0.3) < 1e-8);
+  assert.equal(graph.filter.frequency.value, cutoff * 0.5);
+  assert.deepEqual(graph.envelope.gain.events, envelopeEvents, 'Position and ducking retain the original fade envelope');
+  assert.equal(audio.getStatus().streetAtmosphere.sirenCount, before.sirenCount);
+  assert.equal(audio.getStatus().streetAtmosphere.nextSirenAt, before.nextSirenAt);
+  state.zone = 'street'; audio.tick(0.05, state);
+  assert.ok(Math.abs(graph.spatial.gain.value - level) < 1e-8);
+  state.zone = 'roof'; audio.tick(0.05, state);
+  assert.ok(siren.stops.includes(undefined), 'Leaving the district stops the cue immediately');
+  const starts = atmosphereSources(fake).length;
+  advance(audio, fake, 30, state);
+  assert.equal(atmosphereSources(fake).length, starts);
+  state.zone = 'street'; advance(audio, fake, 2.5, state);
+  assert.equal(atmosphereSources(fake).length, starts, 'Returning starts with quiet, never a backlog');
+});
+
+test('street cues stop for pause, mute, zero ambience/master, reset and ambient shutdown without deferred tails', async () => {
+  for (const operation of ['pause', 'mute', 'ambienceZero', 'masterZero', 'reset', 'stopAmbient']) {
+    const { audio, fake } = await activeStreet(), state = streetState();
+    advance(audio, fake, 11.05, state);
+    const siren = atmosphereSources(fake, 'distant-siren')[0];
+    if (operation === 'pause') { audio.tick(0.05, { ...state, paused: true }); await settle(); }
+    if (operation === 'mute') audio.setMuted(true);
+    if (operation === 'ambienceZero') audio.setMix({ ambience: 0 });
+    if (operation === 'masterZero') audio.setMix({ master: 0 });
+    if (operation === 'reset') await audio.reset();
+    if (operation === 'stopAmbient') audio.stopAmbient();
+    assert.ok(siren.stops.includes(undefined), operation + ' stops the current siren');
+    const snapshot = audio.getStatus().streetAtmosphere, allocations = fake.nodes.length;
+    advance(audio, fake, 40, state);
+    assert.equal(fake.nodes.length, allocations, operation + ' cannot allocate delayed cues');
+    assert.deepEqual(audio.getStatus().streetAtmosphere, snapshot, operation + ' freezes or resets accepted atmosphere time');
+    if (operation === 'mute') audio.setMuted(false);
+    if (operation === 'ambienceZero') audio.setMix({ ambience: DEFAULT_AUDIO_MIX.ambience });
+    if (operation === 'masterZero') audio.setMix({ master: DEFAULT_AUDIO_MIX.master });
+    if (['pause', 'mute', 'reset'].includes(operation)) await audio.resume();
+    if (['reset', 'stopAmbient'].includes(operation)) audio.startAmbient();
+    const starts = atmosphereSources(fake).length;
+    audio.tick(0, state);
+    assert.equal(atmosphereSources(fake).length, starts, 'Resume never emits an old tail without simulation');
+    advance(audio, fake, 35, state);
+    assert.ok(atmosphereSources(fake).length > starts, operation + ' resumes ordinary intermittent scheduling');
+  }
+});
+
+test('radio and combat defer new street cues and duck an already playing cue through its separate spatial gain', async () => {
+  const speech = mockSpeech(), { audio, fake } = await activeStreet({ speechAdapter: speech });
+  const state = streetState();
+  audio.setVoiceEnabled(true);
+  advance(audio, fake, 2.8, state);
+  audio.announceCheckpoint({ id: 'street-priority', zone: 'street',
+    text: 'Keep moving. The shop is across the street. Watch the door and stay away from the open road until the family is safe.' });
+  advance(audio, fake, 1.5, state);
+  assert.equal(atmosphereSources(fake).length, 0, 'Radio takes precedence over a due alarm cluster');
+  audio.clearRadio();
+  for (let tick = 0; tick < 120 && !atmosphereSources(fake).length; tick++) advance(audio, fake, 0.05, state);
+  const alarm = atmosphereSources(fake, 'car-alarm')[0];
+  assert.ok(alarm, 'The missed alarm resumes after a quiet retry');
+  const graph = atmosphereGraph(alarm), level = graph.spatial.gain.value;
+  const envelopeEvents = [...graph.envelope.gain.events];
+  state.threat = 1; audio.tick(0.01, state);
+  assert.ok(Math.abs(graph.spatial.gain.value - level * 0.2) < 1e-8);
+  assert.deepEqual(graph.envelope.gain.events, envelopeEvents);
+  audio.announceCheckpoint({ id: 'street-priority-2', zone: 'street', text: 'Keep moving.' });
+  audio.tick(0.01, { ...state, threat: 0 });
+  assert.ok(Math.abs(graph.spatial.gain.value - level * 0.12) < 1e-8);
+  const starts = atmosphereSources(fake).length;
+  advance(audio, fake, 60, state);
+  assert.equal(atmosphereSources(fake).length, starts, 'Sustained combat produces no alarm or siren backlog');
 });
 
 test('bus graph separates effects, ambience, score, and radio behind master and immediate mute gate', async () => {

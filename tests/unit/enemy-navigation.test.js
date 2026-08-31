@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { EnemyNavigationPlanner, createNavigationAgent, enemyPoolCapacity, investigationMemorySeconds, MAX_INVESTIGATION_SECONDS, updateSightCache } from '../../src/game/enemy-navigation.js';
+import { EnemyNavigationPlanner, createNavigationAgent, enemyPoolCapacity, enemyCampaignPoolCapacity, investigationMemorySeconds, MAX_INVESTIGATION_SECONDS, updateSightCache } from '../../src/game/enemy-navigation.js';
 import { updateAwareness } from '../../src/game/combat-rules.js';
 import { capsuleHasClearance } from '../../src/core/collision.js';
 import { ROOF } from '../../src/world/layout.js';
@@ -442,6 +442,30 @@ test('pool sizes cover overlapping waves, expanded finales, and archetype caps',
   assert.equal(enemyPoolCapacity('hitman', configs), 9, 'waves beyond the sixth are included');
   assert.equal(enemyPoolCapacity('enforcer', configs), 3);
   assert.equal(enemyPoolCapacity('unused', configs), 2);
+});
+
+test('campaign pools sum checkpoint survivors but reserve only one finale and one corpse allowance', () => {
+  const encounters = [
+    { maxAlive: 2, waves: [['thug', 'thug', 'thug'], ['enforcer']] },
+    { maxAlive: 3, typeCaps: { enforcer: 1 }, waves: [['thug', 'enforcer', 'enforcer']] },
+  ];
+  const finales = [
+    { maxAlive: 3, waves: [['thug', 'thug']] },
+    { maxAlive: 5, typeCaps: { enforcer: 1 }, waves: [['thug', 'thug'], ['thug', 'thug', 'enforcer', 'enforcer']] },
+  ];
+  assert.equal(enemyCampaignPoolCapacity('thug', encounters, finales), 9, 'three survivors coexist with four finale contacts and two corpses');
+  assert.equal(enemyCampaignPoolCapacity('thug', encounters, finales, 0), 7);
+  assert.equal(enemyCampaignPoolCapacity('enforcer', encounters, finales), 5, 'each checkpoint keeps its own archetype cap');
+  assert.equal(enemyCampaignPoolCapacity('unused', encounters, finales), 2);
+});
+
+test('pressure encounters reserve melee rigs for surviving downgraded armed contacts', () => {
+  const pressure = { maxAlive: 2, rearPressure: {}, waves: [['gunman', 'brawler'], ['hitman', 'thug']] };
+  assert.equal(enemyPoolCapacity('brawler', [pressure], 0), 2);
+  assert.equal(enemyPoolCapacity('thug', [pressure], 0), 2);
+  assert.equal(enemyPoolCapacity('gunman', [pressure], 0), 1);
+  assert.equal(enemyPoolCapacity('bruiser', [pressure], 0), 0);
+  assert.equal(enemyPoolCapacity('brawler', [{ ...pressure, rearPressure: null }], 0), 1);
 });
 
 test('every authored zone and final encounter fits its derived live pool capacity', () => {

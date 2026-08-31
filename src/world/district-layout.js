@@ -19,13 +19,14 @@ export const DISTRICT = freezeTree({
     spawnPockets: [
       streetPoint(-32, 15), streetPoint(-24, 21), streetPoint(-16, 15), streetPoint(-8, 19),
       streetPoint(0, 14), streetPoint(9, 20), streetPoint(18, 15), streetPoint(29, 16),
-      streetPoint(33, 23.5), streetPoint(-31, 23), streetPoint(14, 23.6), streetPoint(34, 11.5),
+      streetPoint(28, 23.5), streetPoint(-31, 23), streetPoint(14, 23.6), streetPoint(34, 11.5),
     ],
     parkedCars: [
-      { id: 'west', ...streetPoint(-30.2, 9.35), yaw: 0, variant: 'wagon', color: 0x62624c, finish: 'workhorse' },
-      { id: 'middle', ...streetPoint(-12.7, 9.50), yaw: Math.PI, variant: 'panel-van', color: 0x858276, finish: 'used' },
-      { id: 'east', ...streetPoint(1.8, 9.40), yaw: 0, variant: 'hatchback', color: 0x777366, finish: 'used' },
-      { id: 'far', ...streetPoint(-5.2, 23.60), yaw: Math.PI, variant: 'sedan', color: 0x68554b, finish: 'used' },
+      { id: 'west', ...streetPoint(-30, 10.6), yaw: 0.28, variant: 'wagon', color: 0x62624c, finish: 'workhorse' },
+      { id: 'middle', ...streetPoint(-11.7, 10.2), yaw: Math.PI - 0.17, variant: 'panel-van', color: 0x858276, finish: 'used' },
+      { id: 'east', ...streetPoint(1.8, 8), yaw: Math.PI / 12, variant: 'hatchback', color: 0x777366, finish: 'used',
+        curb: { side: 'right', floorY: 0.14 } },
+      { id: 'far', ...streetPoint(0, 23.35), yaw: Math.PI + 0.28, variant: 'sedan', color: 0x68554b, finish: 'used' },
     ],
     cover: [
       { id: 'street-cover-west', x: -35, z: 19.5, width: 2.4, height: 1.1, depth: 1.3, material: 'metal' },
@@ -60,12 +61,14 @@ export const DISTRICT = freezeTree({
     ],
   },
   car: {
-    ...streetPoint(23, 21.5), yaw: Math.PI, length: 4.6, width: 1.9,
-    approach: streetPoint(23, 18.7),
-    placard: { x: 27.2, y: 0.14, z: 26.65 },
+    // The east bay requires a turn away from the scaffold landing and bakery
+    // crossing. Walking straight out of the descent cannot choose the car.
+    ...streetPoint(32, 23), yaw: Math.PI, length: 4.6, width: 1.9, commitRadius: 4.5,
+    approach: streetPoint(32, 20.2),
+    placard: { x: 35.2, y: 0.14, z: 26.65 },
     spawnPockets: [
-      streetPoint(15, 17.5), streetPoint(18, 24), streetPoint(27.5, 24),
-      streetPoint(31, 18), streetPoint(24, 16), streetPoint(12, 22),
+      streetPoint(23, 17.5), streetPoint(24, 24), streetPoint(36, 23.5),
+      streetPoint(32, 14.5), streetPoint(27, 16), streetPoint(20, 22),
     ],
   },
   shops: [

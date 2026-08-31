@@ -9,10 +9,13 @@ import { refineConcreteBarrier } from '../../render/street-barrier.js';
 import { createSedanCabin } from '../../render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../render/sedan-panels.js';
 import { createCivilianVehicle } from '../../render/civilian-vehicles.js';
+import { buildStreetVehicleAftermath } from '../../render/street-vehicle-aftermath.js';
+import { buildStreetAftermath } from '../../render/street-aftermath.js';
+import { placeCivilianVehicle } from '../../render/parked-vehicle-placement.js';
 import { buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES } from '../../render/storefront-kit.js';
 import { makeHumanoid, HUMANOID_PRESETS, _CG, _BG, pushDecor } from '../../render/models.js';
 import { Colliders } from '../../core/collision.js';
-import { World, WorldState, Triggers, addBox, addSign, makeSmokeSystem } from '../world.js';
+import { World, WorldState, Triggers, addBox, addSign, makeSmokeSystem, spawnFire } from '../world.js';
 import { BUILDING } from '../layout.js';
 import { DISTRICT } from '../district-layout.js';
 
@@ -61,19 +64,19 @@ function buildStreet() {
     const vehicle = createCivilianVehicle({ variant: parked.variant, paint: parked.color, finish: parked.finish });
     const car = vehicle.group;
     car.name = `parked-${parked.variant}-${parked.id}`;
-    car.position.set(parked.x, parked.y, parked.z);
-    car.rotation.y = parked.yaw;
-    car.updateMatrixWorld(true);
+    const placement = placeCivilianVehicle(vehicle, parked);
     const center = new THREE.Vector3(), size = new THREE.Vector3();
     car.userData.civilianVehicle = { id: parked.id, variant: parked.variant, finish: parked.finish,
-      profile: vehicle.profile, resources: vehicle.resources, visualBounds: vehicle.visualBounds };
-    car.userData.movementColliders = vehicle.movementBounds.map(localBounds => {
-      const bounds = localBounds.clone().applyMatrix4(car.matrixWorld);
+      profile: vehicle.profile, resources: vehicle.resources, visualBounds: vehicle.visualBounds,
+      worldBounds: placement.worldBounds, wheelContacts: placement.wheelContacts };
+    car.userData.movementColliders = placement.movementBounds.map(bounds => {
       bounds.getCenter(center); bounds.getSize(size);
       return Colliders.addBoxBySize(center.x, center.y, center.z, size.x, size.y, size.z);
     });
     World.add(car);
   }
+  buildStreetVehicleAftermath({ world: World, district: DISTRICT, spawnFire });
+  buildStreetAftermath({ world: World, materials: MATS, colliders: Colliders });
   for (const cover of street.cover) {
     const floor = street.road.floorY;
     const mesh = addBox(cover.x, floor + cover.height / 2, cover.z, cover.width, cover.height, cover.depth, MATS[cover.material], {

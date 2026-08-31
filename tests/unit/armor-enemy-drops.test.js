@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { Group } from 'three';
 import { ROOF } from '../../src/world/layout.js';
 import { DISTRICT } from '../../src/world/district-layout.js';
+import { createArmorPickups } from '../../src/game/armor-pickups.js';
 import { createEnemyAIHarness } from './helpers/enemy-ai-harness.js';
 
 // Exercise production spawn, damage and death against authored floor geometry.
@@ -94,6 +96,27 @@ test('armor drops use the resolved supporting floor and retain their encounter z
     assert.equal(strength, 100);
     assert.equal(zone, fixture.zone);
   }
+});
+
+test('a surviving street bruiser killed inside the bakery leaves a collectible vest', () => {
+  const point = { x: -18.75, y: DISTRICT.bakery.floorY, z: 29.5 };
+  h.reset(point);
+  h.player.armor = 0;
+  const pickups = createArmorPickups();
+  pickups.init({ world: new Group(), player: h.player, colliders: h.colliders });
+  pickups.setZone('street');
+  // Stage a pursuer that has crossed the entrance but retains its encounter
+  // ownership. The actual lethal hit and pickup manager handle its reward.
+  const survivor = h.spawn('bruiser', point, { zone: 'street' });
+  pickups.setZone('bakery');
+  assert.equal(h.damageEnemy(survivor, 50, 'head').killed, true);
+  assert.equal(h.armorDrops.length, 1);
+  const drop = pickups.spawn(...h.armorDrops[0]);
+  assert.equal(drop.zone, 'street');
+  assert.equal(drop.mesh.visible, true);
+  pickups.update(1 / 120);
+  assert.equal(h.player.armor, 100);
+  assert.equal(drop.active, false);
 });
 
 test('an unsupported armor drop retains the last known floor', () => {

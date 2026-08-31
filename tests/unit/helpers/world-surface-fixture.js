@@ -23,6 +23,9 @@ import { refineConcreteBarrier } from '../../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../../src/render/sedan-panels.js';
 import { createCivilianVehicle } from '../../../src/render/civilian-vehicles.js';
+import { buildStreetVehicleAftermath } from '../../../src/render/street-vehicle-aftermath.js';
+import { buildStreetAftermath } from '../../../src/render/street-aftermath.js';
+import { placeCivilianVehicle } from '../../../src/render/parked-vehicle-placement.js';
 import { buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES } from '../../../src/render/storefront-kit.js';
 
 function loadFunctions(path, bindings, names) {
@@ -41,7 +44,7 @@ function loadFunctions(path, bindings, names) {
  * can be attributed before material batching. Character rigs, transient effect
  * geometry and distant environmental instances are outside this fixture.
  */
-export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld() } = {}) {
+export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld(), createFireServices = null } = {}) {
   Architecture.clear(); Colliders.clear();
   const World = new THREE.Group(), materials = new Map(), additions = new Map();
   const boxes = [], decorations = [], triggers = [];
@@ -110,8 +113,8 @@ export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld() }
   }
   const WorldState = { fires: [], smokeSystems: [], flickerLights: [], bakeryLights: [] };
   const bindings = {
-    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle,
-    THREE, RoundedBoxGeometry, mergeGeometries, World, WorldState, MATS, ...caches,
+    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, placeCivilianVehicle,
+    THREE, RoundedBoxGeometry, mergeGeometries, World, WorldState, MATS, ...caches, buildStreetVehicleAftermath, buildStreetAftermath,
     Architecture, boxBounds, Colliders, Ballistics: ballistics, BUILDING, BALCONY, ROOF, OPENINGS, APARTMENT_DOORS, STAIRS, DISTRICT,
     SCAFFOLD_LEVELS, SCAFFOLD_TRIGGER_MIN_Z, createInteriorProps, createDoorAssemblies,
     addBox, addDecor, pushDecor, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, addCrtHousing, applyWaterTankStaveUV, createSedanCabin, createSedanBumper, createSedanHood,
@@ -126,9 +129,15 @@ export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld() }
     makeSmokeSystem: () => ({ points: new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()) }),
     addFlickerLight() {},
     setFireActive(entry, active) { entry.group.visible = active; },
-    spawnFire() { const group = new THREE.Group(), light = new THREE.PointLight(); group.userData.ballistics = false; group.add(light); World.add(group); return { group, light }; },
+    spawnFire(x, y, z) {
+      const group = new THREE.Group(), light = new THREE.PointLight();
+      group.position.set(x, y, z); group.userData.ballistics = false; group.add(light); World.add(group);
+      return { group, light, smoke: { points: new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()) } };
+    },
     Triggers: { add(name, min, max, onEnter, onReset) { triggers.push({ name, bounds: new THREE.Box3(min, max), onEnter, onReset }); } },
   };
+  if (createFireServices) Object.assign(bindings, createFireServices({ THREE, World, WorldState, Colliders,
+    makeSmokeSystem: bindings.makeSmokeSystem }));
   Object.assign(bindings, loadFunctions('src/world/structures.js', bindings, ['addBeam', 'addProtectiveScreen']));
   const builders = [
     ['apartment', 'apartments', 'buildPlayerApartment'], ['neighbor', 'apartments', 'buildNeighborApartment'],
@@ -152,7 +161,7 @@ export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld() }
     entry.bounds = new THREE.Box3().setFromObject(mesh);
     entries.set(mesh, entry);
   });
-  return { World, boxes, decorations, entries: [...entries.values()], records: new Map(Architecture.elements), materials, triggers, colliders: [...Colliders.list], ballistics };
+  return { World, WorldState, boxes, decorations, entries: [...entries.values()], records: new Map(Architecture.elements), materials, triggers, colliders: [...Colliders.list], ballistics };
 }
 
 const AXES = ['x', 'y', 'z'];

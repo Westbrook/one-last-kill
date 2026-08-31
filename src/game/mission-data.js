@@ -59,7 +59,7 @@ function encounter({ spawns, waves, route, stages, reinforcements, typeCaps, rea
     waveInterval: 5,
     maxAlive: 3,
     maxHeightDifference: 3.2,
-    retireLive: true,
+    retireLive: false,
     ...settings,
     variation: Object.freeze({ timingFraction: 0.18, jitterX: 0.18, jitterZ: 0.18, ...variation }),
     spawns: Object.freeze(spawns.map(point => Object.freeze(point))),

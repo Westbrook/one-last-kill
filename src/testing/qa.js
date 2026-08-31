@@ -50,7 +50,7 @@ import { Blood, FX } from '../render/effects.js';
 import { createCivilianVehicle, CIVILIAN_VEHICLE_PROFILES } from '../render/civilian-vehicles.js';
 import { getHumanoidVisualBounds, resetHumanoidPose, updateHumanoidPose } from '../render/humanoid-rig.js';
 import { HUD, IntroCard } from '../ui/hud.js';
-import { World, WorldState, Triggers, triggersUpdate } from '../world/world.js';
+import { World, WorldState, Triggers, triggersUpdate, animateFires } from '../world/world.js';
 import { Architecture } from '../world/architecture.js';
 import { APARTMENT_DOORS, BALCONY, BUILDING, OPENINGS, ROOF } from '../world/layout.js';
 import { STAIRS } from '../world/stair-layout.js';
@@ -1589,6 +1589,38 @@ export function installQA(api) {
     return 'Actual enemy damage/death creates 100% head-only and 50% body-damaged vests; active frames collect once, paused frames preserve them, weaker/equal vests never stack. 40 damage removes 30 armor; breaking hits spill only their unabsorbed damage into health. Retry restores collected 50% armor and clears spare drops. Four directly damaged enemy fixtures; no player-shot or kill credit fabricated.';
   }
 
+  function walkIntoFire(anchor, yaw, label) {
+    placeOnClearFloor({ ...anchor, yaw });
+    const health = Player.health;
+    startSimulation();
+    assert(Input.keyDown('KeyW'), `${label} uses actual forward input`);
+    try {
+      simulateUntil(() => Player.health < health, 2, `${label} must hurt the approaching capsule`);
+    } finally { Input.keyUp('KeyW'); }
+    assert(capsuleHasClearance(new Vector3(Player.pos.x, Player.pos.y - Player._eyeH, Player.pos.z),
+      Player.radius, Player.bodyHeight, Colliders.list), `${label} cannot require penetrating a solid`);
+  }
+
+  function checkContactDamage(seconds, armor, label) {
+    const health = Player.health;
+    simulateFor(seconds);
+    near(health - Player.health, 20 * seconds, `${label} applies 20 health per simulated second`, 1e-5);
+    near(Player.armor, armor, `${label} bypasses the bulletproof vest without consuming it`);
+    near(HUD.snapshot().health, Player.health, `${label} reaches the actual health HUD`);
+    assert(!document.getElementById('damageindicator').classList.contains('show')
+      && !document.getElementById('offscreenthreat').classList.contains('show'),
+    `${label} cannot invent an attacking enemy or a shot direction`);
+  }
+
+  function retreatFromFire(clear, label) {
+    assert(Input.keyDown('KeyS'), `${label} uses actual backward input`);
+    try { simulateUntil(clear, 2, `${label} must leave contact`); }
+    finally { Input.keyUp('KeyS'); }
+    const health = Player.health;
+    simulateFor(0.5);
+    near(Player.health, health, `${label} stops damaging immediately after exit`);
+  }
+
   const tests = [
     ['Silent audio policy, real mix controls and checkpoint captions', () => {
       const preferences = Settings.snapshot(), inventory = Weapons.snapshot(), supplies = AmmoSupplies.snapshot();
@@ -1630,7 +1662,9 @@ export function installQA(api) {
           assert(cue && caption && !caption.hidden, `${zone} must retain a separate visible radio subtitle`);
           same(caption.textContent, `INTERCEPTED RADIO · ${cue.text}`, `${zone} uses the authored short radio subtitle`);
           near(api.stepFrame(STEP), 0, 'Paused checkpoint inspection cannot advance audio or gameplay');
-          startSimulation(); simulateStep(); pauseSilently();
+          startSimulation(); simulateStep();
+          near(Player.health, 100, `${zone} checkpoint starts outside active fire contact`);
+          pauseSilently();
           assertSilent();
         }
         same(Weapons.snapshot(), inventory, 'Mix changes and checkpoint cues cannot corrupt inventory');
@@ -1706,6 +1740,105 @@ export function installQA(api) {
       same(CombatStats.snapshot(), before, 'Explicit fixture damage never fabricates player combat credit');
       same(Weapons.snapshot(), inventory, 'The health presentation never changes the loadout');
       return 'Real damage path crosses 40/39/20/19 HP, persistent cue survives damage-flash expiry, pause hides it, an actual health pickup recovers it, death/retry clears it; disclosed fixture damage, no fabricated combat credit';
+    }],
+    ['Apartment fire contact bypasses armor without stacking, pausing or lingering', () => {
+      controlledArea('apartment');
+      const before = CombatStats.snapshot();
+      const fires = WorldState.fires.filter(fire => fire.active && fire.collider
+        && fire.group.position.y === BUILDING.apartmentY && fire.group.position.z === -0.9);
+      assert(fires.length === 2 && fires.every(fire => fire.damageBounds?.isBox3),
+        'Both authored apartment fires must register world-space damage bounds');
+      assert(fires.every(fire => fire.damageBounds.min.x < -6.5 && fire.damageBounds.max.x > -6.5),
+        'The physical contact probe must touch the overlapping fire interval');
+      // Disclosed inventory fixture: the same earned-armor checkpoint path
+      // must restore a vest even though it offers no protection from heat.
+      Player.armor = 100; HUD.setArmor(100); saveCheckpoint('apartment');
+      walkIntoFire({ x: -6.5, y: BUILDING.apartmentY, z: -3 }, Math.PI, 'Apartment overlap');
+      checkContactDamage(0.5, 100, 'Overlapping apartment flames');
+      near(Player.pos.z, -2.07, 'The real collision solver holds the player against the fire face', 0.02);
+      const pausedHealth = Player.health, pausedTime = GameTime.elapsed;
+      pauseSilently();
+      near(api.stepFrame(4), 0, 'Paused contact cannot advance fire damage');
+      near(Player.health, pausedHealth, 'Paused flames preserve health');
+      near(GameTime.elapsed, pausedTime, 'Paused flames preserve the simulation clock');
+      startSimulation();
+      checkContactDamage(0.25, 100, 'Resumed contact without catch-up');
+      retreatFromFire(() => Player.pos.z < -2.5, 'Backing away from apartment flames');
+
+      // A one-HP specimen makes the actual environmental death path quick;
+      // only subsequent real contact, not direct fixture damage, kills it.
+      Player.health = 1; HUD.setHealth(1);
+      walkIntoFire({ x: -6.5, y: BUILDING.apartmentY, z: -3 }, Math.PI, 'Lethal apartment approach');
+      simulateUntil(() => PlayerState.dead, 0.3, 'Remaining in apartment fire must kill a one-HP player');
+      near(Player.health, 0, 'Fire death clamps health to zero');
+      assert(!Input.active && document.getElementById('deathscreen').classList.contains('show'),
+        'Fire death follows the normal pause and retry dialog');
+      near(api.stepFrame(2), 0, 'Dead fire contact cannot advance another frame');
+      near(Player.health, 0, 'Dead fire contact cannot damage below zero');
+      assert(restartFromZone(), 'The real checkpoint must restore a fire death');
+      WaveDirector.reset(); Enemies.clearAll();
+      startSimulation(); simulateFor(0.5);
+      near(Player.health, 100, 'Retry places the player safely outside the flames with no retained burn');
+      near(Player.armor, 100, 'Retry restores the checkpoint vest');
+      assertNoPlayerCombatCredit(before);
+      return 'Real W input meets both apartment blockers at solver tangency; 20 HP/s once, armor untouched, pause discards time, S retreat stops damage. A disclosed one-HP specimen dies through actual fire; normal retry restores safe full health and the seeded vest. No enemy/shot feedback or combat credit';
+    }],
+    ['Neighbor breach fire hurts after creation and retry, but not after full reset', () => {
+      controlledArea('neighbor');
+      const fire = WorldState.fires.find(entry => entry.group.name === 'neighbor-breach-fire');
+      assert(fire?.active && fire.collider && fire.damageBounds?.isBox3,
+        'The actual neighbor trigger must create an active fire hazard');
+      const bounds = fire.damageBounds;
+      walkIntoFire(CHECKPOINTS.neighbor, Math.PI / 2, 'Neighbor breach gate');
+      checkContactDamage(0.5, 0, 'Dynamic neighbor gate contact');
+      near(Player.pos.x, -1.78, 'The closed gate stops the real capsule at its east face', 0.02);
+      retreatFromFire(() => Player.pos.x > -1.2, 'Backing away from the closed breach');
+      pauseSilently();
+      assert(restartFromZone(), 'A neighbor checkpoint retry must succeed after fire contact');
+      assert(fire.active && fire.damageBounds === bounds, 'Checkpoint retry retains the same closed, damaging gate');
+      WaveDirector.reset(); Enemies.clearAll();
+      walkIntoFire(CHECKPOINTS.neighbor, Math.PI / 2, 'Retried neighbor gate');
+      checkContactDamage(0.25, 0, 'Gate contact after checkpoint retry');
+
+      freshApartment();
+      controlledArea('apartment');
+      assert(!fire.active && !fire.group.visible, 'A full mission reset must disable the cached fire');
+      placeOnClearFloor({ x: -4.22, y: BUILDING.apartmentY, z: -6 });
+      startSimulation(); simulateFor(0.5);
+      near(Player.health, 100, 'The inactive cached fire cannot burn at its old west contact boundary');
+      assert(!Triggers.list.find(entry => entry.name === 'neighbor').fired,
+        'The inactive contact probe stays on the apartment side of the trigger');
+      controlledArea('neighbor');
+      assert(WorldState.fires.find(entry => entry.group.name === 'neighbor-breach-fire') === fire
+        && fire.active && fire.damageBounds === bounds, 'Reentering reactivates the same hazard and bounds');
+      walkIntoFire(CHECKPOINTS.neighbor, Math.PI / 2, 'Reactivated neighbor gate');
+      checkContactDamage(0.25, 0, 'Gate contact after reentry');
+      return 'Actual neighbor entry creates the hot blocking gate; W contact hurts and S retreat stops it. Retry preserves its hazard, full reset makes the cached volume harmless, and reentry reuses/reactivates it';
+    }],
+    ['Street wreck burns on contact while checkpoint and bakery approaches stay safe', () => {
+      controlledStreet();
+      const fire = WorldState.fires.find(entry => entry.group.name === 'street-wreck-engine-fire');
+      assert(fire?.active && fire.collider === null && fire.damageBounds?.isBox3,
+        'The visible wreck fire must have a damage volume even without a separate movement collider');
+      Player.armor = 100; HUD.setArmor(100); saveCheckpoint('street');
+      walkIntoFire({ x: -3.5, y: DISTRICT.street.road.floorY, z: 23.75 }, -Math.PI / 2, 'Street wreck');
+      checkContactDamage(0.5, 100, 'Nonblocking wreck flames');
+      retreatFromFire(() => Player.pos.x < -3.3, 'Backing away from the wreck');
+      pauseSilently();
+      assert(restartFromZone(), 'Street checkpoint retry must clear previous contact feedback');
+      WaveDirector.reset(); Enemies.clearAll(); StreetChoice.reset(); Endings.reset();
+      startSimulation(); simulateFor(0.5);
+      near(Player.health, 100, 'Street checkpoint restores health outside the wreck hazard');
+      near(Player.armor, 100, 'Wreck contact did not consume the saved vest');
+      for (const anchor of [
+        { x: -3.5, y: DISTRICT.street.road.floorY, z: 20 },
+        { x: -18.75, y: DISTRICT.street.farWalk.floorY, z: 26.5 },
+        DISTRICT.car.approach,
+      ]) {
+        placeOnClearFloor(anchor); simulateFor(0.25);
+        near(Player.health, 100, `Clear street route at ${anchor.x},${anchor.z} stays outside fire contact`);
+      }
+      return 'The real addCollider:false wreck flame applies 20 HP/s through armor, stops on physical retreat and leaves no burn after retry. Street checkpoint, road crossing, bakery approach and Gnucci approach stay safe';
     }],
     ['Settings and Field Notes prevent starting play', () => {
       api.setInspection(false);
@@ -2996,6 +3129,44 @@ export function installQA(api) {
       ], 'District and bakery access route');
       return 'Actual capsule reaches the car approach, crosses the expanded road, steps onto the far pavement and walks through both bakery rooms without passing through counters or the partition';
     }],
+    ['Walking from the scaffold exit commits the bakery without selecting the car', () => {
+      controlledArea('scaffolding');
+      // Isolate route/trigger behavior by pausing ordinary arrivals. Player
+      // input, gravity, collision, branch selection and final arrivals are real.
+      placeOnClearFloor({ x: 24, y: 1.5, z: 5.2 });
+      const before = CombatStats.snapshot();
+      const visited = new Set();
+      startSimulation();
+      for (const [x, z] of [[24, 10], [24, 18.7], [-18.75, 18.7], [-18.75, 28.4]]) {
+        const startDistance = Math.hypot(x - Player.pos.x, z - Player.pos.z);
+        Player.yaw = Math.atan2(Player.pos.x - x, Player.pos.z - z);
+        Player.pitch = 0;
+        assert(Input.keyDown('KeyW'), 'The bakery route requires real walking input');
+        try {
+          simulateUntil(() => Math.hypot(x - Player.pos.x, z - Player.pos.z) < 0.15,
+            startDistance / 3 + 3, 'Walk to bakery waypoint ' + x + ',' + z, () => {
+              const state = getMissionState();
+              visited.add(state.zone);
+              assert(state.ending.mode !== 'car', 'Leaving the scaffold or crossing west cannot choose the car');
+              if (!Endings.isCommitted()) {
+                WaveDirector.stop();
+                near(Player.health, 100, 'The real scaffold-to-bakery route stays clear of open flames');
+              }
+              Player.yaw = Math.atan2(Player.pos.x - x, Player.pos.z - z);
+            });
+        } finally { Input.keyUp('KeyW'); }
+      }
+      pauseSilently();
+      const state = getMissionState();
+      assert(visited.has('street') && visited.has('bakery'), 'Walking must fire the real street and bakery triggers');
+      same(state.ending.mode, 'bakery', 'The physical bakery approach selects protector');
+      same(state.checkpoint.branch, 'bakery', 'The protector checkpoint is saved');
+      near(state.ending.total, FINAL_ENCOUNTERS.bakery.totalContacts, 'All eighteen raiders remain authored');
+      assert(state.ending.spawned > 0 && !state.ending.resolved && state.ending.deadline > 0,
+        'The bakery encounter and countdown must actually start');
+      assertNoPlayerCombatCredit(before);
+      return 'Real W input walks off the last scaffold deck, crosses west and enters the bakery. Both triggers fire, protector commits, its raiders/countdown start, and car remains unselected. Ordinary arrivals paused for this route fixture';
+    }],
     ['Floor ammo boxes stay supported and conserve their finite budgets through E', () => {
       controlledArea('balcony');
       same(AmmoSupplies.list.map(entry => entry.id).sort(), ['balcony-reserve', 'roof-east-reserve', 'roof-west-reserve'],
@@ -3975,6 +4146,36 @@ export function installQA(api) {
       catch { /* Preserve the original inspection failure. */ }
       report('fail', error instanceof Error ? error.message : String(error));
     }
+  }
+
+  function inspectStreetAftermath(view = 'overview') {
+    if (busy || disposed) return;
+    try {
+      checkpointAt('street');
+      ui.select.value = 'street';
+      visualFixtureActive = true;
+      document.body.classList.add('qa-scene-inspection');
+      const framing = {
+        overview: { eye: [9, 1.78, 18], target: [-4, 1.15, 26.8] },
+        market: { eye: [-6.5, 1.78, 24.7], target: [-3.5, 0.5, 27.6] },
+        deli: { eye: [-16, 1.86, 25.65], target: [-14.1, 0.95, 28.2] },
+        wreck: { eye: [-5.8, 1.78, 21.3], target: [-0.8, 1.05, 23.6] },
+      }[view];
+      Player.pos.fromArray(framing.eye);
+      pointCameraAt(new Vector3(...framing.target));
+      const wreckFire = WorldState.fires.find(entry => entry.group.name === 'street-wreck-engine-fire');
+      // A newly built fire normally gets its first texture paint on a live
+      // tick. Force that initial visual sample for this paused inspection.
+      for (const patch of wreckFire?.fires ?? []) patch._lastPaint = -Infinity;
+      animateFires(GameTime.elapsed, 0);
+      pausedRender();
+      report('ready', [...sceneDescription('street'),
+        `STREET AFTERMATH · ${view} · paused review placement`,
+        'Actual tilted vehicles, scorch finish, engine fire/smoke, curved skids and supported storefront debris.',
+        `Wreck fire active ${wreckFire?.active} · visible ${wreckFire?.group.visible} · smoke visible ${wreckFire?.smoke.points.visible}`,
+        'Fire texture sampled at the current simulation time; no gameplay or sound advanced. Reset before play.']);
+      assertSilent();
+    } catch (error) { report('fail', error instanceof Error ? error.message : String(error)); }
   }
 
   function inspectFurniture({ kitchen = false } = {}) {
@@ -4978,6 +5179,10 @@ export function installQA(api) {
   }
 
   ui.button(ui.inspectionRow, 'Inspect area', 'qa-inspect', inspect);
+  ui.button(ui.inspectionRow, 'Inspect street aftermath', 'qa-street-aftermath', () => inspectStreetAftermath());
+  ui.button(ui.inspectionRow, 'Inspect burning car', 'qa-street-wreck', () => inspectStreetAftermath('wreck'));
+  ui.button(ui.inspectionRow, 'Inspect market spill', 'qa-street-market', () => inspectStreetAftermath('market'));
+  ui.button(ui.inspectionRow, 'Inspect deli damage', 'qa-street-deli', () => inspectStreetAftermath('deli'));
   ui.button(ui.inspectionRow, 'Inspect furniture', 'qa-furniture-inspect', inspectFurniture);
   ui.button(ui.inspectionRow, 'Inspect kitchen finishes', 'qa-kitchen-inspect', () => inspectFurniture({ kitchen: true }));
   ui.quality.addEventListener('change', () => {

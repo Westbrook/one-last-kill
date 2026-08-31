@@ -10,7 +10,7 @@ import { selectEncounterSpawn, selectEncounterFrontPair } from '../../src/game/e
 import { describeOffscreenThreat } from '../../src/game/offscreen-threats.js';
 import { hasPairBearingSeparation, isBehindPlayer } from '../../src/game/rear-encounter-rules.js';
 import { isSegmentOccluded } from '../../src/game/combat-rules.js';
-import { enemyPoolCapacity } from '../../src/game/enemy-navigation.js';
+import { enemyCampaignPoolCapacity } from '../../src/game/enemy-navigation.js';
 import { Architecture } from '../../src/world/architecture.js';
 import { Colliders, capsuleHasClearance } from '../../src/core/collision.js';
 import { createEnemyAIHarness } from './helpers/enemy-ai-harness.js';
@@ -433,13 +433,46 @@ test('a director reset restores rear roles, timers and cursors without retaining
   assert.equal(next.pos.equals(originalPosition), true);
 });
 
-test('the existing shared rig pools cover the strongest possible concentration of rear melee arrivals', () => {
-  const configs = [...Object.values(ZONE_WAVE_CONFIG), ...Object.values(FINAL_ENCOUNTERS)];
+test('the campaign rig pools cover the strongest possible concentration of rear melee arrivals', () => {
+  const configs = Object.entries(ZONE_WAVE_CONFIG).filter(([zone]) => zone !== 'bakery').map(([, config]) => config);
   for (const type of ['brawler', 'thug']) {
     for (const config of Object.values(ZONE_WAVE_CONFIG).filter(value => value.rearPressure)) {
-      const capacity = enemyPoolCapacity(type, configs);
+      const capacity = enemyCampaignPoolCapacity(type, configs, Object.values(FINAL_ENCOUNTERS));
       assert.ok(capacity >= config.maxAlive + 2, `${type}: two dead rigs cannot exhaust rear arrival capacity`);
       assert.equal(ai.EnemyPool.pools[type].length, capacity);
     }
   }
+});
+
+test('actual pools retain checkpoint survivors and recent corpses while either finale acquires its contacts', () => {
+  // Each case concentrates one archetype while other contacts are defeated.
+  // Stair melee includes weapon downgrades; scaffold survivors share its cap.
+  const cases = [
+    { type: 'gunman', finale: 'bakery', contacts: 5, survivors: { neighbor: 1, stairwell: 2, roof: 3, scaffolding: 3, street: 5 } },
+    { type: 'brawler', finale: 'bakery', contacts: 3, survivors: { apartment: 1, neighbor: 1, balcony: 3, stairwell: 2, roof: 1, scaffolding: 2, street: 2 } },
+    { type: 'bruiser', finale: 'car', contacts: 2, survivors: { roof: 2, scaffolding: 1, street: 2 } },
+  ];
+  for (const { type, finale, contacts, survivors } of cases) {
+    ai.reset(CHECKPOINTS.street);
+    const corpses = Array.from({ length: 2 }, () => ai.spawn(type, CHECKPOINTS.street, { zone: 'street' }));
+    for (const enemy of corpses) assert.equal(ai.damageEnemy(enemy, 9999, 'body', enemy.pos.clone()).killed, true);
+    const retained = [];
+    for (const [zone, count] of Object.entries(survivors)) {
+      assert.ok(count <= ZONE_WAVE_CONFIG[zone].maxAlive);
+      for (let index = 0; index < count; index++) retained.push(ai.spawn(type, CHECKPOINTS[zone], { zone }));
+    }
+    const finaleZone = finale === 'car' ? 'street' : 'bakery';
+    for (let index = 0; index < contacts; index++) ai.spawn(type, CHECKPOINTS[finaleZone], { zone: finaleZone });
+    assert.equal(ai.Enemies.list.length, retained.length + contacts + 2);
+    for (const enemy of retained) {
+      assert.equal(enemy.alive, true, `${type}: a previous checkpoint's survivor keeps living`);
+      assert.equal(enemy.removed, false);
+      assert.equal(enemy.poolSlot.owner, enemy);
+    }
+    for (const corpse of corpses) {
+      assert.equal(corpse.removed, false, `${type}: finale capacity includes two recent corpses`);
+      assert.equal(corpse.poolSlot.owner, corpse);
+    }
+  }
+  ai.reset();
 });

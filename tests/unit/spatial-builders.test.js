@@ -23,6 +23,9 @@ import { refineConcreteBarrier } from '../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../src/render/sedan-panels.js';
 import { createCivilianVehicle } from '../../src/render/civilian-vehicles.js';
+import { buildStreetVehicleAftermath } from '../../src/render/street-vehicle-aftermath.js';
+import { buildStreetAftermath } from '../../src/render/street-aftermath.js';
+import { placeCivilianVehicle } from '../../src/render/parked-vehicle-placement.js';
 import { buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES } from '../../src/render/storefront-kit.js';
 
 // Execute the authored builders with real Three.js math/geometry and injected
@@ -83,15 +86,16 @@ function buildFixture() {
   }
   const WorldState = { bakeryLights: [], smokeSystems: [], flickerLights: [], fires: [] };
   const bindings = {
-    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle,
+    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, placeCivilianVehicle,
     THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, BALCONY, ROOF, APARTMENT_DOORS, DISTRICT, createInteriorProps, createDoorAssemblies,
-    World, WorldState, MATS, _CG, _BG, Colliders,
+    World, WorldState, MATS, _CG, _BG, Colliders, buildStreetVehicleAftermath, buildStreetAftermath,
     addBox, addWallZ, addSign, pushDecor, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, addCrtHousing, createSedanCabin, createSedanBumper, createSedanHood,
     addDecor: (x, y, z, sx, sy, sz, material) => addBox(x, y, z, sx, sy, sz, material, { collide: false }),
     makeSignTexture: () => new THREE.Texture(),
     makeHumanoid: () => new THREE.Group(), HUMANOID_PRESETS: { shopkeeper: {} },
     Triggers: { add() {} }, setFireActive() {}, addFlickerLight() {},
-    spawnFire() { return { group: new THREE.Group(), light: new THREE.PointLight() }; },
+    spawnFire() { return { group: new THREE.Group(), light: new THREE.PointLight(),
+      smoke: { points: new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()) } }; },
     makeSmokeSystem: () => ({ points: new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()) }),
   };
   const apartments = loadBuilder('../../src/world/zones/apartments.js', bindings, ['buildPlayerApartment', 'buildNeighborApartment']);

@@ -161,7 +161,7 @@ function paintFireCanvas(fire, t) {
   fire.tex.needsUpdate = true;
 }
 
-// Spawn a fire patch: animated billboards + point light + smoke particles + hot collider.
+// Spawn a fire patch with contact damage independent of its optional movement barrier.
 function spawnFire(x, y, z, opts = {}) {
   const o = Object.assign({ width: 1.4, height: 1.8, blockHeight: 2.0, blockWidth: 1.6, blockDepth: null, color: 0xffa040, intensity: 3.8, addCollider: true }, opts);
   // blockDepth (z-size) defaults to blockWidth so legacy callers stay square.
@@ -195,7 +195,16 @@ function spawnFire(x, y, z, opts = {}) {
   const collider = o.addCollider
     ? Colliders.addBoxBySize(x, y + o.blockHeight / 2, z, o.blockWidth, o.blockHeight, o.blockDepth)
     : null;
-  const entry = { group, fires: [fireA, fireB], light, smoke, collider, active: true, baseIntensity: o.intensity };
+  // A blocking flame must hurt at the surface movement can actually reach.
+  // Unblocked flames (such as the wreck's hood) use their visible envelope;
+  // smoke and light ranges never enlarge the contact area.
+  const damageBounds = collider ? collider.clone() : new THREE.Box3(
+    new THREE.Vector3(x - o.width / 2, y, z - o.width / 2),
+    new THREE.Vector3(x + o.width / 2, y + o.height, z + o.width / 2),
+  );
+  const damageSource = new THREE.Vector3(x, y + o.height / 2, z);
+  const entry = { group, fires: [fireA, fireB], light, smoke, collider, damageBounds, damageSource,
+    active: true, baseIntensity: o.intensity };
   WorldState.fires.push(entry);
   if (o.active === false) setFireActive(entry, false);
   return entry;

@@ -1,6 +1,7 @@
 import { createAudioPolicy } from './audio-policy.js';
 import { AUDIO_BUSES, DEFAULT_AUDIO_MIX, normalizeAudioMix, audioSurface, surfaceSoundProfile, describeAudioEvent } from './audio-model.js';
 import { createScoreScheduler } from './audio-score.js';
+import { createStreetAtmosphereScheduler } from './street-atmosphere.js';
 import { createSampleBank } from './audio-samples.js';
 import { createLocalSpeechAdapter } from './local-speech.js';
 import { WEAPON_TIMBRES, renderWeaponReport } from './weapon-timbres.js';
@@ -36,6 +37,7 @@ export function createAudioController({
 } = {}) {
   const policy = createAudioPolicy({ search, webdriver });
   const score = createScoreScheduler();
+  const streetAtmosphere = createStreetAtmosphereScheduler();
   const voices = new Set();
   const noiseCache = new Map();
   const weaponCache = new Map();
@@ -72,7 +74,7 @@ export function createAudioController({
       radioActive: Boolean(currentRadio), radioWaiting: Boolean(currentRadio?.waiting), radioQueued: radioQueue.length,
       resources: { voices: voices.size, maxVoices: MAX_VOICES, noiseBuffers: noiseCache.size,
         weaponBuffers: weaponCache.size * SHOT_VARIANTS, samples: samples.snapshot() },
-      elapsed, score: score.snapshot(),
+      elapsed, score: score.snapshot(), streetAtmosphere: streetAtmosphere.snapshot(),
     };
   }
   function notify() { onChange(getStatus()); }
@@ -120,12 +122,14 @@ export function createAudioController({
     return voice;
   }
   function own(voice, node) { voice.nodes.push(node); return node; }
-  function route(voice, output, pan = 0) {
-    if (Math.abs(pan) > 0.005 && typeof ctx.createStereoPanner === 'function') {
+  function route(voice, output, pan = 0, spatial = false) {
+    if ((spatial || Math.abs(pan) > 0.005) && typeof ctx.createStereoPanner === 'function') {
       const panner = own(voice, ctx.createStereoPanner());
       panner.pan.value = clamp(pan, -1, 1);
       output.connect(panner).connect(buses[voice.bus]);
+      return panner;
     } else output.connect(buses[voice.bus]);
+    return null;
   }
   function envelope(param, now, duration, gain, attack = 0.003) {
     param.setValueAtTime(FLOOR_GAIN, now);
@@ -188,7 +192,7 @@ export function createAudioController({
   function tone(bus, {
     frequency = 120, endFrequency = frequency, duration = 0.14, gain = 0.1,
     waveform = 'sine', cutoff = 0, delay = 0, pan = 0, attack = 0.004, loop = false,
-    destination = null,
+    destination = null, spatial = false,
   } = {}) {
     if (!canPlay(bus) || gain <= FLOOR_GAIN) return null;
     const voice = makeVoice(bus, true, loop);
@@ -205,9 +209,18 @@ export function createAudioController({
       const filter = own(voice, ctx.createBiquadFilter());
       filter.type = 'lowpass'; filter.frequency.value = cutoff;
       output = output.connect(filter);
+      voice.filter = filter;
     }
     output.connect(gainNode);
-    if (destination) gainNode.connect(destination); else route(voice, gainNode, pan);
+    let routedGain = gainNode;
+    if (spatial) {
+      // Distance/ducking changes must not cancel the authored pulse envelope.
+      voice.spatialGain = own(voice, ctx.createGain());
+      voice.spatialGain.gain.value = 0;
+      gainNode.connect(voice.spatialGain);
+      routedGain = voice.spatialGain;
+    }
+    if (destination) routedGain.connect(destination); else voice.panner = route(voice, routedGain, pan, spatial);
     voice.gain = gainNode;
     source.start(now);
     if (!loop) { voice.endsAt = now + duration + 0.02; source.stop(voice.endsAt); }
@@ -352,7 +365,7 @@ export function createAudioController({
   }
   function reset() {
     ambientWanted = false; fireWanted = false;
-    checkpointHistory.clear(); score.reset(); elapsed = 0; currentZone = ''; listener = null;
+    checkpointHistory.clear(); score.reset(); streetAtmosphere.reset(); elapsed = 0; currentZone = ''; listener = null;
     return suspend();
   }
 
@@ -530,7 +543,47 @@ export function createAudioController({
   function stopAmbient() {
     ambientWanted = false;
     if (ambient) for (const voice of Object.values(ambient)) if (voice) disposeVoice(voice, true);
+    for (const voice of [...voices]) if (voice.atmosphere) disposeVoice(voice, true);
+    streetAtmosphere.reset();
     ambient = null;
+  }
+  function streetScene(profile, zone, threat) {
+    const scene = describeAudioEvent({ pos: profile.pos }, listener);
+    const indoors = zone === 'bakery';
+    const pressure = clamp(finite(threat, 0), 0, 1);
+    // Radio remains the foreground voice. Fighting also pushes these distant
+    // details well below weapon reports, without changing the ambience slider.
+    const duck = currentRadio ? 0.12 : 1 - pressure * 0.8;
+    scene.gain *= listener ? duck * (indoors ? 0.3 : 1) : 0;
+    scene.cutoff = profile.cutoff * (indoors ? 0.5 : 1);
+    return scene;
+  }
+  function placeStreetVoice(voice, scene, immediate = false) {
+    setParam(voice.spatialGain.gain, scene.gain, immediate);
+    if (voice.panner) setParam(voice.panner.pan, scene.pan, immediate);
+    if (voice.filter) setParam(voice.filter.frequency, scene.cutoff, immediate);
+  }
+  function tickStreetAtmosphere(dt, zone, threat) {
+    const inDistrict = zone === 'street' || zone === 'bakery';
+    for (const voice of [...voices]) {
+      if (!voice.atmosphere) continue;
+      if (!inDistrict) disposeVoice(voice, true);
+      else placeStreetVoice(voice, streetScene(voice.atmosphere, zone, threat));
+    }
+    for (const profile of streetAtmosphere.advance(dt, {
+      zone, threat, radioActive: Boolean(currentRadio), enabled: ambientWanted && canPlay('ambience'),
+    })) {
+      const scene = streetScene(profile, zone, threat);
+      // Atmosphere never steals the last effect slots from an active fight.
+      if (scene.gain <= FLOOR_GAIN || voices.size >= MAX_VOICES - 8) continue;
+      const voice = tone('ambience', { ...profile, spatial: true, pan: scene.pan });
+      if (!voice) continue;
+      voice.atmosphere = profile;
+      for (const step of profile.frequencyAutomation) {
+        voice.source.frequency.linearRampToValueAtTime(step.frequency, ctx.currentTime + step.time);
+      }
+      placeStreetVoice(voice, scene, true);
+    }
   }
   function startFireCrackle() {
     fireWanted = true;
@@ -674,6 +727,7 @@ export function createAudioController({
       }
     }
     if (!currentRadio && radioQueue.length && canPlay('radio')) startRadio(radioQueue.shift());
+    tickStreetAtmosphere(step, zone, state?.threat);
     for (const note of score.advance(step, { zone, threat: state?.threat, enabled: canPlay('music') })) {
       tone('music', { ...note, attack: note.kind === 'pad' ? 0.4 : 0.009 });
     }

@@ -17,7 +17,7 @@ import { MAX_ARMOR, armorStrengthAfterHit } from './armor-rules.js';
 import { Blood, FX } from '../render/effects.js';
 import { applyPlayerDamage, surfaceTopAt } from './mission.js';
 import { ZONE_WAVE_CONFIG, FINAL_ENCOUNTERS } from './mission-data.js';
-import { EnemyNavigationPlanner, createNavigationAgent, enemyPoolCapacity, investigationMemorySeconds, updateSightCache } from './enemy-navigation.js';
+import { EnemyNavigationPlanner, createNavigationAgent, enemyCampaignPoolCapacity, investigationMemorySeconds, updateSightCache } from './enemy-navigation.js';
 import { createStairPursuit, stairPursuitWaypoint, stairPursuitMemorySeconds, resetStairPursuit, primeEnemyInvestigation } from './stair-pursuit.js';
 import {
   CORPSE_LIMIT, CORPSE_LIFETIME, damageForHit, advanceAttackWindup,
@@ -131,9 +131,13 @@ const EnemyPool = {
     // warmCharacters after the full pool exists. Bounds proxies stay hidden.
   },
   _poolSize(type) {
-    // Zones and finale branches do not coexist, but survivors can span waves.
-    // Two corpse slots preserve aftermath; acquire can reclaim older corpses.
-    return enemyPoolCapacity(type, [...Object.values(ZONE_WAVE_CONFIG), ...Object.values(FINAL_ENCOUNTERS)]);
+    // Crossing checkpoints keeps living actors, so each zone reserves its
+    // simultaneous cap. Bakery entry immediately starts its shared finale
+    // roster; it does not need a second normal-zone allocation. Only one
+    // finale can run, and two corpse slots are reserved across the whole run.
+    return enemyCampaignPoolCapacity(type,
+      Object.entries(ZONE_WAVE_CONFIG).filter(([zone]) => zone !== 'bakery').map(([, config]) => config),
+      Object.values(FINAL_ENCOUNTERS));
   },
   acquire(type) {
     const arr = this.pools[type];
@@ -822,10 +826,19 @@ function killEnemy(enemy, hitPos) {
   if (enemy.armorStrength > 0) {
     ArmorPickups.spawn(enemy.pos.x, enemy.floorY, enemy.pos.z, enemy.armorStrength, enemy.zone);
   }
-  const fallAxis = enemy.zone === 'balcony'
-    ? enemy.pos.z >= BALCONY.wrap.z1 ? 'x' : 'z'
-    : null;
-  const fallRegion = enemy.zone === 'balcony' ? fallAxis === 'x' ? BALCONY.wrap : BALCONY.east : null;
+  // Encounter identity survives checkpoint crossings. Constrain a corpse to
+  // balcony rails only when its actual death position is on that gallery.
+  let fallRegion = null;
+  if (Math.abs(enemy.floorY - BALCONY.floorY) <= 0.05) {
+    for (const region of [BALCONY.wrap, BALCONY.east]) {
+      if (enemy.pos.x >= region.x1 && enemy.pos.x <= region.x2
+        && enemy.pos.z >= region.z1 && enemy.pos.z <= region.z2) {
+        fallRegion = region;
+        break;
+      }
+    }
+  }
+  const fallAxis = fallRegion === BALCONY.wrap ? 'x' : fallRegion ? 'z' : null;
   beginHumanoidCollapse(enemy.mesh, enemy.yaw, enemy.floorY, fallAxis, enemy.deathLean, fallRegion);
   if (hitPos) Blood.spawn(hitPos.x, hitPos.y, hitPos.z, 18, 1.1);
   // Drop weapon if not already done.

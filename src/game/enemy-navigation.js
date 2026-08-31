@@ -8,16 +8,26 @@ const FOOTPRINT = [[1, 0], [0, 1], [-1, 0], [0, -1], [0.7071, 0.7071], [-0.7071,
 const EMPTY = Object.freeze([]);
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
-/** Survivors can overlap waves; finals and per-type caps use the same rule. */
+/** Peak for alternative encounters, including survivors across their waves. */
 export function enemyPoolCapacity(type, encounters, corpseReserve = 2) {
   let alive = 0;
   for (const encounter of encounters) {
-    const count = (encounter.waves ?? []).reduce((total, wave) => total + wave.filter(value => value === type).length, 0);
+    // Turning during a pressure encounter can replace an armed contact with
+    // melee. Those survivors still need their final archetype's pooled rig.
+    const canReplace = encounter.rearPressure && (type === 'brawler' || type === 'thug');
+    const count = (encounter.waves ?? []).reduce((total, wave) => total + wave.filter(value =>
+      value === type || (canReplace && (type === 'brawler' || value !== 'brawler'))).length, 0);
     const limit = Math.max(0, encounter.maxAlive ?? 0);
     const typeLimit = encounter.typeCaps?.[type] ?? limit;
     alive = Math.max(alive, Math.min(count, limit, typeLimit));
   }
   return alive + Math.max(0, corpseReserve);
+}
+
+/** Every checkpoint may leave survivors; only one finale is ever selected. */
+export function enemyCampaignPoolCapacity(type, encounters, finales, corpseReserve = 2) {
+  const survivors = encounters.reduce((total, encounter) => total + enemyPoolCapacity(type, [encounter], 0), 0);
+  return survivors + enemyPoolCapacity(type, finales, corpseReserve);
 }
 
 export function createNavigationAgent() {
