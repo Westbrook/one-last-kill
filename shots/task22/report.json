@@ -1,0 +1,87 @@
+{
+  "fpsResults": [
+    {
+      "zone": "apartment",
+      "alive": true,
+      "fps": 16.5,
+      "frames": 50,
+      "tris": 2964,
+      "calls": 102,
+      "geom": 433,
+      "tex": 34
+    },
+    {
+      "zone": "neighbor",
+      "alive": true,
+      "fps": 16.9,
+      "frames": 51,
+      "tris": 8206,
+      "calls": 114,
+      "geom": 453,
+      "tex": 43
+    },
+    {
+      "zone": "balcony",
+      "alive": true,
+      "fps": 6.4,
+      "frames": 20,
+      "tris": 42736,
+      "calls": 1208,
+      "geom": 571,
+      "tex": 63
+    },
+    {
+      "zone": "stairwell",
+      "alive": true,
+      "fps": 11.5,
+      "frames": 36,
+      "tris": 41620,
+      "calls": 1378,
+      "geom": 604,
+      "tex": 70
+    },
+    {
+      "zone": "roof",
+      "alive": true,
+      "fps": 33.6,
+      "frames": 101,
+      "tris": 3152,
+      "calls": 39,
+      "geom": 605,
+      "tex": 71
+    },
+    {
+      "zone": "scaffolding",
+      "alive": true,
+      "fps": 11.9,
+      "frames": 36,
+      "tris": 19252,
+      "calls": 453,
+      "geom": 605,
+      "tex": 71
+    },
+    {
+      "zone": "street",
+      "alive": true,
+      "fps": 13.3,
+      "frames": 40,
+      "tris": 20336,
+      "calls": 379,
+      "geom": 605,
+      "tex": 71
+    },
+    {
+      "zone": "bakery",
+      "alive": true,
+      "fps": 13,
+      "frames": 40,
+      "tris": 39884,
+      "calls": 883,
+      "geom": 606,
+      "tex": 74
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "exceptions": []
+}
