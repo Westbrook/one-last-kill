@@ -45,16 +45,21 @@ body:has(#deathscreen.show) #touch-controls { display: none; }
 .touch-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .touch-button[data-pressed="true"] { color: #fff5d8; background: rgb(148 78 47 / 82%); border-color: #e3b28a; }
 .touch-button[aria-pressed="true"] { box-shadow: inset 0 -3px 0 #e3b28a; }
-.touch-utility, .touch-stance, .touch-actions { position: absolute; display: flex; gap: var(--touch-gap); }
+.touch-utility, .touch-stance, .touch-actions, .touch-motion-controls { position: absolute; display: flex; gap: var(--touch-gap); z-index: 1; }
 .touch-utility { top: var(--touch-top); right: var(--touch-right); }
 .touch-utility .touch-button { height: 48px; min-height: 48px; }
+.touch-motion-controls { top: calc(var(--touch-top) + 56px); right: var(--touch-right); }
+.touch-motion-controls .touch-button { width: 72px; height: 48px; }
+.touch-motion-controls svg { width: 18px; height: 18px; }
+.touch-motion-status { position: absolute; top: calc(var(--touch-top) + 112px); right: var(--touch-right); max-width: 185px; text-align: right; color: #edeade; font: 8px/1.4 var(--mono); text-shadow: 0 1px 6px #000; }
 .touch-pause { width: 66px; flex-direction: row; }
 .touch-pause svg { width: 16px; height: 16px; }
 .touch-stance { bottom: calc(var(--touch-bottom) + var(--stick-size) + 14px); left: var(--touch-left); }
-.touch-stick { position: absolute; left: var(--touch-left); bottom: var(--touch-bottom); width: var(--stick-size); height: var(--stick-size); border: 1px solid rgb(235 231 220 / 35%); border-radius: 50%; background: rgb(14 18 14 / 32%); }
+.touch-move { position: absolute; left: var(--touch-left); bottom: var(--touch-bottom); width: var(--stick-size); height: var(--stick-size); }
+.touch-stick { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--stick-size); height: var(--stick-size); border: 1px solid rgb(235 231 220 / 35%); border-radius: 50%; background: rgb(14 18 14 / 32%); pointer-events: none; }
 .touch-stick-ring { position: absolute; inset: 16%; border: 1px solid rgb(235 231 220 / 12%); border-radius: 50%; pointer-events: none; }
 .touch-stick-thumb { position: absolute; top: 50%; left: 50%; width: 36%; height: 36%; border: 1px solid rgb(235 231 220 / 60%); border-radius: 50%; background: rgb(235 231 220 / 16%); transform: translate(-50%, -50%); pointer-events: none; }
-.touch-stick[data-pressed="true"] .touch-stick-thumb { background: rgb(235 231 220 / 34%); border-color: #eee8d6; }
+.touch-move[data-pressed="true"] .touch-stick-thumb { background: rgb(235 231 220 / 34%); border-color: #eee8d6; }
 .touch-stick-label { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font: 8px var(--mono); letter-spacing: .15em; color: rgb(235 231 220 / 65%); pointer-events: none; }
 .touch-actions { bottom: var(--touch-bottom); right: var(--touch-right); display: grid; grid-template-columns: repeat(3, var(--touch-size)); grid-template-rows: repeat(3, var(--touch-size)); }
 /* Hiding firearm sights must not shift the other thumb targets. */
@@ -65,6 +70,16 @@ body:has(#deathscreen.show) #touch-controls { display: none; }
 .touch-jump { grid-column: 3; grid-row: 3; }
 .touch-fire { grid-column: 2 / 4; grid-row: 1 / 3; width: 100%; height: 100%; border-radius: 50%; background: rgb(78 39 28 / 55%); border-color: rgb(226 176 148 / 65%); font-size: 10px; letter-spacing: .16em; gap: 10px; }
 .touch-fire svg { width: 34px; height: 34px; }
+
+/* Motion permission replaces both touch look surfaces with a compact trigger. */
+#touch-controls[data-aim-mode="motion"] .touch-look { display: none; pointer-events: none; }
+#touch-controls[data-aim-mode="motion"] .touch-actions { grid-template-rows: repeat(2, var(--touch-size)); }
+#touch-controls[data-aim-mode="motion"] .touch-fire { grid-column: 2; grid-row: 1; border-radius: 12px; font-size: 8px; letter-spacing: .05em; gap: 5px; }
+#touch-controls[data-aim-mode="motion"] .touch-fire svg { width: 22px; height: 22px; }
+#touch-controls[data-aim-mode="motion"] .touch-use { grid-column: 3; grid-row: 1; }
+#touch-controls[data-aim-mode="motion"] .touch-reload,
+#touch-controls[data-aim-mode="motion"] .touch-melee,
+#touch-controls[data-aim-mode="motion"] .touch-jump { grid-row: 2; }
 
 /* Keep health, ammunition, and prompts clear of the thumb areas. */
 body[data-touch-controls="true"] #vitals { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 232px); width: 144px; }
@@ -100,7 +115,7 @@ body[data-touch-controls="true"] #ragecue { position: fixed; top: max(85px, calc
   body[data-touch-controls="true"] #mission-caption p { font-size: 11px; }
 }
 @media (max-width: 760px) {
-  body[data-touch-controls="true"] .audio-button { top: max(68px, calc(env(safe-area-inset-top) + 64px)); right: max(12px, env(safe-area-inset-right)); }
+  body[data-touch-controls="true"] .audio-button { top: max(68px, calc(env(safe-area-inset-top) + 64px)); right: calc(max(12px, env(safe-area-inset-right)) + 160px); }
   .close-panel { min-width: 44px; min-height: 44px; }
 }
 .setting-row:has(#settingtouchcontrols) { position: relative; }
@@ -111,13 +126,15 @@ label[for="settingtouchcontrols"]::after { content: ""; position: absolute; inse
   .touch-button { font-size: 7px; }
   .touch-pause { width: 60px; }
   body[data-touch-controls="true"] .objective-group { width: calc(100vw - 190px); }
-  body[data-touch-controls="true"] .audio-button { top: max(68px, calc(env(safe-area-inset-top) + 64px)); right: max(12px, env(safe-area-inset-right)); }
+  body[data-touch-controls="true"] .audio-button { top: max(68px, calc(env(safe-area-inset-top) + 64px)); right: calc(max(12px, env(safe-area-inset-right)) + 160px); }
   body[data-touch-controls="true"] #vitals { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 184px); }
   body[data-touch-controls="true"] #weaponbox { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 176px); }
 }
 
 /* Landscape phones need a scrollable menu and briefing before play. */
 @media (max-height: 500px) {
+  .touch-motion-controls { top: auto; bottom: var(--touch-bottom); left: 50%; right: auto; transform: translateX(-50%); }
+  .touch-motion-status { top: auto; bottom: calc(var(--touch-bottom) + 54px); left: 50%; right: auto; width: 185px; transform: translateX(-50%); text-align: center; }
   #overlay { overflow-y: auto; }
   .menu-content { position: relative; top: auto; left: auto; transform: none; margin: 68px 8vw 80px; width: 84vw; }
   .menu-kicker { margin-bottom: 14px; }

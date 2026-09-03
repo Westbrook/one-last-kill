@@ -106,6 +106,9 @@ export function createInputState() {
       if (Number.isFinite(dx)) this._touchDX += dx;
       if (Number.isFinite(dy)) this._touchDY += dy;
     },
+    clearTouchLook() {
+      this._touchDX = this._touchDY = 0;
+    },
     touchButton(action, down) {
       if (!this.active || !Object.hasOwn(TOUCH_ACTIONS, action)) return false;
       if (!down) return this._touchButtons.delete(action);
