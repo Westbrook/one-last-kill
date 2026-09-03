@@ -920,7 +920,8 @@ export function installQA(api) {
       // Explicit QA-only supersampling enables reproducible comparisons even
       // when the browser's device-pixel ratio changes. Never stored in Settings.
       renderer.setPixelRatio(scale);
-      renderer.setSize(innerWidth, innerHeight, false);
+      const { width, height } = renderer.domElement.getBoundingClientRect();
+      renderer.setSize(Math.max(1, width), Math.max(1, height), false);
     }
   }
   function restoreGameplayScale() {
@@ -1702,9 +1703,12 @@ export function installQA(api) {
         same(label.textContent, level === 'critical' ? 'CRITICAL HEALTH' : level === 'low' ? 'LOW HEALTH' : '',
           'Warning text does not rely solely on color');
         if (level !== 'normal') {
-          const rect = cue.getBoundingClientRect(), style = globalThis.getComputedStyle(cue);
-          near(rect.width, innerWidth, 'Health cue spans the actual viewport width', 1);
-          near(rect.height, innerHeight, 'Health cue spans the actual viewport height', 1);
+          const rect = cue.getBoundingClientRect(), viewport = renderer.domElement.getBoundingClientRect();
+          const style = globalThis.getComputedStyle(cue);
+          near(rect.width, viewport.width, 'Health cue spans the actual play viewport width', 1);
+          near(rect.height, viewport.height, 'Health cue spans the actual play viewport height', 1);
+          near(rect.left, viewport.left, 'Health cue aligns with the play viewport horizontally', 1);
+          near(rect.top, viewport.top, 'Health cue aligns with the play viewport vertically', 1);
           same(style.visibility, 'visible', 'The cue is visible during scene play/inspection');
           same(style.pointerEvents, 'none', 'The cue never intercepts aiming or interaction');
           same(style.animationName, 'none', 'The persistent warning does not flash or animate');

@@ -33,7 +33,7 @@ const ROUTES = {
 };
 
 let marker, caption, captionTime = 0, routeIndex = 0;
-let pendingRadio = null;
+let pendingRadio = null, radioResumeTime = 0;
 const projected = new THREE.Vector3();
 const toward = new THREE.Vector3();
 const forward = new THREE.Vector3();
@@ -48,7 +48,7 @@ export function initNavigation() {
   caption.setAttribute('role', 'status');
   caption.setAttribute('aria-atomic', 'true');
   caption.innerHTML = '<span></span><p></p><small class="radio-caption"></small>';
-  document.getElementById('hud').append(caption);
+  document.getElementById('mission-comms').append(caption);
   onZoneChange(zone => {
     routeIndex = 0;
     if (RunSettings.snapshot().mode === 'defense') {
@@ -62,6 +62,7 @@ export function initNavigation() {
     caption.querySelector('span').textContent = line[0];
     caption.querySelector('p').textContent = line[1];
     pendingRadio = CHECKPOINT_COMMS[zone] ?? null;
+    radioResumeTime = 0;
     const radioCaption = caption.querySelector('.radio-caption');
     radioCaption.hidden = !pendingRadio;
     radioCaption.textContent = pendingRadio ? `INTERCEPTED RADIO · ${pendingRadio.text}` : '';
@@ -125,6 +126,7 @@ export function updateNavigation(dt) {
   // A restore can change the zone while paused. Play only its current cue on
   // the next simulation step; inspection and muted sessions never speak.
   if (pendingRadio && dt > 0 && !Endings.isResolved()) {
+    radioResumeTime += dt;
     const status = Audio.getStatus();
     const resuming = status.active && status.supported && !status.muted && !status.hardMuted
       && !status.blocked && !status.running && status.mix.master > 0 && status.mix.radio > 0;
@@ -134,9 +136,14 @@ export function updateNavigation(dt) {
     if (!resuming) {
       Audio.announceCheckpoint(pendingRadio);
       pendingRadio = null;
-    } else if (captionTime <= 4.5) pendingRadio = null;
+    } else if (radioResumeTime >= 1.5) pendingRadio = null;
   }
-  captionTime = Math.max(0, captionTime - dt);
+  // Urgent status readouts share the story's slot. Give the interrupted story
+  // its remaining reading time; the separate radio subtitle stays visible.
+  if (!document.getElementById('message').classList.contains('show')
+    && !document.getElementById('pickupprompt').classList.contains('show')) {
+    captionTime = Math.max(0, captionTime - dt);
+  }
   caption.classList.toggle('show', captionTime > 0);
   const next = target();
   marker.hidden = !next;

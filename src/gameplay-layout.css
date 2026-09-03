@@ -1,0 +1,150 @@
+/* A stable communication rail sits outside the camera viewport. Messages never
+   resize the view, and HUD bearings remain relative to the actual canvas. */
+:root {
+  --play-top: calc(104px + env(safe-area-inset-top));
+  --readout-left: max(16px, env(safe-area-inset-left));
+  --readout-right: max(16px, env(safe-area-inset-right));
+  --readout-utilities: 130px;
+}
+body[data-touch-controls="true"] { --readout-utilities: 258px; --play-top: calc(144px + env(safe-area-inset-top)); }
+body #game { position: fixed; inset: var(--play-top) 0 0; height: calc(100% - var(--play-top)); }
+body #hud { top: var(--play-top); }
+body #deathscreen { position: fixed; }
+
+#mission-readout {
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--play-top);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  align-items: center;
+  gap: 20px;
+  padding: calc(10px + env(safe-area-inset-top)) calc(var(--readout-right) + var(--readout-utilities)) 10px var(--readout-left);
+  background: #111610;
+  border-bottom: 1px solid #414a37;
+  pointer-events: none;
+}
+#mission-readout .objective-group { position: static; width: auto; max-width: none; min-width: 0; display: grid; text-shadow: none; }
+#mission-readout .hud-eyebrow, #mission-readout #missionmeter { display: none; }
+#mission-readout .objective-meta { grid-row: 1; margin: 0 0 7px; font-size: 8px; gap: 8px; }
+#mission-readout #objective, #mission-readout #banner { grid-row: 2; grid-column: 1; max-width: none; font: 500 12px/1.4 var(--body); letter-spacing: .02em; overflow-wrap: anywhere; }
+#mission-readout #banner { position: static; width: auto; padding: 0; transform: none; text-align: left; text-shadow: none; visibility: hidden; transition: none; }
+#mission-readout #banner.show { visibility: visible; }
+#mission-readout #banner small { display: none; }
+#mission-readout #banner > span { font: inherit; letter-spacing: inherit; }
+#mission-readout .objective-group:has(#banner.show) #objective { visibility: hidden; }
+
+#mission-comms { min-width: 0; }
+#mission-readout #message { display: none; position: static; width: auto; transform: none; text-align: left; font: 500 12px/1.4 var(--body); letter-spacing: .02em; color: #edcf9e; text-shadow: none; transition: none; overflow-wrap: anywhere; }
+#mission-readout #message.show { display: block; }
+#mission-readout #pickupprompt { display: none; position: static; max-width: none; padding: 0; border: 0; transform: none; text-align: left; background: none; color: #d9e9c7; font: 500 12px/1.4 var(--body); letter-spacing: .02em; transition: none; }
+#mission-readout #pickupprompt.show { display: block; }
+#mission-comms:has(#message.show) #pickupprompt { display: none; }
+#mission-readout #mission-caption { display: none; position: static; width: auto; max-width: none; padding: 0; transform: none; text-align: left; background: none; transition: none; }
+#mission-readout #mission-caption.show { display: block; }
+#mission-readout #mission-caption > span { display: block; font: 8px/1.3 var(--mono); letter-spacing: .1em; }
+#mission-readout #mission-caption p { margin: 4px 0 0; font: 12px/1.4 var(--body); text-shadow: none; }
+#mission-readout #mission-caption .radio-caption { margin-top: 5px; font: 9px/1.3 var(--body); letter-spacing: .04em; }
+#mission-comms:has(#message.show) #mission-caption > span,
+#mission-comms:has(#message.show) #mission-caption p,
+#mission-comms:has(#pickupprompt.show) #mission-caption > span,
+#mission-comms:has(#pickupprompt.show) #mission-caption p { display: none; }
+
+/* Choice summaries use the same rail; movement still commits either route. */
+body #choice { inset: env(safe-area-inset-top) calc(var(--readout-right) + var(--readout-utilities)) auto var(--readout-left); height: 104px; padding: 10px 0; gap: 20px; align-items: center; background: #111610; }
+body #choice .opt { width: 50%; min-width: 0; padding: 0; border: 0; background: none; }
+body #choice .choice-number { font-size: 7px; letter-spacing: .07em; }
+body #choice .h { margin-top: 4px; font: 500 13px/1.2 var(--body); }
+body #choice .b { margin-top: 4px; font: 10px/1.3 var(--body); }
+body #choice .k { margin-top: 5px; font-size: 7px; letter-spacing: .02em; }
+body:has(#choice.show) #mission-readout > * { visibility: hidden; opacity: 0; }
+
+body #compass { top: 12px; }
+body #offscreenthreat[data-direction="ABOVE"] { top: 58px; }
+body #fps { top: 12px; }
+body #killmessage { top: auto; bottom: 18px; }
+body #touch-controls { top: var(--play-top); }
+.touch-look { inset: 0 0 0 40%; }
+.touch-utility { position: fixed; }
+.touch-motion-controls { position: fixed; }
+.touch-motion-status { position: fixed; top: calc(env(safe-area-inset-top) + 124px); max-width: 200px; }
+body[data-touch-controls="true"] #ragecue { position: absolute; top: auto; bottom: calc(100% + 8px); left: 0; width: 180px; max-width: 100%; transform: none; padding: 6px; }
+body[data-touch-controls="true"] #ragehint { display: none; }
+body[data-touch-controls="true"] .rage-heading { gap: 4px; }
+body[data-touch-controls="true"] #ragelabel { font-size: 9px; }
+body[data-touch-controls="true"] .touch-look-hint { top: 18%; }
+
+@media (max-width: 760px) and (orientation: portrait) {
+  :root { --play-top: calc(156px + env(safe-area-inset-top)); --readout-left: max(12px, env(safe-area-inset-left)); --readout-right: max(12px, env(safe-area-inset-right)); }
+  #mission-readout { display: block; padding: calc(12px + env(safe-area-inset-top)) var(--readout-right) 8px var(--readout-left); }
+  body[data-touch-controls="true"] { --play-top: calc(176px + env(safe-area-inset-top)); }
+  body[data-touch-controls="true"] #mission-readout { padding-top: calc(64px + env(safe-area-inset-top)); }
+  #mission-readout .objective-meta { width: calc(100% - 202px); min-width: 82px; min-height: 36px; margin-bottom: 4px; flex-direction: column; justify-content: flex-start; gap: 4px; font-size: 7px; }
+  body[data-touch-controls="true"] #mission-readout .objective-meta { width: calc(100% - 44px); min-height: 10px; flex-direction: row; justify-content: space-between; }
+  #mission-readout #objective, #mission-readout #banner { font-size: 11px; line-height: 1.3; }
+  #mission-comms { margin-top: 8px; }
+  #mission-readout #mission-caption p, #mission-readout #message, #mission-readout #pickupprompt { font-size: 11px; line-height: 1.3; }
+  #mission-readout #mission-caption p { margin-top: 3px; }
+  #mission-readout #mission-caption .radio-caption { margin-top: 3px; }
+  body #compass { display: none; }
+  body[data-touch-controls="true"] .audio-button { top: calc(var(--play-top) - 32px); right: var(--readout-right); width: 32px; min-width: 32px; height: 24px; }
+  .touch-motion-controls { top: var(--touch-top); bottom: auto; left: var(--touch-left); right: auto; transform: none; gap: 6px; }
+  .touch-motion-controls .touch-button { width: 48px; font-size: 6px; }
+  .touch-motion-status { top: calc(var(--play-top) - 16px); bottom: auto; left: var(--readout-left); right: var(--readout-right); width: auto; max-width: none; transform: none; text-align: left; font-size: 8px; }
+  body #choice { inset: calc(env(safe-area-inset-top) + 62px) var(--readout-right) auto var(--readout-left); height: 88px; gap: 12px; padding: 0; }
+  body #choice .b { font-size: 9px; }
+  body #choice .k { font-size: 6px; }
+  body:has(#choice.show) #mission-readout .objective-meta { visibility: visible; }
+  body[data-touch-controls="true"] #choice { top: calc(env(safe-area-inset-top) + 86px); }
+  /* The touch button already presents the ready action. Keep its active timer
+     in the gap between the two vital readouts, even on short portrait phones. */
+  body[data-touch-controls="true"] #ragecue[data-state="available"] { display: none; }
+  body[data-touch-controls="true"] #ragecue[data-state="active"] { position: fixed; top: calc(var(--play-top) + 8px); bottom: auto; left: 50%; width: 56px; padding: 4px; transform: translateX(-50%); }
+  body[data-touch-controls="true"] #ragecue[data-state="active"] #ragelabel { font-size: 7px; }
+  body[data-touch-controls="true"] #ragecue[data-state="active"] #ragecountdown { font-size: 11px; }
+}
+
+@media (max-width: 380px) and (orientation: portrait) {
+  :root { --play-top: calc(168px + env(safe-area-inset-top)); }
+  body[data-touch-controls="true"] { --play-top: calc(192px + env(safe-area-inset-top)); }
+}
+
+@media (max-height: 500px) and (orientation: landscape), (max-width: 760px) and (orientation: landscape) {
+  :root { --readout-left: max(12px, env(safe-area-inset-left)); --readout-right: max(12px, env(safe-area-inset-right)); --readout-utilities: 100px; }
+  body[data-touch-controls="true"] { --readout-utilities: 200px; --play-top: calc(104px + env(safe-area-inset-top)); }
+  #touch-controls { --touch-size: 48px; --touch-gap: 6px; --stick-size: 100px; }
+  .touch-motion-controls { top: auto; bottom: var(--touch-bottom); left: 50%; right: auto; transform: translateX(-50%); }
+  .touch-motion-status { top: auto; bottom: calc(var(--touch-bottom) + 54px); left: 50%; right: auto; width: 185px; transform: translateX(-50%); text-align: center; }
+  #mission-readout { gap: 12px; padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: 8px; }
+  #mission-readout #objective, #mission-readout #banner, #mission-readout #message, #mission-readout #pickupprompt { font-size: 10px; line-height: 1.3; }
+  #mission-readout #mission-caption p { font-size: 11px; line-height: 1.3; }
+  #mission-readout .objective-meta { font-size: 7px; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+  #mission-readout #mission-caption > span { font-size: 7px; }
+  #mission-readout #mission-caption .radio-caption { font-size: 8px; }
+  body[data-touch-controls="true"] .audio-button { top: calc(env(safe-area-inset-top) + 68px); right: var(--readout-right); height: 28px; }
+  body #compass, body #playerstatus, body .weapon-hint, body #combatsummary { display: none; }
+  body #vitals, body[data-touch-controls="true"] #vitals { top: 4px; bottom: auto; left: var(--readout-left); width: 100px; }
+  body #weaponbox, body[data-touch-controls="true"] #weaponbox { top: 4px; bottom: auto; right: var(--readout-right); min-width: 104px; }
+  body #healthtext, body #ammocurrent { font-size: 20px; }
+  body .vital-readout { gap: 5px; }
+  body .vital-meter { margin: 3px 0 0; height: 11px; }
+  body #healthbar { inset: 4px; }
+  body #armorfill { border-width: 2px; }
+  body #armorreadout { position: absolute; top: 2px; left: calc(100% + 8px); margin: 0; font-size: 7px; white-space: nowrap; }
+  body #healthwarning { position: absolute; top: 16px; left: calc(100% + 8px); margin: 0; font-size: 6px; white-space: nowrap; }
+  body .weapon-meta { display: none; }
+  body #weaponname { font-size: 12px; }
+  body #ammo { margin-top: 2px; font-size: 16px; }
+  body #ammoreserve { font-size: 12px; }
+  body #reloadindicator { top: 43px; bottom: auto; font-size: 8px; }
+  body #ragecue, body[data-touch-controls="true"] #ragecue { position: absolute; top: 32px; bottom: auto; left: calc(100% + 8px); width: 100px; padding: 3px; transform: none; }
+  body #ragekey { font-size: 6px; }
+  body #ragelabel { font-size: 7px; }
+  body #ragehint { display: none; }
+  body #choice { gap: 12px; }
+  body #choice .choice-number { display: none; }
+  body #choice .h { font-size: 11px; }
+  body #choice .b { font-size: 9px; }
+  body #choice .k { font-size: 6px; }
+  body #offscreenthreat, body #offscreenthreat[data-direction], body[data-touch-controls="true"] #offscreenthreat[data-direction] { top: 4px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%); max-width: calc(100vw - 270px); }
+}

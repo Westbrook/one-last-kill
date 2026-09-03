@@ -27,11 +27,18 @@
       <div id="vignette" aria-hidden="true"></div>
       <div id="healthvignette" data-level="normal" aria-hidden="true" hidden></div>
       <div id="bloodvignette" aria-hidden="true"></div>
-      <div class="objective-group">
-        <div class="hud-eyebrow"><span class="objective-marker" aria-hidden="true"></span> <span>01 / LITTLE SICILY</span></div>
-        <div class="objective-meta"><span id="chapterlabel">APARTMENT</span><span id="missionprogress">01 / 08</span></div>
-        <div id="objective" role="status">Get out. The fire is spreading.</div>
-        <progress id="missionmeter" value="1" max="8" aria-label="Mission route progress"></progress>
+      <div id="mission-readout" aria-label="Mission communications">
+        <div class="objective-group">
+          <div class="hud-eyebrow"><span class="objective-marker" aria-hidden="true"></span> <span>01 / LITTLE SICILY</span></div>
+          <div class="objective-meta"><span id="chapterlabel">APARTMENT</span><span id="missionprogress">01 / 08</span></div>
+          <div id="objective" role="status">Get out. The fire is spreading.</div>
+          <div id="banner" role="status" aria-atomic="true"><small></small><span></span></div>
+          <progress id="missionmeter" value="1" max="8" aria-label="Mission route progress"></progress>
+        </div>
+        <div id="mission-comms">
+          <div id="message" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div id="pickupprompt" role="status"></div>
+        </div>
       </div>
 
       <div id="compass" aria-label="Compass heading">
@@ -48,8 +55,6 @@
         <span class="threat-copy"><span id="offscreenthreatlabel"></span><span id="offscreenthreatcount" hidden></span></span>
       </div>
       <div id="killmessage" aria-hidden="true"></div>
-      <div id="banner" role="status"><small></small><span></span></div>
-      <div id="message" role="status" aria-live="polite"></div>
 
       <div id="vitals" data-low="false" data-health-warning="normal">
         <div id="ragecue" data-state="inactive" role="status" aria-live="polite" aria-atomic="false" aria-hidden="true" hidden>
@@ -75,7 +80,6 @@
         <div class="weapon-hint"><kbd>R</kbd> RELOAD <span></span> <kbd>V</kbd> MELEE</div>
       </div>
 
-      <div id="pickupprompt" role="status"></div>
       <div id="fps" aria-label="Performance statistics">— FPS</div>
 
       <section id="deathscreen" aria-labelledby="deathtitle" aria-hidden="true">

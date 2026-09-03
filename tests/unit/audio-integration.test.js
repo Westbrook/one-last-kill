@@ -233,9 +233,9 @@ function navigationHarness(audio, run = {}) {
   function element() {
     const children = new Map(), classes = new Set();
     return {
-      id: '', textContent: '', hidden: false, style: {}, attributes: {},
+      id: '', textContent: '', hidden: false, style: {}, attributes: {}, parentElement: null,
       setAttribute(key, value) { this.attributes[key] = value; },
-      append(child) { nodes.set(child.id, child); },
+      append(child) { child.parentElement = this; nodes.set(child.id, child); },
       querySelector(selector) {
         if (!children.has(selector)) children.set(selector, element());
         return children.get(selector);
@@ -249,6 +249,11 @@ function navigationHarness(audio, run = {}) {
     };
   }
   nodes.set('hud', element());
+  for (const id of ['mission-comms', 'message', 'pickupprompt']) {
+    const node = element();
+    node.id = id;
+    nodes.get(id === 'mission-comms' ? 'hud' : 'mission-comms').append(node);
+  }
   const camera = new THREE.PerspectiveCamera(82, 16 / 9, 0.05, 300);
   const Player = { pos: new THREE.Vector3(-9, 5.72, -4), yaw: 0, _eyeH: 1.72 };
   camera.position.copy(Player.pos); camera.updateMatrixWorld(true);
@@ -426,6 +431,42 @@ test('all eight actual checkpoint captions match local radio IDs and announce on
   }
 });
 
+test('status and pickup interruptions preserve story reading time and the separate checkpoint radio subtitle', () => {
+  const { audio, calls } = lockedAudio(), h = navigationHarness(audio);
+  h.changeZone('neighbor');
+  const caption = h.nodes.get('mission-caption'), status = h.nodes.get('message');
+  const speaker = caption.querySelector('span'), story = caption.querySelector('p');
+  const radio = caption.querySelector('.radio-caption');
+  assert.equal(caption.parentElement, h.nodes.get('mission-comms'), 'Story and status occupy the communications dock');
+  assert.equal(h.nodes.get('route-marker').parentElement, h.nodes.get('hud'), 'Route projection stays in the play viewport');
+  const original = { speaker: speaker.textContent, story: story.textContent, radio: radio.textContent };
+  h.updateNavigation(2);
+  status.textContent = 'INCOMING · DINING ROOM';
+  status.classList.add('show');
+  h.updateNavigation(10);
+  assert.equal(caption.classList.contains('show'), true, 'A status occupying the story slot cannot spend its reading time');
+  assert.deepEqual({ speaker: speaker.textContent, story: story.textContent, radio: radio.textContent }, original);
+  assert.equal(radio.hidden, false);
+  assert.equal(radio.textContent, 'INTERCEPTED RADIO · ' + CHECKPOINT_COMMS.neighbor.text);
+  assert.equal(h.announcements.length, 1, 'An interrupted story never replays its checkpoint voice');
+  status.classList.remove('show');
+  const pickup = h.nodes.get('pickupprompt');
+  pickup.textContent = '[USE] PICK UP SHOTGUN';
+  pickup.classList.add('show');
+  h.updateNavigation(10);
+  assert.equal(caption.classList.contains('show'), true, 'A persistent pickup prompt also preserves the story reading time');
+  assert.deepEqual({ speaker: speaker.textContent, story: story.textContent, radio: radio.textContent }, original);
+  assert.equal(radio.hidden, false);
+  assert.equal(h.announcements.length, 1);
+  pickup.classList.remove('show');
+  h.updateNavigation(0);
+  h.updateNavigation(3.9);
+  assert.equal(caption.classList.contains('show'), true, 'Reading resumes with the four seconds left before interruption');
+  h.updateNavigation(0.11);
+  assert.equal(caption.classList.contains('show'), false, 'The story relinquishes the dock when its remaining time ends');
+  assertLocked(audio, calls);
+});
+
 test('tower defense suppresses campaign routes, dialogue and checkpoint radio in either arena', async () => {
   for (const arena of ['roof', 'street']) {
     const output = outputDouble(), audio = createAudioController(output);
@@ -485,7 +526,7 @@ test('actual navigation waits for an asynchronous resume without consuming the c
   await audio.reset();
 });
 
-test('actual navigation expires an unresolved resume after bounded simulation time and never plays its stale cue', async () => {
+test('a status interruption cannot extend the bounded radio resume window or replay its stale cue', async () => {
   const output = outputDouble();
   let finishResume;
   output.context.resume = () => new Promise(resolve => {
@@ -495,11 +536,14 @@ test('actual navigation expires an unresolved resume after bounded simulation ti
   audio.setVoiceEnabled(true); audio.setMuted(false);
   const pending = audio.resume();
   h.changeZone('balcony');
+  h.nodes.get('message').classList.add('show');
   for (let frame = 0; frame < Math.ceil((1.5 + STEP * 2) / STEP); frame++) h.updateNavigation(STEP);
   assert.equal(h.announcements.length, 0);
+  assert.equal(h.nodes.get('mission-caption').classList.contains('show'), true, 'Interrupted story time is retained independently');
   finishResume(); await pending;
   h.updateNavigation(STEP);
   assert.equal(h.announcements.length, 0); assert.equal(output.calls.speech.length, 0);
+  h.nodes.get('message').classList.remove('show');
   h.changeZone('stairwell'); h.updateNavigation(STEP);
   assert.equal(output.calls.speech.length, 1); assert.equal(output.calls.speech[0].text, CHECKPOINT_COMMS.stairwell.text);
   await audio.reset();

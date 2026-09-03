@@ -389,6 +389,40 @@ test('switching from a firearm to fists clears the ammunition presentation', () 
   assert.equal(hud.snapshot().weapon, 'FISTS');
 });
 
+test('transient status messages release the communications slot when their simulation time expires', () => {
+  const { hud, element } = fixture();
+  const message = element('message');
+  hud.message('CHECKPOINT RESTORED', 2);
+  assert.equal(message.textContent, 'CHECKPOINT RESTORED');
+  assert.equal(message.classList.contains('show'), true);
+  assert.equal(message.style.opacity, '1');
+  hud.update(0);
+  hud.update(1.5);
+  assert.equal(message.classList.contains('show'), true);
+  hud.message('INCOMING · DINING ROOM', 1);
+  hud.update(0.75);
+  assert.equal(message.textContent, 'INCOMING · DINING ROOM');
+  assert.equal(message.classList.contains('show'), true, 'The replacement owns its full lifetime');
+  hud.update(0.25);
+  assert.equal(message.classList.contains('show'), false, 'Expiry allows the interrupted story to return');
+  assert.equal(message.style.opacity, '0');
+});
+
+test('feedback clearing and death transitions release the communications slot immediately', () => {
+  const { hud, element } = fixture();
+  const message = element('message');
+  for (const clear of [() => hud.clearFeedback(), () => hud.showDeath(true), () => hud.showDeath(false)]) {
+    hud.message('CONTACTS DOWN · CATCH YOUR BREATH', 10);
+    hud.update(1);
+    assert.equal(message.classList.contains('show'), true);
+    clear();
+    assert.equal(message.classList.contains('show'), false);
+    assert.equal(message.style.opacity, '0');
+    hud.update(20);
+    assert.equal(message.classList.contains('show'), false, 'A cleared status cannot retain or reclaim the story slot');
+  }
+});
+
 test('clearing or dismissing feedback also hides stale reload and pickup announcements', () => {
   const { hud, element } = fixture();
   hud.setReloading(true);

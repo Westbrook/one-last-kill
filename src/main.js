@@ -37,6 +37,7 @@ import { RunSettings } from './game/run-settings.js';
 import { HealthRegeneration } from './game/health-regeneration.js';
 import { ThreatFeedback } from './game/threat-feedback.js';
 import { initNavigation, updateNavigation } from './game/navigation.js';
+import './gameplay-layout.css';
 import { Blood, FX } from './render/effects.js';
 
 const clock = new FixedStepClock();

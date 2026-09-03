@@ -134,6 +134,7 @@ const HUD = (() => {
     messageTimer = bloodOpacity = hitTimer = killTimer = directionTimer = 0;
     bloodEl.style.opacity = '0';
     messageEl.style.opacity = '0';
+    messageEl.classList.remove('show');
     hitEl.classList.remove('show', 'killed', 'headshot');
     killEl.classList.remove('show');
     directionEl.classList.remove('show');
@@ -214,6 +215,7 @@ const HUD = (() => {
     message(text, seconds = 2.5) {
       write(messageEl, text);
       messageEl.style.opacity = '1';
+      messageEl.classList.add('show');
       messageTimer = Math.max(0.1, nonNegative(seconds, 2.5));
     },
     bloodFlash(strength = 1) {
@@ -313,7 +315,10 @@ const HUD = (() => {
     },
     update(dt) {
       const delta = nonNegative(dt);
-      if (messageTimer > 0 && (messageTimer -= delta) <= 0) messageEl.style.opacity = '0';
+      if (messageTimer > 0 && (messageTimer -= delta) <= 0) {
+        messageEl.style.opacity = '0';
+        messageEl.classList.remove('show');
+      }
       if (bloodOpacity > 0) {
         bloodOpacity = Math.max(0, bloodOpacity - delta * 1.6);
         bloodEl.style.opacity = bloodOpacity.toFixed(3);
