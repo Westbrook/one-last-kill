@@ -44,9 +44,10 @@ function makeGripSleeve(root, rig) {
   rig.armBasis = new THREE.Matrix4(); rig.inverseArm = new THREE.Quaternion();
 }
 function makeHand(root, side, radius = null) {
-  const materials = getHandMaterials(), geometry = getHandArmGeometry(), label = side < 0 ? 'left' : 'right';
+  const surfaceGeometry = getAuthoredHandGeometry(side, radius), geometry = getHandArmGeometry(), label = side < 0 ? 'left' : 'right';
+  const materials = getHandMaterials({ authored: surfaceGeometry.userData.authoredHand?.finish === 'blender-baked-v2' });
   const hand = new THREE.Group(); hand.name = `${label}-hand`;
-  const surface = new THREE.Mesh(getAuthoredHandGeometry(side, radius), materials.hand);
+  const surface = new THREE.Mesh(surfaceGeometry, materials.hand);
   surface.name = `${label}-authored-hand`; surface.frustumCulled = false; hand.add(surface);
   const anatomy = createHandDigits(side, radius);
   const sleeve = new THREE.Mesh(geometry.sleeve, materials.sleeve);

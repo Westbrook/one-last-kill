@@ -7,6 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Architecture, boxBounds, signYaw } from '../../src/world/architecture.js';
 import { SCAFFOLD_LEVELS, SCAFFOLD_TRIGGER_MIN_Z, BALCONY } from '../../src/world/layout.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
+import { createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh } from '../../src/render/authored-world-dressing.js';
 
 // Run the actual authored builder and structural helpers with real geometry,
 // collision and registry services. Only rendering/material/canvas services are
@@ -35,6 +36,7 @@ function fixture() {
   }
   const bindings = {
     THREE, mergeGeometries, MATS, World, Architecture, boxBounds, Colliders,
+    createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh,
     SCAFFOLD_LEVELS, SCAFFOLD_TRIGGER_MIN_Z, _BG: { unitBox }, addBox,
     makeCanvas() { throw new Error('Scaffold rail frames should not require a canvas'); },
     addDecor: (x, y, z, sx, sy, sz, mat) => addBox(x, y, z, sx, sy, sz, mat, { collide: false }),

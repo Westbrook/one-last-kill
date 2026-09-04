@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { normalsFromHeights } from './surface-detail.js';
+import { AUTHORED_HAND_FINISH_PROFILE, getAuthoredHandFinishMaps } from './authored-hand-finish.js';
 
 const SIZE = 256, HALF = SIZE / 2, CLOTH_SIZE = 128, GUTTER = 8;
 const TAU = Math.PI * 2;
@@ -8,7 +9,7 @@ const smooth = value => value * value * (3 - 2 * value);
 const ramp = (low, high, value) => smooth(clamp((value - low) / (high - low), 0, 1));
 const band = (value, center, width) => Math.exp(-(((value - center) / width) ** 2));
 const wrappedDistance = (value, center) => Math.min(Math.abs(value - center), 1 - Math.abs(value - center));
-let shared = null;
+let shared = null, authored = null, armMaterials = null;
 
 /**
  * Actual texture UVs, with eight texels of padding around each region. Albedo
@@ -195,17 +196,8 @@ function clothMaps() {
   };
 }
 
-/**
- * Shared, bake-once resources: 960 KiB of base RGBA maps (1.25 MiB with mips).
- * Sleeve and cuff share their maps; no canvas, image decode, or frame updates.
- * The caller owns geometry, but should not dispose these shared materials/maps.
- */
-export function getHandMaterials() {
-  if (shared) return shared;
-  const hand = new THREE.MeshStandardMaterial({
-    ...atlasMaps(), color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0,
-    normalScale: new THREE.Vector2(0.65, 0.65), envMapIntensity: 0.32,
-  });
+function getArmMaterials() {
+  if (armMaterials) return armMaterials;
   const sleeve = new THREE.MeshStandardMaterial({
     ...clothMaps(), color: 0xffffff, roughness: 1, metalness: 0,
     normalScale: new THREE.Vector2(0.65, 0.65), envMapIntensity: 0.18,
@@ -213,12 +205,39 @@ export function getHandMaterials() {
   const cuff = sleeve.clone();
   cuff.color.setHex(0xe3e5df);
   cuff.normalScale.set(0.80, 0.80);
-  hand.name = 'hands:skin-and-fingerless-glove';
   sleeve.name = 'hands:woven-sleeve';
   cuff.name = 'hands:woven-cuff';
-  hand.userData.handFinish = { profile: 'skin-glove-atlas', textureSize: SIZE, atlas: HAND_ATLAS };
   sleeve.userData.handFinish = { profile: 'woven-sleeve', textureSize: CLOTH_SIZE };
   cuff.userData.handFinish = { profile: 'woven-cuff', textureSize: CLOTH_SIZE };
-  shared = Object.freeze({ hand, sleeve, cuff });
+  armMaterials = Object.freeze({ sleeve, cuff });
+  return armMaterials;
+}
+
+/**
+ * Shared resources with no frame updates. Baked hands and the unchanged cloth
+ * use about 4.25 MiB including mips; procedural hands and cloth use 1.25 MiB.
+ * Only request the baked finish for geometry bearing its matching UV layout.
+ * The caller owns geometry, but should not dispose these shared materials/maps.
+ */
+export function getHandMaterials({ authored: useAuthored = false } = {}) {
+  if (useAuthored && getAuthoredHandFinishMaps()) {
+    if (authored) return authored;
+    const hand = new THREE.MeshStandardMaterial({
+      ...getAuthoredHandFinishMaps(), color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0,
+      normalScale: new THREE.Vector2(1, 1), envMapIntensity: 0.32,
+    });
+    hand.name = 'hands:blender-skin-and-fingerless-glove';
+    hand.userData.handFinish = { profile: AUTHORED_HAND_FINISH_PROFILE, textureSize: 512, atlas: HAND_ATLAS };
+    authored = Object.freeze({ hand, ...getArmMaterials() });
+    return authored;
+  }
+  if (shared) return shared;
+  const hand = new THREE.MeshStandardMaterial({
+    ...atlasMaps(), color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0,
+    normalScale: new THREE.Vector2(0.65, 0.65), envMapIntensity: 0.32,
+  });
+  hand.name = 'hands:skin-and-fingerless-glove';
+  hand.userData.handFinish = { profile: 'skin-glove-atlas', textureSize: SIZE, atlas: HAND_ATLAS };
+  shared = Object.freeze({ hand, ...getArmMaterials() });
   return shared;
 }

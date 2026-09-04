@@ -1,0 +1,309 @@
+{
+  "version": 2,
+  "source": "assets/blender/hands.blend",
+  "generator": "tools/blender/build-hands.py",
+  "format": "HND1 geometry pack with atomic Blender-baked finish",
+  "blender": "5.2.1 LTS",
+  "bytes": 967888,
+  "sha256": "c7b5cf4d53eaf5113589660d05396eb689f2d13942565c7fb5876fb5660e655e",
+  "rightHandVariants": [
+    null,
+    0.015,
+    0.022,
+    0.03,
+    0.034,
+    0.036,
+    0.038,
+    0.04
+  ],
+  "sharedArmMeshes": [
+    "sleeve",
+    "cuff"
+  ],
+  "textures": 3,
+  "materials": 0,
+  "extraDrawCalls": 0,
+  "refinements": [
+    {
+      "key": "fist",
+      "vertices": 2120,
+      "triangles": 3138,
+      "movedVertices": 2038,
+      "maximumRefinementM": 0.012500002770684353
+    },
+    {
+      "key": "grip-015",
+      "vertices": 1928,
+      "triangles": 3138,
+      "movedVertices": 1609,
+      "maximumRefinementM": 0.012500002770684353
+    },
+    {
+      "key": "grip-022",
+      "vertices": 2117,
+      "triangles": 3138,
+      "movedVertices": 1780,
+      "maximumRefinementM": 0.012500002770684353
+    },
+    {
+      "key": "grip-030",
+      "vertices": 2180,
+      "triangles": 3138,
+      "movedVertices": 1789,
+      "maximumRefinementM": 0.012500002770684353
+    },
+    {
+      "key": "grip-034",
+      "vertices": 2180,
+      "triangles": 3138,
+      "movedVertices": 1764,
+      "maximumRefinementM": 0.012500002770684353
+    },
+    {
+      "key": "grip-036",
+      "vertices": 2228,
+      "triangles": 3138,
+      "movedVertices": 1769,
+      "maximumRefinementM": 0.012500002770684353
+    },
+    {
+      "key": "grip-038",
+      "vertices": 2252,
+      "triangles": 3138,
+      "movedVertices": 1749,
+      "maximumRefinementM": 0.012500002770684353
+    },
+    {
+      "key": "grip-040",
+      "vertices": 2252,
+      "triangles": 3138,
+      "movedVertices": 1692,
+      "maximumRefinementM": 0.012500002770684353
+    },
+    {
+      "key": "sleeve",
+      "vertices": 377,
+      "triangles": 720,
+      "movedVertices": 313,
+      "maximumRefinementM": 0.0014566620106334137
+    },
+    {
+      "key": "cuff",
+      "vertices": 177,
+      "triangles": 336,
+      "movedVertices": 125,
+      "maximumRefinementM": 0.02102690960875995
+    }
+  ],
+  "runtimeMeshes": [
+    {
+      "key": "cuff",
+      "vertices": 177,
+      "triangles": 336,
+      "shapeKeys": []
+    },
+    {
+      "key": "fist",
+      "vertices": 2123,
+      "triangles": 3138,
+      "shapeKeys": [
+        "Basis",
+        "Clench"
+      ]
+    },
+    {
+      "key": "grip-015",
+      "vertices": 1931,
+      "triangles": 3138,
+      "shapeKeys": [
+        "Basis",
+        "Clench"
+      ]
+    },
+    {
+      "key": "grip-022",
+      "vertices": 2120,
+      "triangles": 3138,
+      "shapeKeys": [
+        "Basis",
+        "Clench"
+      ]
+    },
+    {
+      "key": "grip-030",
+      "vertices": 2183,
+      "triangles": 3138,
+      "shapeKeys": [
+        "Basis",
+        "Clench"
+      ]
+    },
+    {
+      "key": "grip-034",
+      "vertices": 2183,
+      "triangles": 3138,
+      "shapeKeys": [
+        "Basis",
+        "Clench"
+      ]
+    },
+    {
+      "key": "grip-036",
+      "vertices": 2231,
+      "triangles": 3138,
+      "shapeKeys": [
+        "Basis",
+        "Clench"
+      ]
+    },
+    {
+      "key": "grip-038",
+      "vertices": 2255,
+      "triangles": 3138,
+      "shapeKeys": [
+        "Basis",
+        "Clench"
+      ]
+    },
+    {
+      "key": "grip-040",
+      "vertices": 2255,
+      "triangles": 3138,
+      "shapeKeys": [
+        "Basis",
+        "Clench"
+      ]
+    },
+    {
+      "key": "sleeve",
+      "vertices": 377,
+      "triangles": 720,
+      "shapeKeys": []
+    }
+  ],
+  "uniqueBuffers": 61,
+  "quantization": {
+    "positions": "float32 metres",
+    "normals": "signed16 renormalized at load",
+    "clenchPositions": "signed16, 0.1 micrometre step",
+    "clenchNormals": "signed16, 2/32767 step",
+    "uv": "float32; anatomical finger/thumb/wrist/palm/glove islands with padded material bands"
+  },
+  "revision": "hands-sculpt-v2",
+  "bake": {
+    "method": "Blender Cycles selected-to-active tangent-space NORMAL and EMIT albedo/roughness from editable dense SCULPT_Atlas_Master",
+    "sourceObject": "SCULPT_Atlas_Master",
+    "sourceTriangles": 301248,
+    "bakedTriangles": 177984,
+    "atlasCanonicalGame": "GAME_fist; separate index/thumb/wrist/palm/binding/web islands exploded in 3D during baking to exclude self cross-projection; shared semantic coordinates on all grips",
+    "size": 512,
+    "textures": [
+      {
+        "file": "hand-normal.png",
+        "width": 512,
+        "height": 512,
+        "bytes": 226225,
+        "sha256": "f6a3a5b9274663103a715a3fe2723664bb448498d2055d4d86db14379a2c4bc6",
+        "colorSpace": "linear"
+      },
+      {
+        "file": "hand-albedo.png",
+        "width": 512,
+        "height": 512,
+        "bytes": 230235,
+        "sha256": "96bad7a1aa399c2c41d4ef5460cb0ded758a69601426eeccfb55e38292e0828c",
+        "colorSpace": "sRGB"
+      },
+      {
+        "file": "hand-roughness.png",
+        "width": 512,
+        "height": 512,
+        "bytes": 193078,
+        "sha256": "c2841eaef6f728fc59ee5aef32116597d8c04abb7af66060e6aedc5276886b52",
+        "colorSpace": "linear"
+      }
+    ],
+    "normalConvention": "OpenGL +Y; TextureLoader flipY=true",
+    "estimatedRuntimeBytesWithMipmaps": 4194304,
+    "extraDrawCalls": 0,
+    "features": [
+      "nail plate and cuticle geometry",
+      "flexion folds and skin relief",
+      "glove panel depth, seams and stitch relief"
+    ],
+    "neutralPaddingPixels": {
+      "normal": 3632,
+      "albedo": 72522,
+      "roughness": 73785
+    },
+    "padding": "Uncovered cap, seam and ray-miss texels use material-correct neutral color/roughness and flat tangent normals; covered anatomical detail remains the geometric bake",
+    "lastBakeMaps": [
+      "albedo",
+      "roughness"
+    ],
+    "generatedMaterials": {
+      "version": 1,
+      "id": "generated-hand-materials-v1",
+      "method": "Generated flat diffuse material samples projected offline into saved POINT SculptAlbedo; paired authored regional roughness in SculptRoughness; existing sculpt tangent normal retained",
+      "sources": {
+        "skin": {
+          "file": "assets/material-sources/hand-material-v1/skin-source.png",
+          "sha256": "d0835d7fa3071c2a0b27886f3de51428aeae7354bcbdc161211ce7562cfcc95e",
+          "width": 1254,
+          "height": 1254,
+          "cropLeftBottomRightTop": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "packedImage": "SOURCE_Generated_Skin",
+          "linearMedian": [
+            0.5647116899490356,
+            0.28314879536628723,
+            0.11443538218736649
+          ]
+        },
+        "leather": {
+          "file": "assets/material-sources/hand-material-v1/leather-source.png",
+          "sha256": "9e8437e91bb517c3576bc5cfbe6cdcb573e6066662f3a35a742f97ad8f7e6494",
+          "width": 1254,
+          "height": 1254,
+          "cropLeftBottomRightTop": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "packedImage": "SOURCE_Generated_Leather",
+          "linearMedian": [
+            0.029556842520833015,
+            0.026241222396492958,
+            0.022173883393406868
+          ]
+        }
+      },
+      "paint": {
+        "masterVertices": 150626,
+        "changedAlbedoVertices": 144127,
+        "changedRoughnessVertices": 143688,
+        "roughnessRange": [
+          0.48503562808036804,
+          0.9674286246299744
+        ],
+        "albedoAttributeSHA256": "1a25619c4127ca82927849bdd76697be7ace6c3656d1f98f0250116ada6a3a38",
+        "roughnessAttributeSHA256": "82d6109b2e092abbb52dd3c2859f6885a14a09a283243a8e186fdfef2e667d07"
+      },
+      "retainedGeometrySHA256": "c7b5cf4d53eaf5113589660d05396eb689f2d13942565c7fb5876fb5660e655e",
+      "retainedNormalSHA256": "f6a3a5b9274663103a715a3fe2723664bb448498d2055d4d86db14379a2c4bc6",
+      "runtime": {
+        "maps": 3,
+        "size": 512,
+        "extraDrawCalls": 0,
+        "extraShaderSamples": 0,
+        "extraTextureAllocationBytes": 0
+      },
+      "limitations": "Generated diffuse samples are art sources rather than measured reflectance; color variation is palette-normalized and seam-tapered; four fingers and mirrored grips intentionally share the same atlas."
+    }
+  }
+}

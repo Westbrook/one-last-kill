@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { getHandMaterials, HAND_ATLAS } from './hand-materials.js';
+import { getBlenderHandGeometry, getBlenderArmGeometry } from './authored-hand-surfaces.js';
 
 const TAU = Math.PI * 2;
 const cache = new Map();
@@ -433,12 +434,24 @@ function sleeveGeometry(cuff = false) {
 
 let armGeometry = null, cuffGeometry = null;
 export function getHandArmGeometry() {
+  const authored = getBlenderArmGeometry();
+  if (authored) return authored;
+  return getProceduralArmGeometry();
+}
+
+/** Unmodified rig-compatible sleeve input for the Blender preparation step. */
+export function getProceduralArmGeometry() {
   if (!armGeometry) { armGeometry = sleeveGeometry(); cuffGeometry = sleeveGeometry(true); }
   return { sleeve: armGeometry, cuff: cuffGeometry };
 }
 
 /** Immutable shared buffers; clenching changes one GPU morph influence only. */
 export function getAuthoredHandGeometry(side = 1, radius = null) {
+  return getBlenderHandGeometry(side, radius) || getProceduralHandGeometry(side, radius);
+}
+
+/** Offline Blender input and the fallback for unsupported grip radii. */
+export function getProceduralHandGeometry(side = 1, radius = null) {
   const key = `${side}:${radius}`;
   if (cache.has(key)) return cache.get(key);
   const geometry = buildHand(side, radius, 0), clenched = buildHand(side, radius, 1);
@@ -457,7 +470,8 @@ export function getAuthoredHandGeometry(side = 1, radius = null) {
  * origin, dorsal palm is +Y, and the wrist trails +Z. No timers or bones.
  */
 export function createAuthoredGripHand({ side = 1, radius = 0.022, forearmLength = 0.14, forearmDirection = null } = {}) {
-  const root = new THREE.Group(), materials = getHandMaterials(), geometry = getAuthoredHandGeometry(side, radius).clone();
+  const root = new THREE.Group(), geometry = getAuthoredHandGeometry(side, radius).clone();
+  const materials = getHandMaterials({ authored: geometry.userData.authoredHand?.finish === 'blender-baked-v2' });
   geometry.morphAttributes = {}; geometry.translate(-GRIP_CENTER.x, -GRIP_CENTER.y, -GRIP_CENTER.z);
   const hand = new THREE.Mesh(geometry, materials.hand); hand.name = 'authored-grip-hand'; root.add(hand);
   const wrist = WRIST.clone().sub(GRIP_CENTER); root.userData.wristAnchor = wrist.clone();

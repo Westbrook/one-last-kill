@@ -13,7 +13,8 @@
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "test": "node --test tests/unit/*.test.js",
     "lint": "eslint src tests/unit",
-    "check": "npm run lint && npm test && npm run build"
+    "check:materials": "node tools/audit-model-materials.mjs",
+    "check": "npm run lint && npm test && npm run check:materials && npm run build"
   },
   "dependencies": {
     "three": "0.185.1"

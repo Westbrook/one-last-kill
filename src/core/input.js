@@ -3,7 +3,7 @@ import { canvas } from './renderer.js';
 import { createInputState, GAMEPLAY_KEYS } from './input-state.js';
 import { Settings } from './settings.js';
 import { createTouchControls } from '../ui/touch-controls.js';
-import { HUD, IntroCard, RunSetup, FPSMeter } from '../ui/hud.js';
+import { HUD, IntroCard, RunSetup, LeaveGame, PauseMenu, FPSMeter } from '../ui/hud.js';
 import { RunSettings } from '../game/run-settings.js';
 
 const Input = createInputState();
@@ -23,7 +23,7 @@ let fallbackNotified = false;
 let previousPadMenu = false, previousPadConfirm = false;
 
 function cardOpen(id) { return document.getElementById(id)?.classList.contains('show') ?? false; }
-function modalOpen() { return RunSetup.isOpen() || IntroCard.isOpen() || cardOpen('endcard') || cardOpen('deathscreen'); }
+function modalOpen() { return LeaveGame.isOpen() || RunSetup.isOpen() || IntroCard.isOpen() || cardOpen('endcard') || cardOpen('deathscreen'); }
 function editableTarget(target) {
   return Boolean(target?.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"], #touch-controls button'));
 }
@@ -72,7 +72,7 @@ function requestPointer() {
   } catch { pointerFallback(attempt); }
 }
 function engageLock({ pointerLock = true } = {}) {
-  if (document.hidden || overlayEl?.classList.contains('is-panel-open') || startButton?.disabled
+  if (document.hidden || LeaveGame.isOpen() || overlayEl?.classList.contains('is-panel-open') || startButton?.disabled
     || cardOpen('endcard') || cardOpen('deathscreen')) return false;
   if (RunSetup.isOpen()) return false;
   if (firstEngage || !RunSettings.isStarted()) {
@@ -103,7 +103,7 @@ document.addEventListener('run:configured', () => {
   IntroCard.present();
 });
 function engageFromMenu({ gamepad = false } = {}) {
-  if (document.hidden || overlayEl?.classList.contains('is-panel-open') || startButton?.disabled) return;
+  if (document.hidden || LeaveGame.isOpen() || overlayEl?.classList.contains('is-panel-open') || startButton?.disabled) return;
   if (cardOpen('endcard')) { document.getElementById('endrestart')?.click(); return; }
   if (cardOpen('deathscreen')) {
     // The mission owns checkpoint restore; its visible action remains the
@@ -127,6 +127,9 @@ function toggleAudio() {
 
 addEventListener('keydown', (event) => {
   if (event.defaultPrevented || event.metaKey || event.altKey || editableTarget(event.target)) return;
+  // The confirmation owns Escape, Tab and its buttons; no session shortcut
+  // can resume or retry a run from behind it.
+  if (LeaveGame.isOpen()) return;
   if (event.ctrlKey && !['ControlLeft', 'ControlRight'].includes(event.code) && !Input.active) return;
   if (event.code === 'Escape' || event.code === 'KeyP') {
     if (Input.active && !event.repeat) { event.preventDefault(); pauseSession(); }
@@ -160,7 +163,8 @@ addEventListener('mousemove', (event) => {
 });
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 canvas.addEventListener('click', () => {
-  if (!Input.active && !modalOpen()) engageLock();
+  if (modalOpen()) return;
+  if (!Input.active) engageLock();
   else if (Input.active && !Input.locked && !touchEnabled) requestPointer();
 });
 startButton?.addEventListener('click', engageLock);
@@ -210,11 +214,20 @@ Input.pollGamepad = function () {
   previousPadConfirm = confirm;
   const wasActive = Input.active;
   Input.setGamepad(pad);
+  if (LeaveGame.isOpen()) {
+    PauseMenu.reset();
+    LeaveGame.pollGamepad(pad);
+    return;
+  }
   if (RunSetup.isOpen()) {
+    PauseMenu.reset();
     RunSetup.pollGamepad(pad);
     return;
   }
-  if (menuPressed) {
+  const pauseAction = PauseMenu.pollGamepad(pad);
+  if (pauseAction) {
+    if (pauseAction === 'primary') engageFromMenu({ gamepad: true });
+  } else if (menuPressed) {
     if (Input.active) pauseSession();
     else engageFromMenu({ gamepad: true });
   } else if (!Input.active && confirmPressed) {

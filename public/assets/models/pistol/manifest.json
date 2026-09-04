@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "name": "H9 compact service pistol",
+  "source": "original-blender-authored",
+  "authoringTool": "5.2.1 LTS",
+  "rebuild": "tools/blender/build-pistol.py",
+  "sourceFile": "assets/blender/pistol.blend",
+  "runtimeFile": "public/assets/models/pistol/pistol.glb",
+  "license": "Original project asset; no third-party geometry, trademarks, or photographs.",
+  "coordinateSystem": {
+    "units": "meters",
+    "forward": "+X",
+    "up": "+Y",
+    "right": "+Z"
+  },
+  "muzzle": [
+    0.201,
+    0.04,
+    0
+  ],
+  "gripCenter": [
+    -0.052,
+    -0.06,
+    0.012
+  ],
+  "ironSights": {
+    "rear": {
+      "x": -0.05,
+      "length": 0.02,
+      "width": 0.032,
+      "bottom": 0.069,
+      "floor": 0.074,
+      "top": 0.087,
+      "gap": 0.012
+    },
+    "front": {
+      "x": 0.13,
+      "length": 0.012,
+      "width": 0.006,
+      "bottom": 0.07,
+      "top": 0.079
+    }
+  },
+  "bounds": {
+    "min": [
+      -0.0876912996172905,
+      -0.12300000339746475,
+      -0.019600000232458115
+    ],
+    "max": [
+      0.20100000500679016,
+      0.08649999648332596,
+      0.019500000402331352
+    ]
+  },
+  "geometry": {
+    "triangles": 2400,
+    "exportedVertices": 3318,
+    "meshParts": 51,
+    "materialGroups": 3,
+    "accessorBytes": 146256,
+    "budgetTriangles": 4000,
+    "budgetMaterialGroups": 3
+  },
+  "delivery": {
+    "glbBytes": 670636,
+    "sha256": "146f2852199599897c94f602e0cc1798fdb3554fd8b51fb5b6e86da35d2aeb3d",
+    "embeddedImages": 6,
+    "textureRgba8BytesWithMipmapsEstimate": 2097152,
+    "runtimeExternalDependencies": []
+  },
+  "textures": [
+    {
+      "path": "assets/blender/pistol-textures/pistol-polymer-basecolor.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 62762,
+      "sha256": "faeae404a8a2527f23b9479c3813e1cba33dfb34cc06f91a13da02df376049e5"
+    },
+    {
+      "path": "assets/blender/pistol-textures/pistol-polymer-metalrough.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 72326,
+      "sha256": "2829ad4fd14eecdad808b6707a47415b1ffefbcd80d10860b2f66aef5a02ac94"
+    },
+    {
+      "path": "assets/blender/pistol-textures/pistol-polymer-normal.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 101682,
+      "sha256": "1fd3d33f3c1254e0d200d2bcf5dc39ab707bb354b7654aafb29212ce7aa3a024"
+    },
+    {
+      "path": "assets/blender/pistol-textures/pistol-steel-basecolor.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 81197,
+      "sha256": "f12724b29aa3df813741780f32985a755fb7eac4f1a8313108213f51defbed69"
+    },
+    {
+      "path": "assets/blender/pistol-textures/pistol-steel-metalrough.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 66903,
+      "sha256": "c9e09664cfc06b4640edb740d10db38399ab06280f98140fc1413a9041507f82"
+    },
+    {
+      "path": "assets/blender/pistol-textures/pistol-steel-normal.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 84765,
+      "sha256": "e3a9d6864488415982bdf4ac9cb0eff9479d75cbffa75ed7859fe78fd74453fd"
+    }
+  ],
+  "notes": [
+    "Geometry is a new original fictional pistol, authored with profile lofts, boolean milling, edge bevels, and weighted normals.",
+    "The editable Blender source retains named mesh parts and a separate non-exported review studio.",
+    "UVs are seam-separated physical-scale face charts, with cylindrical charts on the barrel and grip.",
+    "All PBR finish maps are original deterministic 256 px authored data; GLB embeds delivery maps.",
+    "Runtime batcher may merge named static parts by their three shared materials, including the emissive ceramic sight.",
+    "Memory totals are accessor and RGBA8+mip estimates, not measured driver residency."
+  ]
+}

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { applyBoxWorldUV } from './world-uv.js';
+import { authoredFurnitureCacheKey, createAuthoredFurnitureGeometry } from './authored-furniture.js';
 
 // Only the authored room builders request these shapes, once during boot.
 // A key includes real dimensions so neither bevel radii nor texture density
@@ -8,6 +9,7 @@ import { applyBoxWorldUV } from './world-uv.js';
 const cache = new Map();
 const keyOf = values => values.map(value => typeof value === 'number' ? value.toFixed(6) : value).join(':');
 function cached(key, build) {
+  key = `${authoredFurnitureCacheKey()}:${key}`;
   if (!cache.has(key)) {
     const geometry = build();
     geometry.computeBoundingBox(); geometry.computeBoundingSphere();
@@ -74,8 +76,9 @@ export function furnitureBox(width, height, depth, radius = 0.012, meters = 1, s
   if (segments !== 1 && segments !== 2) throw new RangeError('Furniture bevels use one or two segments');
   radius = Math.min(radius, width * 0.49, height * 0.49, depth * 0.49);
   return cached(keyOf(['box', width, height, depth, radius, meters, segments, unit]), () => {
-    const geometry = segments === 1 ? chamferedBox(width, height, depth, radius)
-      : new RoundedBoxGeometry(width, height, depth, segments, radius);
+    const geometry = createAuthoredFurnitureGeometry(segments === 1 ? 'milled-box' : 'soft-box', { width, height, depth, radius, meters })
+      ?? (segments === 1 ? chamferedBox(width, height, depth, radius)
+        : new RoundedBoxGeometry(width, height, depth, segments, radius));
     geometry.type = 'FurnitureRoundedBoxGeometry';
     applyBoxWorldUV(geometry, meters);
     if (unit) geometry.scale(1 / width, 1 / height, 1 / depth);
@@ -92,6 +95,11 @@ export function furnitureBox(width, height, depth, radius = 0.012, meters = 1, s
 export function furnitureLeg(width, height, depth, meters = 0.6) {
   dimensions(width, height, depth, meters);
   return cached(keyOf(['leg', width, height, depth, meters]), () => {
+    const authored = createAuthoredFurnitureGeometry('profiled-leg', { width, height, depth, meters });
+    if (authored) {
+      authored.userData.furnitureShape = { kind: 'profiled-leg', width, height, depth };
+      return authored;
+    }
     const profile = [[0, 0.64], [0.06, 0.64], [0.10, 0.77], [0.43, 0.80],
       [0.47, 1], [0.55, 1], [0.60, 0.82], [0.91, 0.86], [0.94, 1], [1, 1]];
     const cross = [[-0.76, -1], [0.76, -1], [1, -0.76], [1, 0.76],
@@ -194,11 +202,14 @@ export function furniturePiping(width, height, corner = 0.035, radius = 0.0025, 
 
 /** Unit dimensions, with the knob face pointing in the fixture's local +Z. */
 export function furnitureKnob() {
-  return cached('knob', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 12).rotateX(Math.PI / 2));
+  return cached('knob', () => createAuthoredFurnitureGeometry('knob')
+    ?? new THREE.CylinderGeometry(0.5, 0.5, 1, 12).rotateX(Math.PI / 2));
 }
 
 export function furnitureCup() {
   return cached('cup', () => {
+    const authored = createAuthoredFurnitureGeometry('cup', { meters: 0.3 });
+    if (authored) return authored;
     // A closed ceramic wall and rim; the open top is a real recess.
     const profile = [[0, 0], [0.033, 0], [0.037, 0.009], [0.044, 0.10],
       [0.040, 0.10], [0.034, 0.015], [0, 0.015]].map(point => new THREE.Vector2(...point));
@@ -208,6 +219,8 @@ export function furnitureCup() {
 
 export function furnitureCupHandle() {
   return cached('cup-handle', () => {
+    const authored = createAuthoredFurnitureGeometry('cup-handle', { meters: 0.3 });
+    if (authored) return authored;
     // An exterior half-loop ends within the tapered cup wall; a full torus
     // would put its hidden crescent visibly through the hollow bowl.
     const curve = new THREE.Curve();

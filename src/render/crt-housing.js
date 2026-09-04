@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { getAuthoredSupplyGeometry } from './authored-supply-props.js';
 
 let shared = null;
 
@@ -106,16 +107,17 @@ function getHousing() {
 /** Preserve the old body's shadow caster; small details share one decor draw. */
 export function addCrtHousing(pushDecor, { parent, x, y, z }) {
   const [casing, details] = getHousing();
-  const body = new THREE.Mesh(casing.geometry, casing.material);
+  const body = new THREE.Mesh(getAuthoredSupplyGeometry('crt', 'crt-molded-housing') ?? casing.geometry, casing.material);
   body.name = 'neighbor-crt-housing'; body.position.set(x, y, z);
   body.castShadow = true; body.receiveShadow = true;
   parent.add(body);
-  pushDecor(details.geometry, details.material, x, y, z, 1, 1, 1);
+  pushDecor(getAuthoredSupplyGeometry('crt', 'crt-recessed-details') ?? details.geometry, details.material, x, y, z, 1, 1, 1);
   return body;
 }
 
 export function crtHousingBudget() {
-  const parts = getHousing();
+  const parts = getHousing().map(part => ({ ...part,
+    geometry: getAuthoredSupplyGeometry('crt', part.geometry.name) ?? part.geometry }));
   return {
     draws: parts.length,
     triangles: parts.reduce((sum, { geometry }) => sum + geometry.index.count / 3, 0),

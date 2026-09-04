@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { heroBodyGeometry, HERO_BIND_ARM_ANGLE } from './hero-character-geometry.js';
 import { heroHeadGeometry } from './hero-character-head.js';
 import { heroCharacterMaterials } from './hero-character-materials.js';
+import { getAuthoredCharacterSurfaces } from './authored-character-surfaces.js';
 
 const supportCache = new WeakMap();
 const SUPPORT_DIRECTIONS = [];
@@ -62,8 +63,9 @@ export function installHeroCharacter(root, rig, config) {
   joints.shoulderR.rotation.z = HERO_BIND_ARM_ANGLE;
   root.updateMatrixWorld(true);
   const bones = Object.values(joints), skeleton = new THREE.Skeleton(bones);
-  const body = heroBodyGeometry(config, d, bones, bodyMeshes), head = heroHeadGeometry(config);
-  const materials = heroCharacterMaterials(config), visualMeshes = [], bounds = [];
+  const authored = getAuthoredCharacterSurfaces(config, d, bones);
+  const body = authored?.body || heroBodyGeometry(config, d, bones, bodyMeshes), head = authored?.head || heroHeadGeometry(config);
+  const materials = heroCharacterMaterials(config, { finish: authored?.finish }), visualMeshes = [], bounds = [];
   for (const [name, geometry, material] of [['garments', body.garments, materials.garments], ['skin', body.skin, materials.skin]]) {
     const mesh = new THREE.SkinnedMesh(geometry, material);
     mesh.name = `hero-${name}`; mesh.userData.role = 'body';
@@ -94,13 +96,15 @@ export function installHeroCharacter(root, rig, config) {
   rig.contactSurfaces = visualMeshes.map(mesh => ({ mesh, indices: supportSamples(mesh, skeleton) }));
   rig.contactBounds = target => getHumanoidContactBounds(root, target);
   rig.hero = {
-    version: 1, role: body.role, skeleton,
+    version: 1, role: body.role, skeleton, source: authored?.source || 'original-procedural',
     triangles: visualMeshes.reduce((sum, mesh) => sum + (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3, 0),
     draws: visualMeshes.length,
     continuousSurfaceTriangles: body.surfaceTriangles, continuousSurfaceVertices: body.surfaceVertices,
     garmentDetails: body.garmentDetails,
     contactSamples: rig.contactSurfaces.reduce((sum, surface) => sum + surface.indices.length, 0),
     provenance: body.provenance,
+    ...(authored?.finish ? { finish: authored.finish.id } : {}),
+    ...(authored?.revision ? { revision: authored.revision } : {}),
   };
 }
 

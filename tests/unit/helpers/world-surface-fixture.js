@@ -19,10 +19,12 @@ import { addBakeryBread, addBakeryPackage } from '../../../src/render/bakery-pro
 import { getBakeryProvisionMaterials } from '../../../src/render/bakery-provision-materials.js';
 import { addCrtHousing } from '../../../src/render/crt-housing.js';
 import { applyWaterTankStaveUV } from '../../../src/render/water-tank-uv.js';
+import { createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh } from '../../../src/render/authored-world-dressing.js';
 import { refineConcreteBarrier } from '../../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../../src/render/sedan-panels.js';
 import { createCivilianVehicle } from '../../../src/render/civilian-vehicles.js';
+import { getAuthoredVehicleGeometry } from '../../../src/render/authored-vehicles.js';
 import { buildStreetVehicleAftermath } from '../../../src/render/street-vehicle-aftermath.js';
 import { buildStreetAftermath } from '../../../src/render/street-aftermath.js';
 import { placeCivilianVehicle } from '../../../src/render/parked-vehicle-placement.js';
@@ -113,7 +115,8 @@ export function buildWorldSurfaceFixture({ ballistics = createBallisticWorld(), 
   }
   const WorldState = { fires: [], smokeSystems: [], flickerLights: [], bakeryLights: [] };
   const bindings = {
-    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, placeCivilianVehicle,
+    refineConcreteBarrier, createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh,
+    buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, placeCivilianVehicle, getAuthoredVehicleGeometry,
     THREE, RoundedBoxGeometry, mergeGeometries, World, WorldState, MATS, ...caches, buildStreetVehicleAftermath, buildStreetAftermath,
     Architecture, boxBounds, Colliders, Ballistics: ballistics, BUILDING, BALCONY, ROOF, OPENINGS, APARTMENT_DOORS, STAIRS, DISTRICT,
     SCAFFOLD_LEVELS, SCAFFOLD_TRIGGER_MIN_Z, createInteriorProps, createDoorAssemblies,

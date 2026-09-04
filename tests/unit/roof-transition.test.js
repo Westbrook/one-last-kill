@@ -9,6 +9,7 @@ import { STAIRS } from '../../src/world/stair-layout.js';
 import { Architecture, boxBounds } from '../../src/world/architecture.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
 import { applyWaterTankStaveUV } from '../../src/render/water-tank-uv.js';
+import { createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh } from '../../src/render/authored-world-dressing.js';
 
 function buildTransition() {
   Architecture.clear(); Colliders.clear();
@@ -43,6 +44,7 @@ function buildTransition() {
   }
   const bindings = {
     THREE, mergeGeometries, BUILDING, ROOF, OPENINGS, STAIRS, World, MATS, Colliders, Architecture, boxBounds, applyWaterTankStaveUV,
+    createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh,
     _BG: { unitBox: new THREE.BoxGeometry(1, 1, 1), pipe: new THREE.CylinderGeometry(1, 1, 1, 8) },
     addBox, pushDecor, addBeam, addSign() {}, Triggers: { add() {} },
     addDecor: (x, y, z, sx, sy, sz, material) => addBox(x, y, z, sx, sy, sz, material, { collide: false }),

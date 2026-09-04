@@ -12,6 +12,7 @@ import { STAIRS } from '../../src/world/stair-layout.js';
 import { Architecture, boxBounds, signYaw } from '../../src/world/architecture.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
 import { applyWaterTankStaveUV } from '../../src/render/water-tank-uv.js';
+import { createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh } from '../../src/render/authored-world-dressing.js';
 
 const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) < 1e-5, `${label}: ${actual} != ${expected}`);
 
@@ -51,6 +52,7 @@ function buildFixture() {
   };
   const context = {
     THREE, mergeGeometries, World, MATS, _BG, Colliders, Architecture, boxBounds, applyWaterTankStaveUV,
+    createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh,
     BUILDING, BALCONY, ROOF, OPENINGS, APARTMENT_DOORS, STAIRS, addBox, pushDecor, addSign,
     Triggers: { add() {} },
     addDecor: (x, y, z, sx, sy, sz, material) => addBox(x, y, z, sx, sy, sz, material, { collide: false }),

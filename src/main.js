@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import './touch-controls.css';
 import './installed-app.css';
+import './progress-report.css';
+import { mountProgressReportLink } from './ui/progress-report.js';
 import { scene, camera, renderer, GameTime, recordRenderTime } from './core/renderer.js';
 import { FixedStepClock } from './core/frame-budget.js';
 import { Settings, audioMixFromSettings } from './core/settings.js';
@@ -15,6 +17,15 @@ import { createRoofTaskLighting } from './render/roof-task-lighting.js';
 import { renderWithViewModel, shareViewModelLighting } from './render/viewmodel.js';
 import { createWorldPresentation } from './render/world-presentation.js';
 import { warmViewModels } from './render/viewmodel-prewarm.js';
+import { loadAuthoredPistol } from './render/authored-pistol.js';
+import { loadAuthoredWeapons } from './render/authored-weapons.js';
+import { loadAuthoredWorldWeapons } from './render/authored-world-weapons.js';
+import { loadAuthoredCharacterSurfaces } from './render/authored-character-surfaces.js';
+import { loadAuthoredHandSurfaces } from './render/authored-hand-surfaces.js';
+import { loadAuthoredVehicles } from './render/authored-vehicles.js';
+import { loadAuthoredSupplyProps } from './render/authored-supply-props.js';
+import { loadAuthoredFurniture } from './render/authored-furniture.js';
+import { loadAuthoredWorldDressing } from './render/authored-world-dressing.js';
 import { warmCharacters } from './render/character-prewarm.js';
 import { loadHeroFaceAlbedo, setHeroFaceTextureEnabled, getHeroFaceTextureStatus } from './render/hero-face-albedo.js';
 import { buildEnvironment, finishEnvironmentMaterials, updateEnvironment } from './render/environment.js';
@@ -41,6 +52,7 @@ import './gameplay-layout.css';
 import { Blood, FX } from './render/effects.js';
 
 const clock = new FixedStepClock();
+mountProgressReportLink(document, location.href);
 let lightBudget;
 let interiorLighting;
 let interiorReflections;
@@ -223,7 +235,23 @@ document.addEventListener('game:contextlost', () => {
 
 async function boot() {
   const bootStarted = performance.now();
-  const [textures] = await Promise.all([loadSurfaceTextures(), loadHeroFaceAlbedo()]);
+  const assetLoads = {
+    pistol: loadAuthoredPistol(), heldWeapons: loadAuthoredWeapons(),
+    worldWeapons: loadAuthoredWorldWeapons(), characters: loadAuthoredCharacterSurfaces(),
+    hands: loadAuthoredHandSurfaces(), vehicles: loadAuthoredVehicles(),
+    supplies: loadAuthoredSupplyProps(), furniture: loadAuthoredFurniture(),
+    worldDressing: loadAuthoredWorldDressing(),
+  };
+  const [textures, , authoredAssets] = await Promise.all([
+    loadSurfaceTextures(), loadHeroFaceAlbedo(),
+    Promise.all(Object.entries(assetLoads).map(async ([name, pending]) => [name, await pending])).then(Object.fromEntries),
+  ]);
+  graphicsStartup.authoredPistol = authoredAssets.pistol;
+  graphicsStartup.authoredWeapons = authoredAssets.heldWeapons;
+  graphicsStartup.authoredAssets = authoredAssets;
+  for (const [name, status] of Object.entries(authoredAssets)) {
+    if (status.state !== 'ready') console.warn(`Authored ${name} unavailable or incomplete; using procedural fallbacks.`, status);
+  }
   surfaceDelivery = getSurfaceTextureStatus();
   setHeroFaceTextureEnabled(true);
   graphicsStartup.surfaceMapsMs = performance.now() - bootStarted;

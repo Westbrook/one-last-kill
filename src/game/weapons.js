@@ -24,6 +24,8 @@ import { createFirstPersonBat, poseFirstPersonBat } from '../render/first-person
 import { createBatAsset, BAT_DIMENSIONS } from '../render/bat-asset.js';
 import { getWeaponFinishes, batchStaticWeaponParts } from '../render/weapon-finishes.js';
 import { createHeroWeapon } from '../render/hero-weapons.js';
+import { createAuthoredPistol } from '../render/authored-pistol.js';
+import { createAuthoredWeapon } from '../render/authored-weapons.js';
 import { addHeroWeaponHands } from '../render/hero-weapon-grips.js';
 import { createDroppedWeaponAsset, warmDroppedWeaponAssets } from '../render/dropped-weapon-assets.js';
 
@@ -149,13 +151,13 @@ const WeaponDrops = {
 // as a re-pickupable world entity (retaining its remaining ammo). Same-type
 // pickup adds spare ammunition without silently reloading the magazine.
 
-// Procedural first-person view models. Built once per type, attached/detached
+// Cached first-person view models. Built once per type, attached/detached
 // to the camera as the active weapon changes. Held weapons use the lower-right
 // framing; fists have a separate camera-space rig with a clear lower guard.
 function makeWeaponViewModel(type) {
   if (type === 'fists') return prepareViewModel(createFirstPersonHands());
   if (type === 'bat') return prepareViewModel(createFirstPersonBat());
-  const model = createHeroWeapon(type);
+  const model = (type === 'pistol' ? createAuthoredPistol() : createAuthoredWeapon(type)) || createHeroWeapon(type);
   addHeroWeaponHands(model, type);
   // Owned profile meshes and connected grip hands are assembled only once.
   // Preserve the established rigid animation, framing and exact muzzle anchors.

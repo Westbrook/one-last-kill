@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MATS } from '../../render/materials.js';
 import { _BG, pushDecor } from '../../render/models.js';
+import { createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh } from '../../render/authored-world-dressing.js';
 import { SCAFFOLD_LEVELS, SCAFFOLD_TRIGGER_MIN_Z } from '../layout.js';
 import { addBeam, addProtectiveScreen } from '../structures.js';
 import { World, Triggers, addBox, addDecor, addSign } from '../world.js';
@@ -12,6 +13,14 @@ const FRAME_Z = [0.16, 2.2, 5.9, 7.7];
 const LANES = [3.2, 4.2, 4.5, 5.2];
 const POST_BOTTOM = 0.2, POST_TOP = 13.85;
 const GALLERY_LOWER_TOP = 3.65, GALLERY_UPPER_BOTTOM = 6.86;
+
+function pushAuthoredDetail(family, material, x, y, z, width, height, depth) {
+  const geometry = createAuthoredWorldDressingGeometry(family, { dimensions: [width, height, depth],
+    meters: material.userData?.surfaceMeters, offset: { x, y, z } });
+  if (!geometry) return pushDecor(_BG.unitBox, material, x, y, z, width, height, depth);
+  pushDecor(geometry, material, x, y, z, 1, 1, 1);
+  geometry.dispose();
+}
 
 function buildStandards() {
   const rows = FRAME_Z.map(() => []);
@@ -132,8 +141,8 @@ function addWorkbench(index, x, z) {
     architecture: { id: `scaffold-workbench-${index}`, kind: 'worktop', supports: legs },
   });
   pushDecor(_BG.unitBox, MATS.metal, x, level.y + 0.2, z - 0.27, 1.5, 0.07, 0.05);
-  pushDecor(_BG.unitBox, MATS.rubber, x - 0.3, level.y + 0.88, z, 0.58, 0.18, 0.38);
-  pushDecor(_BG.unitBox, MATS.metal, x - 0.3, level.y + 0.99, z, 0.22, 0.05, 0.07);
+  pushAuthoredDetail('workbench-case', MATS.rubber, x - 0.3, level.y + 0.88, z, 0.58, 0.18, 0.38);
+  pushAuthoredDetail('workbench-handle', MATS.metal, x - 0.3, level.y + 0.99, z, 0.22, 0.05, 0.07);
   pushDecor(_BG.unitBox, MATS.metal, x + 0.43, level.y + 0.803, z + 0.08, 0.4, 0.026, 0.09, 0.24);
 }
 
@@ -151,9 +160,10 @@ function addSupplyPallet(index, suffix, x, z, width = 1.45) {
     cast: false, architecture: { id: topId, kind: 'pallet', supports: runners },
   });
   const caseWidth = width - 0.2;
-  addBox(x, level.y + 0.43, z, caseWidth, 0.5, 0.63, MATS.rubber, {
+  const supplyCase = addBox(x, level.y + 0.43, z, caseWidth, 0.5, 0.63, MATS.rubber, {
     architecture: { id: `scaffold-supplies-${index}-${suffix}`, kind: 'supplies', supports: [topId] },
   });
+  refineAuthoredDressingMesh(supplyCase, 'pallet-supply-case');
   for (const dx of [-caseWidth * 0.32, caseWidth * 0.32]) {
     pushDecor(_BG.unitBox, MATS.metal, x + dx, level.y + 0.43, z + 0.321, 0.035, 0.5, 0.012);
     pushDecor(_BG.unitBox, MATS.metal, x + dx, level.y + 0.687, z, 0.035, 0.014, 0.64);

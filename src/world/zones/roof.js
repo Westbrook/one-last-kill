@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MATS } from '../../render/materials.js';
 import { applyWaterTankStaveUV } from '../../render/water-tank-uv.js';
+import { createAuthoredWorldDressingGeometry, refineAuthoredDressingMesh } from '../../render/authored-world-dressing.js';
 import { _BG, pushDecor } from '../../render/models.js';
 import { Colliders } from '../../core/collision.js';
 import { BUILDING, ROOF, OPENINGS } from '../layout.js';
@@ -11,6 +12,14 @@ import { World, Triggers, addBox, addDecor, addSign } from '../world.js';
 
 const PARAPET_HALF_THICKNESS = 0.13;
 const FLASHING_THICKNESS = 0.02;
+
+function pushAuthoredDetail(family, material, x, y, z, width, height, depth) {
+  const geometry = createAuthoredWorldDressingGeometry(family, { dimensions: [width, height, depth],
+    meters: material.userData?.surfaceMeters, offset: { x, y, z } });
+  if (!geometry) return pushDecor(_BG.unitBox, material, x, y, z, width, height, depth);
+  pushDecor(geometry, material, x, y, z, 1, 1, 1);
+  geometry.dispose();
+}
 
 function rectBox(rect, y, height, material, options) {
   return addBox((rect.x1 + rect.x2) / 2, y + height / 2, (rect.z1 + rect.z2) / 2,
@@ -94,11 +103,12 @@ function mechanicalUnit(id, x, z, width = 2.4, depth = 1.8, height = 1.25) {
   const y = ROOF.floorY;
   addBox(x, y + 0.11, z, width + 0.12, 0.22, depth + 0.12, MATS.concrete);
   const unit = addBox(x, y + 0.22 + height / 2, z, width, height, depth, MATS.roofMetal);
+  refineAuthoredDressingMesh(unit, 'hvac-body');
   unit.name = id;
   for (const side of [-1, 1]) {
     pushDecor(_BG.unitBox, MATS.rubber, x, y + 0.22 + height * 0.49, z + side * (depth / 2 + 0.005), width * 0.78, height * 0.66, 0.012);
     for (let i = 0; i < 9; i++) {
-      pushDecor(_BG.unitBox, MATS.roofMetal, x, y + 0.38 + i * height * 0.074,
+      pushAuthoredDetail('hvac-vent-blade', MATS.roofMetal, x, y + 0.38 + i * height * 0.074,
         z + side * (depth / 2 + 0.017), width * 0.8, 0.018, 0.025);
     }
   }
@@ -106,7 +116,9 @@ function mechanicalUnit(id, x, z, width = 2.4, depth = 1.8, height = 1.25) {
   const fan = new THREE.Mesh(new THREE.CylinderGeometry(fanRadius, fanRadius, 0.04, 32), MATS.rubber);
   fan.position.set(x, y + height + 0.245, z); World.add(fan);
   for (let ring = 1; ring <= 4; ring++) {
-    const guard = new THREE.Mesh(new THREE.TorusGeometry(fanRadius * ring / 4, 0.009, 4, 32), MATS.roofMetal);
+    const geometry = createAuthoredWorldDressingGeometry('hvac-fan-guard', { dimensions: [fanRadius * ring / 4, 0.009] })
+      || new THREE.TorusGeometry(fanRadius * ring / 4, 0.009, 4, 32);
+    const guard = new THREE.Mesh(geometry, MATS.roofMetal);
     guard.rotation.x = Math.PI / 2; guard.position.set(x, y + height + 0.274, z); World.add(guard);
   }
   for (const angle of [0, Math.PI / 2]) {
@@ -155,8 +167,8 @@ function buildMechanicalYard() {
   // Pallets, membrane rolls and a tool case leave the eastern escape lane open.
   for (const [px, pz] of [[23.45, -8], [9.5, -17.7]]) {
     addBox(px, y + 0.105, pz, 1.35, 0.21, 1.1, MATS.wood);
-    for (let i = 0; i < 5; i++) pushDecor(_BG.unitBox, MATS.wood, px - 0.56 + i * 0.28, y + 0.24, pz, 0.20, 0.06, 1.1);
-    addBox(px, y + 0.61, pz, 1.2, 0.68, 0.9, MATS.roofMetal);
+    for (let i = 0; i < 5; i++) pushAuthoredDetail('roof-pallet-board', MATS.wood, px - 0.56 + i * 0.28, y + 0.24, pz, 0.20, 0.06, 1.1);
+    refineAuthoredDressingMesh(addBox(px, y + 0.61, pz, 1.2, 0.68, 0.9, MATS.roofMetal), 'roof-tool-case');
     for (const dx of [-0.4, 0.4]) pushDecor(_BG.unitBox, MATS.metal, px + dx, y + 0.98, pz, 0.025, 0.035, 0.92);
   }
   // Parapet scuppers sit in the gravel perimeter, not in the traversal path.
@@ -186,7 +198,9 @@ function buildWaterTank() {
     });
   }
   for (const [i, x] of [-9, -7].entries()) addBeam(`tank-brace-${i}`, [x, y + 0.1, -3], [x, y + 2.1, -1], 0.055, [legIds[i], legIds[i + 2]]);
-  const barrel = new THREE.Mesh(applyWaterTankStaveUV(new THREE.CylinderGeometry(1.4, 1.4, 2.2, 48)), MATS.wood);
+  const barrelGeometry = createAuthoredWorldDressingGeometry('water-tank-barrel', { dimensions: [1.4, 2.2, 48] })
+    || applyWaterTankStaveUV(new THREE.CylinderGeometry(1.4, 1.4, 2.2, 48));
+  const barrel = new THREE.Mesh(barrelGeometry, MATS.wood);
   barrel.position.set(-8, y + 3.3, -2); barrel.castShadow = true; barrel.receiveShadow = true; World.add(barrel);
   const bounds = boxBounds(-8, y + 3.3, -2, 2.8, 2.2, 2.8);
   Architecture.register(barrel, Colliders.addBox(bounds.min, bounds.max), bounds, { id: 'water-tank', kind: 'tank', supports: cradleIds });
@@ -194,7 +208,10 @@ function buildWaterTank() {
     const hoop = new THREE.Mesh(new THREE.TorusGeometry(1.42, 0.035, 6, 48), MATS.metal);
     hoop.rotation.x = Math.PI / 2; hoop.position.set(-8, y + 3.3 + dy, -2); World.add(hoop);
   }
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(1.55, 0.7, 48), MATS.roofMetal);
+  const capGeometry = createAuthoredWorldDressingGeometry('water-tank-cap', { dimensions: [1.55, 0.7, 48],
+    meters: MATS.roofMetal.userData?.surfaceMeters, offset: { x: -8, y: y + 4.75, z: -2 } })
+    || new THREE.ConeGeometry(1.55, 0.7, 48);
+  const cap = new THREE.Mesh(capGeometry, MATS.roofMetal);
   cap.position.set(-8, y + 4.75, -2); cap.castShadow = true; World.add(cap);
   for (const x of [-8.3, -7.7]) pushDecor(_BG.pipe, MATS.metal, x, y + 2.3, -3.48, 0.035, 4.6, 0.035);
   for (let i = 1; i < 15; i++) pushDecor(_BG.unitBox, MATS.metal, -8, y + i * 0.3, -3.48, 0.6, 0.025, 0.025);

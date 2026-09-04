@@ -1,0 +1,7 @@
+#progress-report-link { position: fixed; z-index: 70; left: max(16px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); display: inline-flex; align-items: center; min-height: 36px; padding: 8px 12px; border: 1px solid #68735e; border-radius: 4px; background: #161c14ed; color: #ebe7dc; text-decoration: none; font: 10px/1.4 var(--mono); }
+#progress-report-link:hover { background: #303a29; }
+#progress-report-link:focus-visible { outline: 2px solid #ebe7dc; outline-offset: 3px; }
+body[data-touch-controls="true"][data-playing="true"] #progress-report-link { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 220px); }
+@media (max-height: 500px) and (orientation: landscape) {
+  body[data-touch-controls="true"][data-playing="true"] #progress-report-link { left: max(128px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); }
+}

@@ -23,6 +23,7 @@ import { refineConcreteBarrier } from '../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../src/render/sedan-panels.js';
 import { createCivilianVehicle } from '../../src/render/civilian-vehicles.js';
+import { getAuthoredVehicleGeometry } from '../../src/render/authored-vehicles.js';
 import { buildStreetVehicleAftermath } from '../../src/render/street-vehicle-aftermath.js';
 import { buildStreetAftermath } from '../../src/render/street-aftermath.js';
 import { placeCivilianVehicle } from '../../src/render/parked-vehicle-placement.js';
@@ -86,7 +87,7 @@ function buildFixture() {
   }
   const WorldState = { bakeryLights: [], smokeSystems: [], flickerLights: [], fires: [] };
   const bindings = {
-    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, placeCivilianVehicle,
+    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, getAuthoredVehicleGeometry, placeCivilianVehicle,
     THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, BALCONY, ROOF, APARTMENT_DOORS, DISTRICT, createInteriorProps, createDoorAssemblies,
     World, WorldState, MATS, _CG, _BG, Colliders, buildStreetVehicleAftermath, buildStreetAftermath,
     addBox, addWallZ, addSign, pushDecor, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, addCrtHousing, createSedanCabin, createSedanBumper, createSedanHood,

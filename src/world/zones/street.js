@@ -9,6 +9,7 @@ import { refineConcreteBarrier } from '../../render/street-barrier.js';
 import { createSedanCabin } from '../../render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../render/sedan-panels.js';
 import { createCivilianVehicle } from '../../render/civilian-vehicles.js';
+import { getAuthoredVehicleGeometry } from '../../render/authored-vehicles.js';
 import { buildStreetVehicleAftermath } from '../../render/street-vehicle-aftermath.js';
 import { buildStreetAftermath } from '../../render/street-aftermath.js';
 import { placeCivilianVehicle } from '../../render/parked-vehicle-placement.js';
@@ -250,6 +251,38 @@ function spawnParkedCar(x, y, z, rotY, bodyColor, opts = {}) {
   const chromeMat = new THREE.MeshStandardMaterial({ color: 0xb8b8c0, roughness: 0.25, metalness: 0.85 });
   const redMat = new THREE.MeshStandardMaterial({ color: 0x801010, emissive: 0xa01818, emissiveIntensity: o.idling ? 1.4 : 0.25, roughness: 0.4 });
 
+  const headlightMat = new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffe8a0, emissiveIntensity: o.idling ? 2.5 : 0.4 });
+  const materials = { paint: bodyMat, trim: trimMat, glass: cabinMat, tires: tireMat,
+    metal: chromeMat, rearlamps: redMat, headlamps: headlightMat };
+  // The authored objective car has a fixed envelope; custom-sized callers keep
+  // the procedural factory, whose component dimensions follow their options.
+  const authored = o.length === 4.6 && o.width === 1.9
+    ? getAuthoredVehicleGeometry('objective-sedan') : null;
+  if (authored) {
+    for (const [category, material] of Object.entries(materials)) {
+      const mesh = new THREE.Mesh(authored.geometry[category], material);
+      mesh.name = `objective-sedan-${category}`;
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      car.add(mesh);
+    }
+    car.userData.authoredVehicle = { variant: 'objective-sedan', source: 'original-blender-prepared',
+      resources: authored.resources };
+  } else {
+    buildProceduralObjectiveCar(car, o, materials);
+    consolidateCar(car);
+  }
+
+  World.add(car);
+  const cosine = Math.abs(Math.cos(rotY)), sine = Math.abs(Math.sin(rotY));
+  Colliders.addBoxBySize(x, y + 0.45, z, cosine * (o.length + 0.2) + sine * (o.width + 0.2), 0.9, sine * (o.length + 0.2) + cosine * (o.width + 0.2));
+  Colliders.addBoxBySize(x - 0.1 * Math.cos(rotY), y + 1.15, z + 0.1 * Math.sin(rotY), cosine * o.length * 0.55 + sine * o.width, 0.72, sine * o.length * 0.55 + cosine * o.width);
+  return car;
+}
+
+/** Procedural source and fallback share the same gameplay envelope. */
+function buildProceduralObjectiveCar(car, o, materials) {
+  const { paint: bodyMat, trim: trimMat, glass: cabinMat, tires: tireMat,
+    metal: chromeMat, rearlamps: redMat, headlamps: headlightMat } = materials;
   const body = new THREE.Mesh(new RoundedBoxGeometry(o.length, 0.5, o.width, 3, 0.16), bodyMat);
   body.position.y = 0.55; body.castShadow = true; body.receiveShadow = true; car.add(body);
   // Lower rocker panel — narrow dark strip under the body for visual weight.
@@ -321,7 +354,6 @@ function spawnParkedCar(x, y, z, rotY, bodyColor, opts = {}) {
     }
   }
   // Headlights (forward-facing emissive disks) — slight bezel ring for detail.
-  const headlightMat = new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffe8a0, emissiveIntensity: o.idling ? 2.5 : 0.4 });
   for (const wz of [-0.55, 0.55]) {
     const hl = new THREE.Mesh(_CG.headlight, headlightMat);
     hl.rotation.z = Math.PI / 2; hl.position.set(o.length / 2 + 0.02, 0.55, wz); car.add(hl);
@@ -347,12 +379,6 @@ function spawnParkedCar(x, y, z, rotY, bodyColor, opts = {}) {
     car.add(mir);
   }
 
-  consolidateCar(car);
-  World.add(car);
-  const cosine = Math.abs(Math.cos(rotY)), sine = Math.abs(Math.sin(rotY));
-  Colliders.addBoxBySize(x, y + 0.45, z, cosine * (o.length + 0.2) + sine * (o.width + 0.2), 0.9, sine * (o.length + 0.2) + cosine * (o.width + 0.2));
-  Colliders.addBoxBySize(x - 0.1 * Math.cos(rotY), y + 1.15, z + 0.1 * Math.sin(rotY), cosine * o.length * 0.55 + sine * o.width, 0.72, sine * o.length * 0.55 + cosine * o.width);
-  return car;
 }
 
 /** Keep the articulated vehicle transform while batching static parts by material. */

@@ -6,6 +6,7 @@ import { isSegmentOccluded } from './combat-rules.js';
 import { WEAPON_DEFS } from './weapon-data.js';
 import { AMMO_SUPPLY_CACHES, AmmoSupplyLedger } from './ammo-supply-rules.js';
 import { RunSettings } from './run-settings.js';
+import { getAuthoredSupplyGeometry } from '../render/authored-supply-props.js';
 
 function makeLabelTexture() {
   if (!globalThis.document?.createElement) return null;
@@ -41,8 +42,16 @@ export function createResources() {
 export function buildAmmoBox(config, resources) {
   const group = new THREE.Group();
   group.position.set(config.position.x, config.position.y, config.position.z);
+  const authoredSize = config.width === 0.64 && config.height === 0.34 && config.depth === 0.28;
   const transform = new THREE.Object3D();
   const batch = (name, geometry, material, parts) => {
+    const authored = authoredSize && getAuthoredSupplyGeometry('ammo', name);
+    if (authored) {
+      const mesh = new THREE.Mesh(authored, material); mesh.name = name;
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      group.add(mesh); group.userData.source = 'blender-authored-original';
+      return mesh;
+    }
     const mesh = new THREE.InstancedMesh(geometry, material, parts.length);
     mesh.name = name;
     for (const [index, [x, y, z, width, height, depth, rotationX = 0]] of parts.entries()) {

@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "source": "original project meshes refined in Blender",
+  "blenderVersion": "5.2.1 LTS",
+  "sourceFile": "assets/blender/supplies-props.blend",
+  "sourceInput": "assets/blender/supplies-props-source.json",
+  "catalog": "catalog.json",
+  "bytes": 303188,
+  "sha256": "56d9cb79ddf389ba968f86a7410a1322ac26287a9e4d4a7d9475cdfbc82bb4b1",
+  "textures": 0,
+  "metrics": {
+    "health": {
+      "triangles": 752,
+      "draws": 3,
+      "geometryBytes": 54144,
+      "originalTriangles": 704
+    },
+    "armor": {
+      "triangles": 749,
+      "draws": 4,
+      "geometryBytes": 53928,
+      "originalTriangles": 697
+    },
+    "crt": {
+      "triangles": 724,
+      "draws": 2,
+      "geometryBytes": 40088,
+      "originalTriangles": 628
+    },
+    "ammo": {
+      "triangles": 448,
+      "draws": 3,
+      "geometryBytes": 17664,
+      "originalTriangles": 708,
+      "runtimeLabelAndIndicatorTriangles": 16,
+      "runtimeDraws": 5
+    }
+  },
+  "authoredChanges": {
+    "health": [
+      "Shallow molded lid recess; badge seats below cap",
+      "Inset ivory latch faces and dark release tabs"
+    ],
+    "armor": [
+      "Clipped corners and front chamfer on both carrier pouches; hidden pouch backs omitted"
+    ],
+    "crt": [
+      "Two tapered molded vent rims; original opaque shell and glass aperture retained"
+    ],
+    "ammo": [
+      "Purpose-made rounded body/lid profiles replace subdivided boxes",
+      "Pressed rear ribs, rounded carry grip, recessed latch wells"
+    ]
+  },
+  "runtimeOwnership": "Original game materials, labels, stock indicator, shadows and transforms are retained."
+}

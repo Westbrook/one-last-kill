@@ -228,6 +228,7 @@ test('the settings dialog leaves slider adjustment keys native and keeps Tab ins
   const ui = fixture();
   const controls = [ui.element('settingaudiomaster'), ui.element('settingaudioeffects'), ui.element('resetsettings')];
   ui.context.openPanel = { querySelectorAll: () => controls };
+  ui.context.LeaveGame = { isOpen: () => false };
   const start = source.indexOf('// Native controls keep'), end = source.indexOf('\nconst audioSettingKeys');
   vm.runInContext(source.slice(start, end), ui.context);
   for (const code of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']) {

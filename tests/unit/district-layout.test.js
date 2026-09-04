@@ -16,6 +16,7 @@ import { refineConcreteBarrier } from '../../src/render/street-barrier.js';
 import { createSedanCabin } from '../../src/render/sedan-cabin.js';
 import { createSedanBumper, createSedanHood } from '../../src/render/sedan-panels.js';
 import { createCivilianVehicle } from '../../src/render/civilian-vehicles.js';
+import { getAuthoredVehicleGeometry } from '../../src/render/authored-vehicles.js';
 import { buildStreetVehicleAftermath } from '../../src/render/street-vehicle-aftermath.js';
 import { buildStreetAftermath } from '../../src/render/street-aftermath.js';
 import { placeCivilianVehicle } from '../../src/render/parked-vehicle-placement.js';
@@ -64,7 +65,7 @@ function buildFixture() {
     .replace(/^export \{[^}]+\};\s*$/gm, '');
   assert.doesNotMatch(source, /^import\s/m);
   const builders = runInNewContext(source + '\n;({ buildStreet, buildBakeryAndCar });', {
-    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, placeCivilianVehicle,
+    refineConcreteBarrier, buildClosedStorefront, getStorefrontMaterials, STOREFRONT_STYLES, createCivilianVehicle, getAuthoredVehicleGeometry, placeCivilianVehicle,
     THREE, RoundedBoxGeometry, mergeGeometries, BUILDING, DISTRICT, MATS, World, WorldState, buildStreetVehicleAftermath, buildStreetAftermath,
     _BG, _CG, Colliders, addBox, pushDecor, addSign, Triggers, addBakeryBread, addBakeryPackage, getBakeryProvisionMaterials, createSedanCabin, createSedanBumper, createSedanHood,
     makeHumanoid: () => new THREE.Group(), HUMANOID_PRESETS: { shopkeeper: {}, woman: {} },

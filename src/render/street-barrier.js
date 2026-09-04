@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { applyBoxWorldUV } from './world-uv.js';
+import { createAuthoredWorldDressingGeometry } from './authored-world-dressing.js';
 
 const TOE_FRACTION = 0.12;
 const SHOULDER_HEIGHT = 0.45;
@@ -24,6 +25,11 @@ function profile(width, height, depth) {
 /** Closed extrusion with a broad grounded toe, lower shoulder and narrow crown. */
 export function createConcreteBarrierGeometry(width, height, depth, meters = 2, offset) {
   const section = profile(width, height, depth), positions = [], normals = [], indices = [];
+  const authored = createAuthoredWorldDressingGeometry('concrete-barrier', { dimensions: [width, height, depth], meters, offset });
+  if (authored) {
+    authored.userData.concreteBarrier = { width, height, depth };
+    return authored;
+  }
   for (let i = 0; i < section.length; i++) {
     const a = section[i], b = section[(i + 1) % section.length], base = positions.length / 3;
     const normal = new THREE.Vector3(0, a.x - b.x, b.y - a.y).normalize();

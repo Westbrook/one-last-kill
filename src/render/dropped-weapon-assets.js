@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { getNPCFirearmGeometry, getNPCFirearmMaterials } from './npc-firearms.js';
 import { createHeroWeapon } from './hero-weapons.js';
+import { createAuthoredWeapon } from './authored-weapons.js';
 import { getWeaponFinishes } from './weapon-finishes.js';
 
 const FIREARMS = ['pistol', 'shotgun', 'smg', 'machinegun'];
@@ -20,18 +21,26 @@ function averageAlbedo(material) {
 
 function knifeResources() {
   if (knife) return knife;
-  // The original weapon-only knife has no hands or first-person ready pose.
-  // Keep wood separate; its scale and roughness differ from the metal family.
-  // Metal/metalDark/blade all have 18cm UVs, so their finish can share one draw
-  // with a linear tint preserving the guard/pommel's darker actual albedo.
-  const source = createHeroWeapon('knife'), finishes = getWeaponFinishes();
-  const materials = Object.freeze([finishes.blade, finishes.wood]);
-  const buckets = [[], []], tints = new Map(), target = averageAlbedo(finishes.blade);
+  // The preloaded catalog supplies weapon-only geometry before hands or the
+  // first-person ready pose. Its two shared finishes already fit the drop cap.
+  let source = createAuthoredWeapon('knife');
+  let authored = source && [...new Set(source.children.map(mesh => mesh.material))];
+  if (authored?.length > 2) {
+    // Preserve the two-draw drop contract if a future catalog adds finishes.
+    for (const mesh of source.children) mesh.geometry.dispose();
+    source = null; authored = null;
+  }
+  source ||= createHeroWeapon('knife');
+  const finishes = authored ? null : getWeaponFinishes();
+  const materials = Object.freeze(authored || [finishes.blade, finishes.wood]);
+  const buckets = materials.map(() => []), tints = new Map(), target = finishes && averageAlbedo(finishes.blade);
   for (const mesh of source.children) {
-    const materialIndex = mesh.material === finishes.wood ? 1 : 0;
+    const materialIndex = authored ? materials.indexOf(mesh.material) : mesh.material === finishes.wood ? 1 : 0;
     const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
     mesh.updateMatrix(); geometry.applyMatrix4(mesh.matrix);
-    if (materialIndex === 0 && mesh.material !== finishes.blade) {
+    // The fallback's metal families share physical UVs but need linear tints
+    // to combine into one blade finish; authored charts/colors remain intact.
+    if (!authored && materialIndex === 0 && mesh.material !== finishes.blade) {
       if (!tints.has(mesh.material)) {
         const tint = averageAlbedo(mesh.material);
         tint.setRGB(tint.r / target.r, tint.g / target.g, tint.b / target.b);
@@ -49,7 +58,7 @@ function knifeResources() {
   for (const part of [...buckets.flat(), ...merged]) part.dispose();
   geometry.computeBoundingBox(); geometry.computeBoundingSphere();
   geometry.userData.weaponSurfaceUV = true;
-  geometry.userData.droppedWeapon = Object.freeze({ type: 'knife', source: 'original-profile-procedural',
+  geometry.userData.droppedWeapon = Object.freeze({ type: 'knife', source: source.userData.heroWeapon.source,
     triangles: geometry.attributes.position.count / 3, drawCalls: geometry.groups.length });
   knife = { geometry, materials };
   return knife;

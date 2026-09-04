@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { getWeaponFinishes } from './weapon-finishes.js';
 import { applyHeroWeaponUV } from './hero-weapon-uv.js';
 import { reshapeWeaponShell } from './hero-weapon-shell.js';
+import { getAuthoredWorldWeaponGeometry } from './authored-world-weapons.js';
 
 // Original reduced profile assets. Construction +X is rotated into the rig's
 // existing +Z grip frame; actor, grip and muzzle transforms are never rescaled.
@@ -250,6 +251,8 @@ function automatic(b, machinegun) {
 /** Immutable-in-use source buffers shared by every pool slot of a gun type. */
 export function getNPCFirearmGeometry(type) {
   if (!TYPES.includes(type)) throw new RangeError(`Unknown NPC firearm: ${type}`);
+  const authored = getAuthoredWorldWeaponGeometry(type);
+  if (authored) return authored;
   if (!geometries.has(type)) {
     const b = makeBuilder(type);
     if (type === 'pistol') pistol(b);

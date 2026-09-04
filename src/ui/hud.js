@@ -627,6 +627,167 @@ const EndCard = (() => {
   };
 })();
 
+function menuPadState(pad) {
+  const pressed = index => Boolean(pad.buttons?.[index]?.pressed);
+  return {
+    up: pressed(12) || pad.axes?.[1] < -0.55,
+    down: pressed(13) || pad.axes?.[1] > 0.55,
+    confirm: pressed(0), back: pressed(1), start: pressed(9),
+  };
+}
+
+/** Leaving clears the entire session through the same path as Play Again. */
+const LeaveGame = (() => {
+  const element = byId('leavegame');
+  const cancelButton = byId('leavegamecancel'), confirmButton = byId('leavegameconfirm');
+  let open = false, leaving = false, opener = null, previousPad = null, controllerFocus = null;
+  let background = [];
+  function clearControllerFocus() {
+    controllerFocus?.setAttribute('data-controller-focus', 'false');
+    controllerFocus = null;
+  }
+  function focusFromController(control) {
+    clearControllerFocus();
+    controllerFocus = control;
+    control.setAttribute('data-controller-focus', 'true');
+    control.focus();
+  }
+  function cancel() {
+    if (!open || leaving) return false;
+    open = false;
+    previousPad = null;
+    clearControllerFocus();
+    element.classList.remove('show');
+    element.setAttribute('aria-hidden', 'true');
+    for (const [control, inert] of background) control.inert = inert;
+    background = [];
+    PauseMenu.reset();
+    opener?.focus({ preventScroll: true });
+    return true;
+  }
+  function present({ opener: source = null } = {}) {
+    if (open || Input.active || !RunSettings.isStarted()) return false;
+    opener = source ?? byId(byId('deathscreen').classList.contains('show') ? 'deathleavebutton' : 'leavegamebutton');
+    open = true;
+    previousPad = null;
+    clearControllerFocus();
+    PauseMenu.reset();
+    Input.pause({ showOverlay: false });
+    background = ['overlay', 'hud', 'choice', 'game', 'audiotoggle'].map(id => {
+      const control = byId(id), inert = control.inert;
+      control.inert = true;
+      return [control, inert];
+    });
+    element.classList.add('show');
+    element.setAttribute('aria-hidden', 'false');
+    cancelButton.focus({ preventScroll: true });
+    return true;
+  }
+  cancelButton.addEventListener('click', event => {
+    event.stopPropagation();
+    cancel();
+  });
+  confirmButton.addEventListener('click', event => {
+    event.stopPropagation();
+    if (!open || leaving) return;
+    leaving = true;
+    confirmButton.disabled = true;
+    // Reload retains the current URL and saved preferences; no old mission
+    // state, checkpoint or pending encounter can survive into the next run.
+    location.reload();
+  });
+  for (const id of ['leavegamebutton', 'deathleavebutton']) {
+    const button = byId(id);
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      present({ opener: event.currentTarget });
+    });
+    // Death's legacy Enter shortcut must not retry while this button owns it.
+    button.addEventListener('keydown', event => event.stopPropagation());
+  }
+  element.addEventListener('pointerdown', clearControllerFocus);
+  element.addEventListener('keydown', event => {
+    clearControllerFocus();
+    event.stopPropagation();
+  });
+  return {
+    present, cancel,
+    isOpen() { return open; },
+    pollGamepad(pad) {
+      if (!open) return false;
+      if (!pad) { previousPad = null; return true; }
+      const current = menuPadState(pad);
+      if (!previousPad) { previousPad = current; return true; }
+      const edge = name => current[name] && !previousPad[name];
+      const move = edge('down') ? 1 : edge('up') ? -1 : 0;
+      const accept = edge('confirm'), back = edge('back') || edge('start');
+      previousPad = current;
+      if (back) { cancel(); return true; }
+      const controls = [cancelButton, confirmButton];
+      const index = Math.max(0, controls.indexOf(document.activeElement));
+      if (move) focusFromController(controls[(index + move + controls.length) % controls.length]);
+      else if (accept) controls[index].click();
+      return true;
+    },
+  };
+})();
+
+/** Controller access to the primary and leave actions on pause/death screens. */
+const PauseMenu = (() => {
+  let previousPad = null, previousScreen = null, controllerFocus = null;
+  function reset() {
+    previousPad = null;
+    previousScreen = null;
+    controllerFocus?.setAttribute('data-controller-focus', 'false');
+    controllerFocus = null;
+  }
+  function focusFromController(control) {
+    controllerFocus?.setAttribute('data-controller-focus', 'false');
+    controllerFocus = control;
+    control.setAttribute('data-controller-focus', 'true');
+    control.focus();
+  }
+  return {
+    reset,
+    pollGamepad(pad) {
+      if (Input.active || !RunSettings.isStarted() || LeaveGame.isOpen() || RunSetup.isOpen()
+        || IntroCard.isOpen() || byId('endcard').classList.contains('show')
+        || byId('overlay').classList.contains('is-panel-open')) {
+        reset();
+        return false;
+      }
+      const dead = byId('deathscreen').classList.contains('show');
+      const paused = !byId('overlay').classList.contains('hidden');
+      if (!dead && !paused) {
+        reset();
+        return false;
+      }
+      if (!pad) { reset(); return true; }
+      const screen = dead ? 'death' : 'pause';
+      const controls = dead ? [byId('restartbutton'), byId('deathleavebutton')] : [byId('startbutton'), byId('leavegamebutton')];
+      const current = menuPadState(pad);
+      if (screen !== previousScreen) { reset(); previousScreen = screen; }
+      if (!previousPad) {
+        previousPad = current;
+        focusFromController(controls[0]);
+        return true;
+      }
+      const edge = name => current[name] && !previousPad[name];
+      const move = edge('down') ? 1 : edge('up') ? -1 : 0;
+      const accept = edge('confirm'), start = edge('start');
+      previousPad = current;
+      if (start) return 'primary';
+      const index = Math.max(0, controls.indexOf(document.activeElement));
+      if (move) focusFromController(controls[(index + move + controls.length) % controls.length]);
+      else if (accept) {
+        if (index === 0) return 'primary';
+        controls[index].click();
+      }
+      return true;
+    },
+  };
+})();
+
 /** Sample real frame time, not the clamped simulation step. Memory stays bounded. */
 const FPSMeter = (() => {
   const element = byId('fps');
@@ -730,6 +891,12 @@ document.querySelectorAll('[data-close-panel]').forEach((button) => button.addEv
 
 // Native controls keep their usual keyboard behavior; modal focus cannot start play.
 document.addEventListener('keydown', (event) => {
+  if (LeaveGame.isOpen() && (event.code === 'Escape' || event.code === 'KeyP')) {
+    event.preventDefault();
+    event.stopPropagation();
+    LeaveGame.cancel();
+    return;
+  }
   if (event.code === 'Escape' && !openPanel && RunSetup.isOpen()) {
     event.preventDefault();
     event.stopPropagation();
@@ -742,7 +909,7 @@ document.addEventListener('keydown', (event) => {
     closePanel();
     return;
   }
-  const dialog = openPanel || (RunSetup.isOpen() ? byId('runsetup') : IntroCard.isOpen() ? byId('introcard') : byId('endcard').classList.contains('show') ? byId('endcard') : byId('deathscreen').classList.contains('show') ? byId('deathscreen') : null);
+  const dialog = LeaveGame.isOpen() ? byId('leavegame') : openPanel || (RunSetup.isOpen() ? byId('runsetup') : IntroCard.isOpen() ? byId('introcard') : byId('endcard').classList.contains('show') ? byId('endcard') : byId('deathscreen').classList.contains('show') ? byId('deathscreen') : null);
   if (!dialog || event.code !== 'Tab') return;
   const controls = Array.from(dialog.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]'));
   const first = controls[0], last = controls.at(-1);
@@ -856,6 +1023,8 @@ function syncRunDetails(run = RunSettings.snapshot()) {
     : 'Choose your difficulty when you begin. It stays fixed throughout the run.');
   write(byId('restartlabel'), defense ? 'RETRY DEFENSE' : 'RETRY CHECKPOINT');
   write(byId('deathhint'), defense ? 'Restart from wave 1 with the same difficulty. Hold your ground this time.' : 'Return to your last checkpoint. Make the next move count.');
+  byId('pausegameactions').hidden = !run.locked;
+  byId('deathleavebutton').disabled = !run.locked;
 }
 document.addEventListener('run:settingschange', event => syncRunDetails(event.detail));
 document.addEventListener('run:started', () => syncRunDetails());
@@ -878,4 +1047,4 @@ document.addEventListener('playstatechange', (event) => {
   if (active && mode !== 'mouse') HUD.setStatus(mode === 'touch' ? 'TOUCH CONTROLS / TAP PAUSE FOR MENU' : mode === 'gamepad' ? 'CONTROLLER / START TO PAUSE' : 'ARROWS LOOK / J FIRE / P PAUSE');
 });
 
-export { HUD, ObjectiveBanner, RunSetup, IntroCard, EndCard, FPSMeter };
+export { HUD, ObjectiveBanner, RunSetup, IntroCard, EndCard, LeaveGame, PauseMenu, FPSMeter };

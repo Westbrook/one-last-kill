@@ -87,6 +87,8 @@
         <h2 id="deathtitle">GET BACK UP.</h2>
         <p id="deathhint">Return to your last checkpoint. Make the next move count.</p>
         <button id="restartbutton" class="button button-primary" type="button"><span id="restartlabel">RETRY CHECKPOINT</span><span aria-hidden="true">↗</span></button>
+        <button id="deathleavebutton" class="button-text leave-game-action" type="button" aria-haspopup="dialog" aria-controls="leavegame">LEAVE GAME</button>
+        <p class="leave-game-hint">Start over or choose another mode.</p>
       </section>
     </div>
 
@@ -143,6 +145,19 @@
           <p id="runsetuperror" class="runsetup-error" role="alert" hidden></p>
           <button id="runsetupconfirm" class="button button-primary" type="submit" disabled><span id="runsetupconfirmlabel">BEGIN MISSION</span><span aria-hidden="true">↗</span></button>
         </form>
+      </div>
+    </section>
+
+    <section id="leavegame" role="dialog" aria-modal="true" aria-labelledby="leavegametitle" aria-describedby="leavegamedescription" aria-hidden="true" tabindex="-1">
+      <div class="leave-game-card">
+        <div class="eyebrow">RETURN TO THE MAIN MENU</div>
+        <h2 id="leavegametitle">LEAVE THIS GAME?</h2>
+        <p id="leavegamedescription">Your current run and checkpoints will be lost. Start from the beginning or choose another mode and difficulty. Your settings stay saved.</p>
+        <div class="leave-game-buttons">
+          <button id="leavegamecancel" class="button button-primary" type="button">CANCEL</button>
+          <button id="leavegameconfirm" class="button button-outline" type="button">LEAVE TO MENU <span aria-hidden="true">↗</span></button>
+        </div>
+        <p class="leave-game-controller">Controller: ↑↓ choose · A confirm · B cancel</p>
       </div>
     </section>
 
@@ -217,6 +232,10 @@
           <div class="menu-secondary">
             <button id="fieldnotesbutton" class="button-text" type="button" aria-haspopup="dialog" aria-controls="fieldnotes"><span aria-hidden="true">01</span> FIELD NOTES</button>
             <button id="settingsbutton" class="button-text" type="button" aria-haspopup="dialog" aria-controls="settingspanel"><span aria-hidden="true">02</span> SETTINGS</button>
+          </div>
+          <div id="pausegameactions" hidden>
+            <button id="leavegamebutton" class="button-text leave-game-action" type="button" aria-haspopup="dialog" aria-controls="leavegame">LEAVE GAME</button>
+            <p class="leave-game-hint">Start over or choose another mode.</p>
           </div>
         </div>
         <p class="input-note"><span class="input-note-dot" aria-hidden="true"></span> KEYBOARD + MOUSE / GAMEPAD / TOUCH</p>

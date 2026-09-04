@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSedanBumper } from './sedan-panels.js';
+import { getAuthoredVehicleGeometry } from './authored-vehicles.js';
 
 const geometryCache = new Map(), paintCache = new Map(), trimCache = new Map();
 const CATEGORY = ['paint', 'trim', 'metal', 'glass', 'tires', 'lamps'];
@@ -532,11 +533,12 @@ export function createCivilianVehicle({ variant = 'sedan', paint = 0x66675c, fin
   if (typeof paint !== 'number' || !Number.isInteger(paint) || paint < 0 || paint > 0xffffff) {
     throw new RangeError('Civilian paint must be a 24-bit integer color');
   }
-  if (!geometryCache.has(variant)) {
+  const authored = getAuthoredVehicleGeometry(variant);
+  if (!authored && !geometryCache.has(variant)) {
     const profile = CIVILIAN_VEHICLE_PROFILES[variant];
     geometryCache.set(variant, profile.architecture === 'van' ? buildVanGeometry(profile) : buildGeometry(profile));
   }
-  const cached = geometryCache.get(variant), materials = getMaterials(paint, finish), group = new THREE.Group();
+  const cached = authored || geometryCache.get(variant), materials = getMaterials(paint, finish), group = new THREE.Group();
   group.name = 'civilian-' + variant;
   for (const category of CATEGORY) {
     const mesh = new THREE.Mesh(cached.geometry[category], materials[category]);

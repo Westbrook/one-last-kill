@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { getAuthoredSupplyGeometry } from './authored-supply-props.js';
 
 // The upright carrier has separate front/back panels and an open neckline.
 // All drops share these solid-color parts; only their Group animates.
@@ -89,9 +90,10 @@ export function createArmorPickupModel({ damaged = false } = {}) {
   root.name = 'armor-pickup';
   for (const [index, [name, geometry, material]] of getParts().entries()) {
     if (index === 3 && !damaged) continue;
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(getAuthoredSupplyGeometry('armor', name) ?? geometry, material);
     mesh.name = name;
     root.add(mesh);
   }
+  if (root.children[0].geometry.userData.source) root.userData.source = 'blender-authored-original';
   return root;
 }

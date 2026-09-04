@@ -12,3 +12,27 @@
 #mission-caption .radio-caption[hidden] { display: none; }
 @media(max-width:700px) { #mission-caption { width: 85vw; bottom: 130px; } #route-marker span { font-size: 8px; max-width: 180px; text-align: center; } }
 @media(prefers-reduced-motion:reduce) { #mission-caption, #route-marker { transition: none; } }
+
+#pausegameactions { margin-top: 17px; }
+.leave-game-action { min-height: 44px; color: #c3aa92; }
+.leave-game-hint { font: 9px/1.5 var(--mono); color: #959b8d; }
+#deathscreen .leave-game-action { margin-top: 14px; }
+#deathscreen .leave-game-hint { margin: 0; font-size: 9px; }
+#leavegame { position: fixed; inset: 0; z-index: 60; display: none; overflow-y: auto; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: rgb(8 10 8 / 90%); }
+#leavegame.show { display: flex; }
+.leave-game-card { width: min(480px, 100%); margin: auto; padding: clamp(24px, 5vw, 38px); border: 1px solid #525445; background: #171b14; box-shadow: 0 20px 80px #0008; }
+.leave-game-card .eyebrow { color: #b3bc9f; font-size: 8px; }
+.leave-game-card h2 { margin: 21px 0 18px; font: 400 clamp(30px, 5vw, 43px)/1.05 var(--display); letter-spacing: .02em; }
+.leave-game-card > p { color: #b8bfad; font-size: 12px; line-height: 1.8; }
+.leave-game-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 27px; }
+.leave-game-buttons .button { min-height: 48px; width: 100%; justify-content: center; }
+.leave-game-card .leave-game-controller { margin-top: 18px; color: #8e9b81; font: 8px/1.8 var(--mono); }
+#leavegame [data-controller-focus="true"], #start [data-controller-focus="true"], #deathscreen [data-controller-focus="true"] { outline: 2px solid var(--bone); outline-offset: 5px; }
+body:has(#leavegame.show) #touch-controls { display: none; }
+@media (max-height: 520px) {
+  #pausegameactions { margin-top: 5px; }
+  #pausegameactions .leave-game-hint { display: none; }
+  .leave-game-card { padding: 22px; }
+  .leave-game-card h2 { margin-top: 14px; }
+  .leave-game-buttons { margin-top: 18px; }
+}

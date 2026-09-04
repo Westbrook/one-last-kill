@@ -1,0 +1,678 @@
+{
+  "version": 1,
+  "source": "assets/blender/world-dressing.blend",
+  "sourceTransfer": "assets/blender/world-dressing-source.json",
+  "builder": "tools/blender/build-world-dressing.py",
+  "catalogBytes": 227076,
+  "sha256": "f93002e5bbce60a4fbd0ba7bbe7b631730e9a5d96fee4a1d54088ba5e9b73bfe",
+  "templateCount": 28,
+  "sourcePlacedTriangles": 9332,
+  "placedTriangles": 8972,
+  "triangleDelta": -360,
+  "addedDraws": 0,
+  "addedMaterials": 0,
+  "addedTextures": 0,
+  "addedLights": 0,
+  "entries": [
+    {
+      "id": "hvac-body-0",
+      "family": "hvac-body",
+      "dimensions": [
+        2.2,
+        1,
+        1.2
+      ],
+      "instances": 3,
+      "sourceTriangles": 12,
+      "triangles": 44,
+      "bounds": {
+        "min": [
+          -1.1,
+          -0.5,
+          -0.6
+        ],
+        "max": [
+          1.1,
+          0.5,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": "hvac-vent-blade-0",
+      "family": "hvac-vent-blade",
+      "dimensions": [
+        1.7600000000000002,
+        0.018,
+        0.025
+      ],
+      "instances": 54,
+      "sourceTriangles": 12,
+      "triangles": 12,
+      "bounds": {
+        "min": [
+          -0.88,
+          -0.009,
+          -0.0125
+        ],
+        "max": [
+          0.88,
+          0.009,
+          0.0125
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-0",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.10200000000000001,
+        0.009
+      ],
+      "instances": 3,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.111,
+          -0.111,
+          -0.009
+        ],
+        "max": [
+          0.111,
+          0.111,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-1",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.20400000000000001,
+        0.009
+      ],
+      "instances": 3,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.213,
+          -0.213,
+          -0.009
+        ],
+        "max": [
+          0.213,
+          0.213,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-2",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.30600000000000005,
+        0.009
+      ],
+      "instances": 3,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.315,
+          -0.315,
+          -0.009
+        ],
+        "max": [
+          0.315,
+          0.315,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-3",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.40800000000000003,
+        0.009
+      ],
+      "instances": 3,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.417,
+          -0.417,
+          -0.009
+        ],
+        "max": [
+          0.417,
+          0.417,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-body-1",
+      "family": "hvac-body",
+      "dimensions": [
+        2.4,
+        1.25,
+        1.8
+      ],
+      "instances": 3,
+      "sourceTriangles": 12,
+      "triangles": 44,
+      "bounds": {
+        "min": [
+          -1.2,
+          -0.625,
+          -0.9
+        ],
+        "max": [
+          1.2,
+          0.625,
+          0.9
+        ]
+      }
+    },
+    {
+      "id": "hvac-vent-blade-1",
+      "family": "hvac-vent-blade",
+      "dimensions": [
+        1.92,
+        0.018,
+        0.025
+      ],
+      "instances": 54,
+      "sourceTriangles": 12,
+      "triangles": 12,
+      "bounds": {
+        "min": [
+          -0.96,
+          -0.009,
+          -0.0125
+        ],
+        "max": [
+          0.96,
+          0.009,
+          0.0125
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-4",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.144,
+        0.009
+      ],
+      "instances": 3,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.153,
+          -0.153,
+          -0.009
+        ],
+        "max": [
+          0.153,
+          0.153,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-5",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.288,
+        0.009
+      ],
+      "instances": 3,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.297,
+          -0.297,
+          -0.009
+        ],
+        "max": [
+          0.297,
+          0.297,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-6",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.43199999999999994,
+        0.009
+      ],
+      "instances": 3,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.441,
+          -0.441,
+          -0.009
+        ],
+        "max": [
+          0.441,
+          0.441,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-7",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.576,
+        0.009
+      ],
+      "instances": 3,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.585,
+          -0.585,
+          -0.009
+        ],
+        "max": [
+          0.585,
+          0.585,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-body-2",
+      "family": "hvac-body",
+      "dimensions": [
+        3.3,
+        1.25,
+        1.9
+      ],
+      "instances": 1,
+      "sourceTriangles": 12,
+      "triangles": 44,
+      "bounds": {
+        "min": [
+          -1.65,
+          -0.625,
+          -0.95
+        ],
+        "max": [
+          1.65,
+          0.625,
+          0.95
+        ]
+      }
+    },
+    {
+      "id": "hvac-vent-blade-2",
+      "family": "hvac-vent-blade",
+      "dimensions": [
+        2.64,
+        0.018,
+        0.025
+      ],
+      "instances": 18,
+      "sourceTriangles": 12,
+      "triangles": 12,
+      "bounds": {
+        "min": [
+          -1.3200001,
+          -0.009,
+          -0.0125
+        ],
+        "max": [
+          1.3200001,
+          0.009,
+          0.0125
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-8",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.1615,
+        0.009
+      ],
+      "instances": 1,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.1705,
+          -0.1705,
+          -0.009
+        ],
+        "max": [
+          0.1705,
+          0.1705,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-9",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.323,
+        0.009
+      ],
+      "instances": 1,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.332,
+          -0.332,
+          -0.009
+        ],
+        "max": [
+          0.332,
+          0.332,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-10",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.48450000000000004,
+        0.009
+      ],
+      "instances": 1,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.4935,
+          -0.4935,
+          -0.009
+        ],
+        "max": [
+          0.4935,
+          0.4935,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "hvac-fan-guard-11",
+      "family": "hvac-fan-guard",
+      "dimensions": [
+        0.646,
+        0.009
+      ],
+      "instances": 1,
+      "sourceTriangles": 256,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.655,
+          -0.655,
+          -0.009
+        ],
+        "max": [
+          0.655,
+          0.655,
+          0.009
+        ]
+      }
+    },
+    {
+      "id": "water-tank-barrel-0",
+      "family": "water-tank-barrel",
+      "dimensions": [
+        1.4,
+        2.2,
+        48
+      ],
+      "instances": 1,
+      "sourceTriangles": 192,
+      "triangles": 384,
+      "bounds": {
+        "min": [
+          -1.4,
+          -1.1,
+          -1.4
+        ],
+        "max": [
+          1.4,
+          1.1,
+          1.4
+        ]
+      }
+    },
+    {
+      "id": "water-tank-cap-0",
+      "family": "water-tank-cap",
+      "dimensions": [
+        1.55,
+        0.7,
+        48
+      ],
+      "instances": 1,
+      "sourceTriangles": 96,
+      "triangles": 384,
+      "bounds": {
+        "min": [
+          -1.55,
+          -0.35,
+          -1.55
+        ],
+        "max": [
+          1.55,
+          0.35,
+          1.55
+        ]
+      }
+    },
+    {
+      "id": "concrete-barrier-0",
+      "family": "concrete-barrier",
+      "dimensions": [
+        2.8,
+        0.95,
+        0.75
+      ],
+      "instances": 1,
+      "sourceTriangles": 28,
+      "triangles": 60,
+      "bounds": {
+        "min": [
+          -1.4,
+          -0.475,
+          -0.375
+        ],
+        "max": [
+          1.4,
+          0.475,
+          0.375
+        ]
+      }
+    },
+    {
+      "id": "workbench-case-0",
+      "family": "workbench-case",
+      "dimensions": [
+        0.58,
+        0.18,
+        0.38
+      ],
+      "instances": 2,
+      "sourceTriangles": 12,
+      "triangles": 44,
+      "bounds": {
+        "min": [
+          -0.29,
+          -0.09,
+          -0.19
+        ],
+        "max": [
+          0.29,
+          0.09,
+          0.19
+        ]
+      }
+    },
+    {
+      "id": "workbench-handle-0",
+      "family": "workbench-handle",
+      "dimensions": [
+        0.22,
+        0.05,
+        0.07
+      ],
+      "instances": 2,
+      "sourceTriangles": 12,
+      "triangles": 28,
+      "bounds": {
+        "min": [
+          -0.11,
+          -0.025,
+          -0.035
+        ],
+        "max": [
+          0.11,
+          0.025,
+          0.035
+        ]
+      }
+    },
+    {
+      "id": "pallet-supply-case-0",
+      "family": "pallet-supply-case",
+      "dimensions": [
+        1.15,
+        0.5,
+        0.63
+      ],
+      "instances": 1,
+      "sourceTriangles": 12,
+      "triangles": 52,
+      "bounds": {
+        "min": [
+          -0.575,
+          -0.25,
+          -0.315
+        ],
+        "max": [
+          0.575,
+          0.25,
+          0.315
+        ]
+      }
+    },
+    {
+      "id": "pallet-supply-case-1",
+      "family": "pallet-supply-case",
+      "dimensions": [
+        0.95,
+        0.5,
+        0.63
+      ],
+      "instances": 1,
+      "sourceTriangles": 12,
+      "triangles": 52,
+      "bounds": {
+        "min": [
+          -0.475,
+          -0.25,
+          -0.315
+        ],
+        "max": [
+          0.475,
+          0.25,
+          0.315
+        ]
+      }
+    },
+    {
+      "id": "pallet-supply-case-2",
+      "family": "pallet-supply-case",
+      "dimensions": [
+        1.25,
+        0.5,
+        0.63
+      ],
+      "instances": 3,
+      "sourceTriangles": 12,
+      "triangles": 52,
+      "bounds": {
+        "min": [
+          -0.625,
+          -0.25,
+          -0.315
+        ],
+        "max": [
+          0.625,
+          0.25,
+          0.315
+        ]
+      }
+    },
+    {
+      "id": "roof-pallet-board-0",
+      "family": "roof-pallet-board",
+      "dimensions": [
+        0.2,
+        0.06,
+        1.1
+      ],
+      "instances": 10,
+      "sourceTriangles": 12,
+      "triangles": 44,
+      "bounds": {
+        "min": [
+          -0.1,
+          -0.03,
+          -0.55
+        ],
+        "max": [
+          0.1,
+          0.03,
+          0.55
+        ]
+      }
+    },
+    {
+      "id": "roof-tool-case-0",
+      "family": "roof-tool-case",
+      "dimensions": [
+        1.2,
+        0.68,
+        0.9
+      ],
+      "instances": 2,
+      "sourceTriangles": 12,
+      "triangles": 52,
+      "bounds": {
+        "min": [
+          -0.6,
+          -0.34,
+          -0.45
+        ],
+        "max": [
+          0.6,
+          0.34,
+          0.45
+        ]
+      }
+    }
+  ]
+}

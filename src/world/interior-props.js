@@ -22,6 +22,7 @@ export function createInteriorProps({ addBox, pushDecor, boxGeometry, pipeGeomet
       : furnitureBox(width, height, depth, radius, meters(material), segments);
     mesh.material = material;
     mesh.userData.furnitureShape = mesh.geometry.userData.furnitureShape;
+    if (mesh.geometry.userData.authoredFurniture) mesh.userData.authoredFurniture = mesh.geometry.userData.authoredFurniture;
     original.dispose(); // addBox created this unshared source, before any GPU upload.
     return mesh;
   }

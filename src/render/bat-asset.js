@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { normalsFromHeights } from './surface-detail.js';
+import { getAuthoredWorldWeaponGeometry } from './authored-world-weapons.js';
 
 /** Canonical meters: handle grip at the origin, barrel along +Z. */
 export const BAT_DIMENSIONS = Object.freeze({
@@ -78,8 +79,8 @@ function lathe(profile, segments = 24) {
 
 function resources() {
   if (shared) return shared;
-  const wood = lathe(PROFILE);
-  const grip = lathe([[0.0139, -0.110], [0.0147, -0.108], [0.0148, -0.102],
+  const wood = getAuthoredWorldWeaponGeometry('bat', 'bat-wood') || lathe(PROFILE);
+  const grip = getAuthoredWorldWeaponGeometry('bat', 'bat-grip') || lathe([[0.0139, -0.110], [0.0147, -0.108], [0.0148, -0.102],
     [0.0149, 0.103], [0.0151, 0.111], [0.0148, 0.114]], 20);
   const woodMaterial = new THREE.MeshStandardMaterial({
     ...finishTextures(), roughness: 1, metalness: 0,
@@ -101,8 +102,8 @@ export function createBatAsset({ castShadow = true } = {}) {
   bat.name = 'weapon:bat';
   bat.userData.role = 'weapon'; bat.userData.weaponType = 'bat';
   bat.userData.dimensions = BAT_DIMENSIONS;
-  const wood = new THREE.Mesh(assets.wood, assets.woodMaterial);
-  const grip = new THREE.Mesh(assets.grip, assets.gripMaterial);
+  const wood = new THREE.Mesh(getAuthoredWorldWeaponGeometry('bat', 'bat-wood') || assets.wood, assets.woodMaterial);
+  const grip = new THREE.Mesh(getAuthoredWorldWeaponGeometry('bat', 'bat-grip') || assets.grip, assets.gripMaterial);
   wood.name = 'bat-wood'; grip.name = 'bat-grip';
   wood.castShadow = grip.castShadow = castShadow;
   wood.receiveShadow = grip.receiveShadow = castShadow;

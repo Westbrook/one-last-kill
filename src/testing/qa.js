@@ -17,7 +17,7 @@
  * are disclosed in their reports and reset afterwards. Collision routes use
  * a separate body through the same solver and the built world's boxes.
  */
-import { Box3, Matrix4, Ray, Vector3 } from 'three';
+import { Box3, Matrix4, Ray, Raycaster, Vector3 } from 'three';
 import { Audio } from '../core/audio.js';
 import { Ballistics, createBallisticHit } from '../core/ballistics.js';
 import { Colliders, capsuleHasClearance, moveCapsule } from '../core/collision.js';
@@ -49,8 +49,8 @@ import {
 import { Blood, FX } from '../render/effects.js';
 import { createCivilianVehicle, CIVILIAN_VEHICLE_PROFILES } from '../render/civilian-vehicles.js';
 import { getHumanoidVisualBounds, resetHumanoidPose, updateHumanoidPose } from '../render/humanoid-rig.js';
-import { HUD, IntroCard } from '../ui/hud.js';
-import { World, WorldState, Triggers, triggersUpdate, animateFires } from '../world/world.js';
+import { HUD, IntroCard, RunSetup } from '../ui/hud.js';
+import { World, WorldState, ZoneCull, Triggers, triggersUpdate, animateFires } from '../world/world.js';
 import { Architecture } from '../world/architecture.js';
 import { APARTMENT_DOORS, BALCONY, BUILDING, OPENINGS, ROOF } from '../world/layout.js';
 import { STAIRS } from '../world/stair-layout.js';
@@ -717,7 +717,7 @@ function createPanel() {
   ]);
   const actorFraming = inspectionSelect(actorPanel, 'qa-npc-framing', 'NPC framing', [
     ['body', 'Full body'], ['portrait', 'Face and shoulders'], ['face', 'Face close-up'],
-    ['lowface', 'Face from below'], ['grip', 'Weapon grip'],
+    ['lowface', 'Face from below'], ['grip', 'Weapon grip'], ['boots', 'Boots and trouser finish'],
   ]);
   const actorActions = document.createElement('div');
   actorActions.className = 'qa-row'; actorPanel.append(actorActions);
@@ -757,6 +757,8 @@ function createPanel() {
     ['civilian-east-rear', 'Civilian east · rear quarter'],
     ['civilian-far', 'Civilian far curb'], ['civilian-row', 'Civilian near row'],
     ['tank', 'Water tank'], ['barrier', 'Street barrier'],
+    ['hvac', 'Placed rooftop HVAC · fan and vents'], ['ammo', 'Placed roof ammunition case'],
+    ['crt-rear', 'Placed neighbor CRT · rear housing'], ['workbench-case', 'Placed scaffold workbench case'],
     ['drops', 'Full drop pool (16)'],
   ]);
   const objectActions = document.createElement('div');
@@ -941,6 +943,7 @@ export function installQA(api) {
   }
   function freshApartment() {
     pauseSilently();
+    RunSetup.hide();
     setNPCInspection(false);
     inspectedActor = null;
     visualFixtureActive = false;
@@ -1013,6 +1016,22 @@ export function installQA(api) {
       'Audio locked off · no AudioContext',
     ];
   }
+  function handAssetDescription(model) {
+    const surfaces = [...(model?.userData.handSurfaces ?? [])];
+    if (!surfaces.length) model?.traverse(object => {
+      const surface = object.geometry?.userData.authoredHand;
+      if (surface) surfaces.push(surface);
+    });
+    const identities = [...new Set(surfaces.map(surface =>
+      `${surface.source || 'original-procedural'} / ${surface.revision || 'initial'} / ${surface.finish || 'existing finish'}`))];
+    return `Hand surfaces: ${surfaces.length} actual hands · ${identities.join('; ') || 'unreported'}`;
+  }
+  function characterAssetDescription(actor) {
+    const rig = actor?.mesh.userData.rig;
+    const revisions = [...new Set((rig?.visualMeshes ?? []).map(mesh =>
+      mesh.geometry.userData.authoredCharacter?.revision).filter(Boolean))];
+    return `Character asset: ${actor?.type} · ${rig?.hero?.source || 'original-procedural'} · ${revisions.join(', ') || 'initial'} · finish ${rig?.hero?.finish || 'existing'} · ${rig?.hero?.triangles ?? '?'} triangles / ${rig?.hero?.draws ?? '?'} body draws`;
+  }
   function graphicsDescription(metrics = api.metrics?.() ?? {}) {
     const bake = metrics.interiorLighting, shadows = metrics.focusedShadows, reflections = metrics.interiorReflections;
     return [
@@ -1020,6 +1039,14 @@ export function installQA(api) {
       `Compressed texture support: ${textureFormats}`,
       ...(metrics.surfaceDelivery ? [`Surface delivery: ${JSON.stringify(metrics.surfaceDelivery)}`] : []),
       ...(metrics.startup ? [`Graphics startup: ${metrics.startup.readyMs?.toFixed(0) ?? 'pending'} ms to ready · ${metrics.startup.surfaceMapsMs?.toFixed(0) ?? '?'} ms maps · ${metrics.startup.worldBuildMs?.toFixed(0) ?? '?'} ms world build (local cache/network state applies)`] : []),
+      ...(metrics.startup?.authoredPistol ? [`Blender pistol: ${metrics.startup.authoredPistol.state} · ${metrics.startup.authoredPistol.triangles ?? 0} weapon triangles · ${metrics.startup.authoredPistol.materials ?? 0} materials · ${metrics.startup.authoredPistol.elapsedMs?.toFixed(0) ?? '?'} ms load/decode`] : []),
+      ...Object.entries(metrics.startup?.authoredAssets ?? {}).map(([name, asset]) => {
+        const bytes = asset.bytes ?? asset.geometryBytes;
+        const byteLabel = asset.bytes !== undefined || name === 'characters' ? 'pack bytes' : 'geometry bytes';
+        return `Blender asset ${name}: ${asset.state}`
+          + (Number.isFinite(bytes) ? ` · ${bytes.toLocaleString()} ${byteLabel}` : '')
+          + ` · ${(asset.loadMs ?? asset.elapsedMs)?.toFixed(0) ?? '?'} ms load/decode`;
+      }),
       ...(bake ? [`Interior bake ${bake.enabled ? 'ON' : 'OFF'}: ${bake.receivers} receivers · ${bake.charts} charts · ${bake.atlasSize}² atlas · ${bake.rays} rays`,
         `Bake startup: ${bake.cpuMs.toFixed(1)} ms CPU / ${bake.elapsedMs.toFixed(1)} ms wall · ${bake.yieldCount} yields · ${(bake.atlasBytes / 1048576).toFixed(2)} MiB atlas · ${(bake.geometryBytes / 1024).toFixed(0)} KiB UVs`] : []),
       ...(shadows ? [`Directional shadows: ${shadows.mode} (${shadows.reason}) · ${shadows.linearResolutionGain.toFixed(2)}× linear texel density · ${(shadows.texelSize.x * 100).toFixed(2)} × ${(shadows.texelSize.y * 100).toFixed(2)} cm/texel`] : []),
@@ -1252,7 +1279,7 @@ export function installQA(api) {
     near(strike.health - enemy.health, strike.expectedDamage, 'Real melee input hits the centered torso exactly once at contact');
   }
 
-  function prepareCombatFixture({ roof = false } = {}) {
+  function prepareCombatFixture({ roof = false, pistol = false, firearm = null } = {}) {
     freshApartment();
     const zone = roof ? 'roof' : 'street';
     controlledArea(zone);
@@ -1263,22 +1290,25 @@ export function installQA(api) {
     if (roof) placeOnClearFloor({ x: 15, y: ROOF.floorY, z: -7 });
     const entries = points.map((point, index) => ({ ...point, type: types[index] }));
     for (const entry of entries) entry.enemy = spawnFixtureEnemy(entry.type, entry, zone);
-    Weapons.restore({ current: 'smg', loaded: WEAPON_DEFS.smg.mag, reserve: 240 });
+    const weapon = firearm || (pistol ? 'pistol' : 'smg');
+    const semiAutomatic = !WEAPON_DEFS[weapon].full;
+    Weapons.restore({ current: weapon, loaded: WEAPON_DEFS[weapon].mag, reserve: 240 });
     const aim = roof ? entries[0] : entries[1];
     pointCameraAt({ x: aim.x, y: aim.y + 1.02, z: aim.z });
     const view = { yaw: Player.yaw, pitch: Player.pitch };
     const station = { x: Player.pos.x, z: Player.pos.z };
-    let respawns = 0, absorbedDamage = 0, healthRestores = 0;
+    let respawns = 0, absorbedDamage = 0, healthRestores = 0, reloads = 0, wasReloading = false;
+    let nextShotAt = GameTime.elapsed;
     let measuredStart = null;
     api.setInspection(false);
     Input.activate();
     Input.keyDown('KeyQ');
-    assert(Input.keyDown('KeyJ'), 'Combat fixture must activate the real automatic-fire input');
+    if (!semiAutomatic) assert(Input.keyDown('KeyJ'), 'Combat fixture must activate the real automatic-fire input');
 
     function counters() {
       const combat = CombatStats.snapshot();
       return { elapsed: GameTime.elapsed, shots: combat.shots, hits: combat.hits,
-        kills: combat.kills, respawns, absorbedDamage, healthRestores };
+        kills: combat.kills, respawns, absorbedDamage, healthRestores, reloads };
     }
     return {
       prepareFrame() {
@@ -1298,12 +1328,19 @@ export function installQA(api) {
         }
         Player.yaw = view.yaw;
         Player.pitch = view.pitch;
-        // Fire is held through the real full-auto input path. Empty magazines
-        // request a normal timed reload; ammunition is not injected per frame.
+        // Semi-automatic weapons get distinct press edges; automatics retain held fire.
+        if (semiAutomatic && GameTime.elapsed >= nextShotAt && Weapons.loaded > 0 && Weapons.reloading <= 0) {
+          assert(Input.keyDown('KeyJ'), 'Firearm fixture must activate the real fire input');
+          nextShotAt = GameTime.elapsed + WEAPON_DEFS[weapon].rate + 0.05;
+        }
+        // Empty magazines request normal reloads; no per-frame ammo injection.
         if (Weapons.loaded === 0 && Weapons.reloading <= 0 && Weapons.reserve > 0) Input.keyDown('KeyR');
       },
       afterFrame() {
         Input.keyUp('KeyR');
+        if (semiAutomatic) Input.keyUp('KeyJ');
+        if (Weapons.reloading > 0 && !wasReloading) reloads++;
+        wasReloading = Weapons.reloading > 0;
         absorbedDamage += Math.max(0, 100 - Player.health);
         assert(!PlayerState.dead, 'The controlled combat fixture cannot continue after death');
         const alive = Enemies.list.filter(enemy => enemy.alive);
@@ -1846,9 +1883,21 @@ export function installQA(api) {
     }],
     ['Settings and Field Notes prevent starting play', () => {
       api.setInspection(false);
-      // Establish a positive control after the one-time intro. Otherwise its
-      // first-engage return could make an absent modal guard appear to pass.
+      // Each fixture reset clears run configuration. Complete the actual
+      // setup and briefing before testing the Settings/Field Notes guard.
       let entered = engageLock({ pointerLock: false });
+      if (!entered && RunSetup.isOpen()) {
+        for (const [id, value] of [['runmode', 'campaign'], ['rundifficulty', 'average']]) {
+          const field = document.getElementById(id);
+          assert(field, 'Run setup must expose its actual mode and difficulty controls');
+          field.value = value;
+          field.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const confirm = document.getElementById('runsetupconfirm');
+        assert(confirm && !confirm.disabled, 'The explicit Average campaign selection must enable Begin');
+        confirm.click();
+        assert(!RunSetup.isOpen() && IntroCard.isOpen(), 'Submitting run setup must present the briefing');
+      }
       if (!entered && IntroCard.isOpen()) {
         IntroCard.dismiss({ engage: false });
         entered = engageLock({ pointerLock: false });
@@ -1878,7 +1927,7 @@ export function installQA(api) {
       }
       assert(engageLock({ pointerLock: false }) && Input.active, 'Closing both panels must restore normal play activation');
       pauseSilently();
-      return 'Actual Settings/Field Notes buttons open protected modals; play is rejected until they close';
+      return 'Actual Average campaign setup and briefing establish play; Settings/Field Notes buttons open protected modals, and play is rejected until they close';
     }],
     ['All eight checkpoint floors and capsule clearances', () => {
       assert(ZONE_ORDER.length === 8, 'All eight authored areas must be covered');
@@ -4229,14 +4278,17 @@ export function installQA(api) {
     if (busy || disposed) return;
     try {
       const type = ui.objectType.value;
-      const zone = ['car', 'barrier', 'drops'].includes(type) || type.startsWith('civilian-') ? 'street' : 'roof';
+      const zone = type === 'crt-rear' ? 'neighbor' : type === 'workbench-case' ? 'scaffolding'
+        : ['car', 'barrier', 'drops'].includes(type) || type.startsWith('civilian-') ? 'street' : 'roof';
       freshApartment();
       controlledArea(zone);
       visualFixtureActive = true;
       ui.select.value = zone;
       document.body.classList.add('qa-scene-inspection');
       let specimen = null;
+      let specimenScope = 'Specimen';
       const details = [];
+      const placedResources = ['hvac', 'ammo', 'crt-rear', 'workbench-case'].includes(type) ? worldResourceSignature() : null;
       if (type === 'health') {
         const pickup = HealPickups.list.find(entry => entry.id === 'roof-front-west');
         assert(pickup?.active && pickup.mesh.visible, 'The authored roof health supply must be visible');
@@ -4314,6 +4366,48 @@ export function installQA(api) {
         details.push(type === 'civilian-row' ? 'Authored parked-car row; the design selector applies only to individual vehicle views.'
           : 'Fixed world-space camera and authored parking transform. Return to game menu restores any design preview before play.');
         details.push(`Camera anchor ${view[0].join(', ')} · look target ${view[1].join(', ')} m.`);
+      } else if (type === 'hvac') {
+        specimen = World.getObjectByName('roof-front-hvac-2');
+        assert(specimen?.isMesh && specimen.visible, 'The placed roof-front-hvac-2 unit must exist');
+        const target = specimen.getWorldPosition(new Vector3());
+        Player.pos.copy(target).add(new Vector3(1.8, 1.65, 2.2));
+        pointCameraAt(target);
+        specimenScope = 'Selected HVAC body (fan and vents remain in their existing world draws)';
+        details.push('Selected placed object: roof-front-hvac-2. Original curb, body, top fan guard and front vent assembly; only the review camera moves.');
+      } else if (type === 'ammo') {
+        const pickup = AmmoSupplies.list.find(entry => entry.id === 'roof-east-reserve');
+        assert(pickup?.mesh.visible, 'The placed roof-east-reserve ammunition case must exist');
+        specimen = pickup.mesh;
+        const target = new Box3().setFromObject(specimen).getCenter(new Vector3());
+        Player.pos.copy(target).add(new Vector3(0.62, 0.58, 0.96));
+        pointCameraAt(target);
+        details.push('Selected placed object: ammo-cache-roof-east-reserve. Original case, labels, indicator and supporting roof; no collection or supply change.');
+      } else if (type === 'crt-rear') {
+        specimen = World.getObjectByName('neighbor-crt-housing');
+        assert(specimen?.isMesh && specimen.visible, 'The placed neighbor-crt-housing must exist');
+        const target = specimen.getWorldPosition(new Vector3());
+        Player.pos.copy(target).add(new Vector3(0.72, 0.38, 1.14));
+        pointCameraAt(target);
+        specimenScope = 'Selected CRT housing (recesses remain in their existing decoration draw)';
+        details.push('Selected placed object: neighbor-crt-housing, viewed from its positive-Z rear quarter. Original console, rear vents and scene lighting; only the review camera moves.');
+      } else if (type === 'workbench-case') {
+        const bench = Architecture.elements.get('scaffold-workbench-0')?.mesh;
+        assert(bench?.visible, 'The placed scaffold-workbench-0 must exist');
+        const target = bench.getWorldPosition(new Vector3()).add(new Vector3(-0.3, 0.135, 0));
+        // The case and handle were merged into zone decoration at boot. Probe
+        // their actual top surfaces without cloning, unbatching or reparenting.
+        const ray = new Raycaster(new Vector3(), new Vector3(0, -1, 0), 0, 0.6);
+        const parts = [0.23, 0].map(offset => {
+          ray.ray.origin.copy(target).add(new Vector3(offset, 0.4, 0));
+          const hit = ray.intersectObjects(ZoneCull.byZone.scaffolding ?? [], true)
+            .find(candidate => candidate.object.visible && candidate.point.y > target.y + 0.05);
+          assert(hit, 'The placed workbench case and handle must have real rendered top surfaces');
+          return hit.object;
+        });
+        Player.pos.copy(target).add(new Vector3(0.56, 0.55, 0.72));
+        pointCameraAt(target);
+        details.push(`Selected placed object: scaffold-workbench-0 case and handle at ${target.toArray().map(value => value.toFixed(3)).join(', ')} m.`,
+          `Both surfaces belong to ${new Set(parts).size} existing scaffold decoration batches; batch totals would also include other props, so no isolated case draw count is reported.`);
       } else if (type === 'tank') {
         Player.pos.set(-11.5, ROOF.floorY + 3, -6.3);
         pointCameraAt({ x: -8, y: ROOF.floorY + 3.3, z: -2 });
@@ -4326,14 +4420,19 @@ export function installQA(api) {
       api.setInspection(true);
       pausedRender();
       assert(!Input.active && Enemies.list.length === 0, 'Object review must contain no active simulation or enemies');
+      if (placedResources) {
+        same(worldResourceSignature(), placedResources, 'Placed-object inspection must retain the existing world objects, geometry, materials and textures');
+        details.push('Placed-object inspection retained all world object and geometry identities; no specimen was rebuilt or moved.');
+      }
       if (specimen) {
         let triangles = 0, draws = 0;
         specimen.traverseVisible(object => {
           if (!object.isMesh) return;
-          triangles += (object.geometry.index?.count ?? object.geometry.attributes.position.count) / 3;
+          triangles += (object.geometry.index?.count ?? object.geometry.attributes.position.count) / 3
+            * (object.isInstancedMesh ? object.count : 1);
           draws += Array.isArray(object.material) ? object.geometry.groups.length : 1;
         });
-        details.push(`Specimen: ${triangles.toLocaleString()} triangles · ${draws} material groups (render passes may multiply draws).`);
+        details.push(`${specimenScope}: ${triangles.toLocaleString()} triangles · ${draws} material groups (render passes may multiply draws).`);
       }
       report('ready', [`WORLD OBJECT INSPECTION · ${type} · simulation paused`, ...sceneDescription(zone), ...details,
         'Explicit camera/placement fixture; use Return to game menu to reset before ordinary play.']);
@@ -4356,6 +4455,9 @@ export function installQA(api) {
     } else if (framing === 'grip') {
       Player.pos.set(actorPosition.x + 1.15, floorY + height * 0.72, actorPosition.z + 0.65);
       pointCameraAt({ x: actorPosition.x + 0.25, y: floorY + height * 0.69, z: actorPosition.z });
+    } else if (framing === 'boots') {
+      Player.pos.set(actorPosition.x + 0.90, floorY + 0.36, actorPosition.z + 0.34);
+      pointCameraAt({ x: actorPosition.x, y: floorY + 0.27, z: actorPosition.z });
     } else {
       Player.pos.set(actorPosition.x + 3.5, floorY + Player.eyeHeight + 0.02, actorPosition.z);
       pointCameraAt({ x: actorPosition.x, y: floorY + height * 0.57, z: actorPosition.z });
@@ -4398,7 +4500,7 @@ export function installQA(api) {
       report('ready', [
         `NPC INSPECTION · ${inspectedActor.type} · ${pose} · simulation paused`,
         `Actual pooled rig v${rig.version} · ${Object.keys(rig.joints).length} joints · ${rig.height.toFixed(2)} m height`,
-        ...(rig.hero ? [`Character surface: ${rig.hero.triangles.toLocaleString()} triangles · ${rig.hero.draws} visible body draws · ${rig.hero.contactSamples} bounded collapse samples`] : []),
+        ...(rig.hero ? [`Character surface: ${rig.hero.triangles.toLocaleString()} triangles · ${rig.hero.draws} visible body draws · ${rig.hero.contactSamples} bounded collapse samples`, characterAssetDescription(inspectedActor)] : []),
         `Pose ${rig.pose.mode} / ${rig.pose.phase} · sole height L ${soles[0].toFixed(3)} m, R ${soles[1].toFixed(3)} m`,
         `Facing ${(inspectedActor.mesh.rotation.y * 180 / Math.PI).toFixed(0)}° · held prop ${inspectedActor.def.weaponType}`,
         `Framing ${framing} · same camera FOV and production materials; inspection placement only`,
@@ -4505,6 +4607,7 @@ export function installQA(api) {
     runVisualReview({
       label: `${type} motion / collapse / reuse`, duration: 17,
       details: [
+        characterAssetDescription(actor),
         '0–3 s in-place walking/carry; 3–5 s turn; 5–7 s guard; 7–12 s attack poses; 12–14.5 s real collapse; 14.5–17 s same-slot reuse.',
         'Living motion uses the production pose driver with disclosed visual inputs; AI, hit tests and attack damage are paused. The in-place stride is not a traversal test.',
         `Selected ${framing} framing and initial rotation; collapse widens to show floor contact. Environment lighting and materials are unchanged.`,
@@ -4789,6 +4892,8 @@ export function installQA(api) {
       report('ready', [
         `HELD WEAPON INSPECTION · ${WEAPON_DEFS[type].name} · ${pose} · simulation paused`,
         `${meshes} actual view-model meshes · ${triangles.toLocaleString()} triangles · ${type === 'fists' ? ui.heldSide.value + ' punch · ' : ''}pose ${(progress * 100).toFixed(0)}%`,
+        ...(model.userData.heroWeapon ? [`Asset source: ${model.userData.heroWeapon.source}`] : []),
+        handAssetDescription(model),
         `Quality ${Settings.get('quality')} · ${renderer.domElement.width} × ${renderer.domElement.height} drawing buffer · ratio ${renderer.getPixelRatio().toFixed(2)}`,
         ranged ? `Firearm framing: ${ui.heldAim.value} · static recoil sample only; no shots or reloads executed`
           : `Authored duration ${(timing.duration * 1000).toFixed(0)} ms · contact ${(timing.contactAt * 1000).toFixed(0)} ms`,
@@ -4861,18 +4966,27 @@ export function installQA(api) {
     report('ready', sceneDescription(ui.select.value));
   }
 
-  function benchmark({ combat = false, balcony = false, roof = false, sweep = false } = {}) {
+  function benchmark({ combat = false, balcony = false, roof = false, sweep = false, pistol = false, firearm = null, held = false } = {}) {
     if (busy || disposed) return;
-    combat ||= balcony || roof;
+    if (firearm && WEAPON_DEFS[firearm]?.kind !== 'ranged') {
+      report('fail', 'Choose a firearm in Held weapon before running its combat benchmark.');
+      return;
+    }
+    combat ||= balcony || roof || pistol || Boolean(firearm);
+    if (held) inspectHeldWeapon();
+    const heldType = held ? Weapons.current : null;
+    const retainedActor = !combat && !held && inspectedActor?.alive ? inspectedActor : null;
     pauseSilently();
-    setNPCInspection(false);
+    if (!held) setNPCInspection(false);
     api.setTesting(true);
     setBusy(true);
     const reviewDirection = { yaw: Player.yaw, pitch: Player.pitch };
     let fixture = null;
     try {
       api.setInspection(true);
-      if (combat) fixture = balcony ? prepareBalconyCombatFixture() : prepareCombatFixture({ roof });
+      if (combat) fixture = balcony ? prepareBalconyCombatFixture() : prepareCombatFixture({ roof, pistol, firearm });
+      if (held) assert(inspectedWeapon && Weapons._vm(heldType)?.name === `vm_${heldType}`,
+        'A held benchmark must retain the selected production viewmodel');
       assertSilent();
     } catch (error) {
       pauseSilently();
@@ -4886,13 +5000,16 @@ export function installQA(api) {
       return;
     }
     report('running', combat ? [
-      `${balcony ? 'BALCONY MELEE' : roof ? 'ROOFTOP COMBAT' : 'STREET COMBAT'} BENCHMARK · 0.5 s warmup, then 10 s measured simulation + rendering`,
+      `${balcony ? 'BALCONY MELEE' : roof ? 'ROOFTOP COMBAT' : firearm ? WEAPON_DEFS[firearm].name + ' COMBAT' : pistol ? 'PISTOL COMBAT' : 'STREET COMBAT'} BENCHMARK · 0.5 s warmup, then 10 s measured simulation + rendering`,
       balcony ? `Fixed balcony camera; actual brawler and bat thug, respawned on death; real bat input every 0.8 s, ${(meleeTiming('bat').contactAt * 1000).toFixed(0)} ms contact delay and capsule-safety assertions.`
         : roof ? 'Fixed rooftop camera; 5 actual mixed-weapon contacts, respawned on death; automatic SMG fire, timed reloads and world-collision assertions.'
-        : 'Fixed street camera; 4 actual contacts, respawned on death; automatic SMG fire and normal timed reloads.',
+        : firearm ? `Fixed street camera; 4 actual contacts, respawned on death; real ${WEAPON_DEFS[firearm].name.toLowerCase()} fire and normal timed reloads.`
+          : pistol ? 'Fixed street camera; 4 actual contacts, respawned on death; distinct pistol presses every 0.23 s and normal timed reloads.'
+          : 'Fixed street camera; 4 actual contacts, respawned on death; automatic SMG fire and normal timed reloads.',
       'Player health is replenished between frames for this fixture. Keep this tab visible. Audio is locked off.',
     ] : sweep ? 'CAMERA SWEEP · 0.5 s warmup, then a measured 10 s full turn with a gentle vertical sweep.\nPaused review camera only, not gameplay movement or input-latency measurement. Audio is locked off.'
-      : 'BENCHMARK · 0.5 s warmup, then 10 s measured rendering\nKeep this tab visible. Gameplay is paused; audio is locked off.');
+      : held ? `HELD ${WEAPON_DEFS[heldType].name} BENCHMARK · 0.5 s warmup, then 10 s measured rendering\nSelected held pose is retained; gameplay is paused and audio is locked off.`
+        : 'BENCHMARK · 0.5 s warmup, then 10 s measured rendering\nKeep this tab visible. Gameplay is paused; audio is locked off.');
     const intervals = [], frameTimes = [], callbackTimes = [], simulationTimes = [], renderTimes = [], calls = [], triangles = [];
     const lateIntervals = [], healthCue = document.getElementById('healthvignette');
     let previousCpuMs = null, previousCallbackCpuMs = null, resourcesBefore = null;
@@ -4976,7 +5093,7 @@ export function installQA(api) {
           const draw = summarize(calls), geometry = summarize(triangles);
           const elapsed = intervals.reduce((sum, value) => sum + value, 0);
           result = [
-            `${balcony ? 'CONTROLLED BALCONY MELEE' : roof ? 'CONTROLLED ROOFTOP COMBAT' : combat ? 'CONTROLLED COMBAT' : sweep ? 'PAUSED CAMERA SWEEP' : 'PAUSED SCENE'} BENCHMARK MEASURED · ${ZONE_LABELS[zone] ?? zone}`,
+            `${balcony ? 'CONTROLLED BALCONY MELEE' : roof ? 'CONTROLLED ROOFTOP COMBAT' : firearm ? 'CONTROLLED ' + WEAPON_DEFS[firearm].name + ' COMBAT' : pistol ? 'CONTROLLED PISTOL COMBAT' : combat ? 'CONTROLLED COMBAT' : sweep ? 'PAUSED CAMERA SWEEP' : held ? 'PAUSED HELD ' + WEAPON_DEFS[heldType].name : 'PAUSED SCENE'} BENCHMARK MEASURED · ${ZONE_LABELS[zone] ?? zone}`,
             `${intervals.length} real rAF intervals · ${(elapsed / 1000).toFixed(2)} s measured`,
             `Frame time: median ${time.median.toFixed(2)} ms · p95 ${time.p95.toFixed(2)} ms · p99 ${time.p99.toFixed(2)} ms · average ${time.average.toFixed(2)} ms`,
             `Maximum rAF interval: ${time.maximum.toFixed(2)} ms · maximum sampled CPU section: ${cpu.maximum.toFixed(2)} ms`,
@@ -5036,8 +5153,20 @@ export function installQA(api) {
               'Controlled workload, not an ordinary playthrough or an input-latency/INP score. The simulation retains its normal stall limits.',
             );
             if (balcony) result.push(`Bat timeline: ${(meleeTiming('bat').duration * 1000).toFixed(0)} ms swing · ${(meleeTiming('bat').contactAt * 1000).toFixed(0)} ms to contact; hits count actual target-health changes.`);
+            if (pistol) result.push(`Pistol fixture: ${measured.reloads} timed reloads · asset ${Weapons._vm('pistol').userData.heroWeapon.source}`);
+            if (firearm) result.push(`${WEAPON_DEFS[firearm].name} fixture: ${measured.reloads} timed reloads · asset ${Weapons._vm(firearm).userData.heroWeapon.source}`);
+            result.push(handAssetDescription(Weapons._vm(Weapons.current)));
           } else {
             result.push('This is a paused-scene render measurement, not a combat or input-latency/INP score.');
+            if (held) {
+              const model = Weapons._vm(heldType);
+              result.push(`Held model: ${heldType} · ${ui.heldAim.value} · asset ${model.userData.heroWeapon?.source ?? model.userData.assetSource ?? 'existing-authored-geometry'} · ${model.userData.presentation?.triangles ?? 'unreported'} triangles · ${model.userData.presentation?.drawCalls ?? 'unreported'} material draws`);
+              result.push(handAssetDescription(model));
+            }
+            if (retainedActor) {
+              assert(retainedActor === inspectedActor && retainedActor.alive, 'Paused character benchmark must retain its inspected actor');
+              result.push(characterAssetDescription(retainedActor));
+            }
             if (sweep) result.push('Camera completed a 360° yaw sweep with ±7° pitch; original viewing direction restored afterward. No player movement or input latency inferred.');
           }
           result.push('Audio locked off on every sampled frame · no AudioContext');
@@ -5094,6 +5223,7 @@ export function installQA(api) {
           api.render();
         } else {
           assert(!Input.active, 'Gameplay was resumed during the paused-scene benchmark');
+          if (held) assert(Weapons.current === heldType && inspectedWeapon, 'The held benchmark lost its selected weapon');
           if (sweep) {
             const progress = start === null ? 0 : Math.min(1, (timestamp - start) / BENCHMARK_MS);
             Player.yaw = reviewDirection.yaw + progress * Math.PI * 2;
@@ -5245,6 +5375,8 @@ export function installQA(api) {
   ui.visualFinish = ui.button(ui.actorActions, 'Finish review', 'qa-review-finish', () => abortVisualReview?.());
   ui.visualPause.disabled = ui.visualFinish.disabled = true;
   ui.button(ui.heldActions, 'Inspect held weapon', 'qa-held-inspect', () => inspectHeldWeapon());
+  ui.button(ui.heldActions, 'Benchmark held pose 10 seconds', 'qa-held-benchmark', () => benchmark({ held: true }));
+  ui.button(ui.heldActions, 'Benchmark held firearm combat 10 seconds', 'qa-held-combat-benchmark', () => benchmark({ firearm: ui.heldType.value }));
   ui.button(ui.heldActions, 'Next attack pose', 'qa-held-next', () => inspectHeldWeapon({ next: true }));
   ui.button(ui.heldActions, 'Inspect off-hand punch', 'qa-offhand-inspect', inspectOffhandPunch);
   ui.button(ui.objectActions, 'Inspect world object', 'qa-object-inspect', inspectWorldObject);
@@ -5262,6 +5394,7 @@ export function installQA(api) {
   ui.button(ui.actions, 'Benchmark 10 seconds', 'qa-benchmark', () => benchmark());
   ui.button(ui.actions, 'Benchmark camera sweep 10 seconds', 'qa-sweep-benchmark', () => benchmark({ sweep: true }));
   ui.button(ui.actions, 'Benchmark combat 10 seconds', 'qa-combat-benchmark', () => benchmark({ combat: true }));
+  ui.button(ui.actions, 'Benchmark pistol combat 10 seconds', 'qa-pistol-benchmark', () => benchmark({ pistol: true }));
   ui.button(ui.actions, 'Benchmark balcony melee 10 seconds', 'qa-balcony-benchmark', () => benchmark({ balcony: true }));
   ui.button(ui.actions, 'Benchmark rooftop combat 10 seconds', 'qa-roof-benchmark', () => benchmark({ roof: true }));
   ui.button(ui.actions, 'Reset apartment', 'qa-reset', () => {

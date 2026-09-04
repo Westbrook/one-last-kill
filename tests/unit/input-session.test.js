@@ -46,8 +46,8 @@ function element(id) {
 // audio device or touch DOM. The touch adapter records its public lifecycle.
 function session({ touchEnabled = false } = {}) {
   const calls = { requests: 0, exits: 0, focus: 0, resumes: 0, suspends: 0, ambient: 0,
-    setups: 0, briefings: 0, starts: [], messages: [], states: [] };
-  const elements = new Map(['overlay', 'startbutton', 'audiotoggle', 'endcard', 'deathscreen'].map(id => [id, element(id)]));
+    setups: 0, briefings: 0, starts: [], messages: [], states: [], leavePadPolls: [], pausePadPolls: [], pauseResets: 0 };
+  const elements = new Map(['overlay', 'startbutton', 'audiotoggle', 'endcard', 'deathscreen', 'restartbutton'].map(id => [id, element(id)]));
   const viewport = eventTarget();
   const document = {
     ...eventTarget(), hidden: false, pointerLockElement: null,
@@ -74,7 +74,8 @@ function session({ touchEnabled = false } = {}) {
     reset() { this.resets++; },
     get visible() { return this.enabled && this.active; },
   };
-  let api, briefingOpen = false, setupOpen = false;
+  let api, briefingOpen = false, setupOpen = false, leaveOpen = false, gamepad = null;
+  let pausePadHandler = () => false, leavePadHandler = () => {};
   const RunSettings = createRunSettings();
   const RunSetup = {
     isOpen: () => setupOpen,
@@ -96,10 +97,20 @@ function session({ touchEnabled = false } = {}) {
       return true;
     },
   };
+  const LeaveGame = {
+    isOpen: () => leaveOpen,
+    present() { leaveOpen = true; api.Input.pause({ showOverlay: false }); },
+    cancel() { leaveOpen = false; },
+    pollGamepad(pad) { calls.leavePadPolls.push(pad); leavePadHandler(pad); },
+  };
+  const PauseMenu = {
+    pollGamepad(pad) { calls.pausePadPolls.push(pad); return pausePadHandler(pad); },
+    reset() { calls.pauseResets++; },
+  };
   api = runInNewContext(source + '\n;({ Input, engageLock });', {
-    createInputState, GAMEPLAY_KEYS, canvas, document, Settings, IntroCard, RunSetup, RunSettings,
+    createInputState, GAMEPLAY_KEYS, canvas, document, Settings, IntroCard, RunSetup, RunSettings, LeaveGame, PauseMenu,
     addEventListener: viewport.addEventListener,
-    navigator: { getGamepads: () => [] },
+    navigator: { getGamepads: () => gamepad ? [gamepad] : [] },
     CustomEvent: class { constructor(type, { detail }) { this.type = type; this.detail = detail; } },
     createTouchControls: () => controls,
     HUD: { message: (...args) => calls.messages.push(args) },
@@ -111,7 +122,14 @@ function session({ touchEnabled = false } = {}) {
   }, { filename: 'src/core/input.js' });
   const overlay = elements.get('overlay'), start = elements.get('startbutton');
   return {
-    ...api, canvas, document, viewport, Settings, IntroCard, RunSetup, RunSettings, controls, calls, overlay, start,
+    ...api, canvas, document, viewport, Settings, IntroCard, RunSetup, RunSettings, LeaveGame, controls, calls, overlay, start,
+    pollPad(buttons = [], axes = [0, 0, 0, 0]) {
+      gamepad = { connected: true, mapping: 'standard', axes,
+        buttons: Array.from({ length: 17 }, (_, index) => ({ pressed: buttons.includes(index) })) };
+      api.Input.pollGamepad();
+    },
+    setPausePadHandler(handler) { pausePadHandler = handler; },
+    setLeavePadHandler(handler) { leavePadHandler = handler; },
     startPlaying() {
       start.click();
       assert.equal(RunSetup.isOpen(), true, 'the first engagement requires run setup');
@@ -336,4 +354,111 @@ test('blur and a hidden document pause touch play and clear held inputs for the 
     assertReleased(h.Input);
     assert.equal(h.calls.requests, 0, cause);
   }
+});
+
+test('leave confirmation blocks keyboard, canvas and delayed capture engagement until cancelled', () => {
+  const h = session();
+  h.startPlaying();
+  h.viewport.emit('keydown', { code: 'KeyW' });
+  h.viewport.emit('mousedown', { button: 0, target: h.canvas });
+  h.LeaveGame.present();
+  const requests = h.calls.requests, resumes = h.calls.resumes;
+
+  h.start.click();
+  h.canvas.click();
+  assert.equal(h.engageLock(), false);
+  for (const code of ['Enter', 'KeyP', 'Escape', 'KeyW', 'Space']) h.viewport.emit('keydown', { code });
+  h.viewport.emit('mousedown', { button: 0, target: h.canvas });
+  h.pointerLock(true);
+
+  assert.equal(h.LeaveGame.isOpen(), true);
+  assert.equal(h.Input.active, false);
+  assert.equal(h.Input.locked, false);
+  assert.equal(h.document.pointerLockElement, null, 'late pointer capture is released behind the dialog');
+  assert.equal(h.calls.requests, requests);
+  assert.equal(h.calls.resumes, resumes);
+  assertReleased(h.Input);
+
+  h.LeaveGame.cancel();
+  h.start.click();
+  assert.equal(h.Input.active, true, 'a fresh action can resume after cancellation');
+});
+
+test('leave confirmation owns A and Start before pause or death-screen retry dispatch', () => {
+  for (const death of [false, true]) {
+    const h = session({ touchEnabled: true });
+    h.startPlaying();
+    h.Input.pause();
+    if (death) h.document.getElementById('deathscreen').classList.add('show');
+    let retries = 0;
+    h.document.getElementById('restartbutton').addEventListener('click', () => { retries++; });
+    h.setPausePadHandler(() => 'primary');
+    h.LeaveGame.present();
+    for (const buttons of [[], [0], [], [9], [], [0, 9]]) h.pollPad(buttons);
+
+    assert.equal(h.Input.active, false);
+    assert.equal(h.controls.visible, false);
+    assert.equal(h.calls.resumes, 1);
+    assert.equal(retries, 0, 'controller confirmation cannot retry from behind Leave Game');
+    assert.equal(h.calls.leavePadPolls.length, 6);
+    assert.equal(h.calls.pausePadPolls.length, 0, 'the underlying menu never receives the modal presses');
+    assert.equal(h.calls.pauseResets, 6, 'underlying menu edges reset while the dialog owns input');
+    assertReleased(h.Input);
+  }
+});
+
+test('a Start press that cancels Leave Game cannot resume the run in the same or a held frame', () => {
+  const h = session({ touchEnabled: true });
+  h.startPlaying();
+  h.Input.pause();
+  h.LeaveGame.present();
+  h.setLeavePadHandler(pad => { if (pad.buttons[9].pressed) h.LeaveGame.cancel(); });
+  h.pollPad([]);
+  h.pollPad([9]);
+  assert.equal(h.LeaveGame.isOpen(), false);
+  assert.equal(h.Input.active, false, 'cancellation ends controller processing for this frame');
+  h.pollPad([9]);
+  assert.equal(h.Input.active, false, 'the held cancel press is not a fresh resume action');
+  h.pollPad([]);
+  h.pollPad([9]);
+  assert.equal(h.Input.active, true, 'a released and pressed Start can resume normally');
+});
+
+test('controller menu selection can open Leave Game without falling through to A resume', () => {
+  const h = session({ touchEnabled: true });
+  h.startPlaying();
+  h.Input.pause();
+  h.setPausePadHandler(() => { h.LeaveGame.present(); return true; });
+  h.pollPad([0]);
+  assert.equal(h.LeaveGame.isOpen(), true);
+  assert.equal(h.Input.active, false);
+  assert.equal(h.calls.resumes, 1);
+  assert.equal(h.calls.pausePadPolls.length, 1);
+});
+
+test('controller primary resume retains uncaptured play and suppresses held gameplay buttons', () => {
+  const h = session();
+  h.startPlaying();
+  h.Input.pause();
+  h.setPausePadHandler(() => 'primary');
+  h.pollPad([0, 7]);
+  assert.equal(h.Input.active, true);
+  assert.equal(h.Input.locked, false);
+  assert.equal(h.calls.requests, 1, 'controller resume does not request mouse capture');
+  assert.equal(h.calls.resumes, 2);
+  assertReleased(h.Input);
+});
+
+test('controller primary action on the death screen invokes the visible retry action once', () => {
+  const h = session({ touchEnabled: true });
+  h.startPlaying();
+  h.Input.pause();
+  h.document.getElementById('deathscreen').classList.add('show');
+  let retries = 0;
+  h.document.getElementById('restartbutton').addEventListener('click', () => { retries++; });
+  h.setPausePadHandler(() => 'primary');
+  h.pollPad([0]);
+  assert.equal(retries, 1);
+  assert.equal(h.Input.active, false, 'checkpoint restoration, not the menu, owns retry engagement');
+  assert.equal(h.calls.resumes, 1);
 });

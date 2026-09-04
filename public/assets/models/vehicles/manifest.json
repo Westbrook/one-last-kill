@@ -1,0 +1,524 @@
+{
+  "version": 1,
+  "source": "original-blender-prepared",
+  "authoringTool": "5.2.1 LTS",
+  "generator": "tools/blender/build-vehicles.py",
+  "sourceFile": "assets/blender/vehicles.blend",
+  "sourceInput": "assets/blender/vehicles-source.json",
+  "sourceInputSha256": "79873fb505a4067460a4fd79d8db6d51062185b5c75172ba9064579cbf8dc9f9",
+  "coordinateSystem": "metres; +X forward, +Y up, +Z right",
+  "textures": 0,
+  "glb": {
+    "file": "public/assets/models/vehicles/vehicles.glb",
+    "bytes": 2505508,
+    "sha256": "e115262cf14c2922a70b7dad3e5a3f8a700f8c5abaf16f67b6698f20dd5ee22f"
+  },
+  "variants": [
+    {
+      "variant": "sedan",
+      "triangles": 3776,
+      "originalTriangles": 3456,
+      "parts": 69,
+      "categories": [
+        "glass",
+        "lamps",
+        "metal",
+        "paint",
+        "tires",
+        "trim"
+      ],
+      "exportedVertices": 8982,
+      "geometryBytes": 368544,
+      "changes": [
+        {
+          "part": "body-shell",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "crowned-roof",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "rear-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "front-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-0-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-1-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-0-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-1-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp--1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp-1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp--1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp-1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        }
+      ]
+    },
+    {
+      "variant": "hatchback",
+      "triangles": 3640,
+      "originalTriangles": 3384,
+      "parts": 63,
+      "categories": [
+        "glass",
+        "lamps",
+        "metal",
+        "paint",
+        "tires",
+        "trim"
+      ],
+      "exportedVertices": 8723,
+      "geometryBytes": 357536,
+      "changes": [
+        {
+          "part": "body-shell",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "crowned-roof",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "rear-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "front-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-0-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-0-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp--1",
+          "edgeRadiusMetres": 0.00499996542930603,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp-1",
+          "edgeRadiusMetres": 0.00499996542930603,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp--1",
+          "edgeRadiusMetres": 0.00499996542930603,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp-1",
+          "edgeRadiusMetres": 0.00499996542930603,
+          "surface": "welded topology with area-weighted normals"
+        }
+      ]
+    },
+    {
+      "variant": "wagon",
+      "triangles": 3776,
+      "originalTriangles": 3456,
+      "parts": 69,
+      "categories": [
+        "glass",
+        "lamps",
+        "metal",
+        "paint",
+        "tires",
+        "trim"
+      ],
+      "exportedVertices": 8974,
+      "geometryBytes": 368224,
+      "changes": [
+        {
+          "part": "body-shell",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "crowned-roof",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "rear-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "front-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-0-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-1-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-0-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "door-handle-1-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp--1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp-1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp--1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp-1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        }
+      ]
+    },
+    {
+      "variant": "panel-van",
+      "triangles": 3780,
+      "originalTriangles": 3492,
+      "parts": 72,
+      "categories": [
+        "glass",
+        "lamps",
+        "metal",
+        "paint",
+        "tires",
+        "trim"
+      ],
+      "exportedVertices": 9086,
+      "geometryBytes": 372584,
+      "changes": [
+        {
+          "part": "body-shell",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "crowned-roof",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "rear-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "front-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "van-cab-door-handle-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "van-cab-door-handle-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "cargo-rear-door-handle",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp--1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp-1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp--1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp-1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        }
+      ]
+    },
+    {
+      "variant": "passenger-van",
+      "triangles": 3960,
+      "originalTriangles": 3672,
+      "parts": 87,
+      "categories": [
+        "glass",
+        "lamps",
+        "metal",
+        "paint",
+        "tires",
+        "trim"
+      ],
+      "exportedVertices": 9611,
+      "geometryBytes": 393584,
+      "changes": [
+        {
+          "part": "body-shell",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "crowned-roof",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "mirror-housing-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "rear-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "front-bumper",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "van-cab-door-handle-right",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "passenger-door-handle",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "van-cab-door-handle-left",
+          "edgeRadiusMetres": 0.006,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp--1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "tail-lamp-1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp--1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "headlamp-1",
+          "edgeRadiusMetres": 0.004999995231628418,
+          "surface": "welded topology with area-weighted normals"
+        }
+      ]
+    },
+    {
+      "variant": "objective-sedan",
+      "triangles": 4312,
+      "originalTriangles": 4120,
+      "parts": 87,
+      "categories": [
+        "glass",
+        "headlamps",
+        "metal",
+        "paint",
+        "rearlamps",
+        "tires",
+        "trim"
+      ],
+      "exportedVertices": 4421,
+      "geometryBytes": 187400,
+      "changes": [
+        {
+          "part": "objective-sedan-body-1",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-hood-1",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-hood-ornament-1",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-roof-1",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-front-bumper-1",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-rear-bumper-1",
+          "edgeRadiusMetres": 0,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-door-handle-1",
+          "edgeRadiusMetres": 0.004,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-mirror-arm-1",
+          "edgeRadiusMetres": 0.004,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-mirror-1",
+          "edgeRadiusMetres": 0.004,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-door-handle-2",
+          "edgeRadiusMetres": 0.004,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-mirror-arm-2",
+          "edgeRadiusMetres": 0.004,
+          "surface": "welded topology with area-weighted normals"
+        },
+        {
+          "part": "objective-sedan-mirror-2",
+          "edgeRadiusMetres": 0.004,
+          "surface": "welded topology with area-weighted normals"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Original project models receive targeted physical edge breaks and welded, weighted panel normals in Blender.",
+    "Named tires, glass, window openings and collision metadata retain the established game contract.",
+    "Runtime uses existing paint/finish/glass/emissive materials and merges parts into six civilian or seven objective material draws.",
+    "Geometry accessor bytes exclude per-part source records, transient decode buffers and driver overhead.",
+    "The source workshop grid is presentation only; each delivered variant uses its own local origin."
+  ]
+}

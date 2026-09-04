@@ -51,6 +51,8 @@ function fixture() {
         if (this.id === 'runsetupconfirm' && !value.defaultPrevented) document.getElementById('runsetupform').dispatch('submit');
       },
       querySelectorAll() {
+        if (this.id === 'leavegame') return ['leavegamecancel', 'leavegameconfirm'].map(id => document.getElementById(id)).filter(control => !control.disabled);
+        if (this.id === 'deathscreen') return ['restartbutton', 'deathleavebutton'].map(id => document.getElementById(id)).filter(control => !control.disabled);
         if (this.id !== 'runsetup') return [];
         const controls = ['runsetupback', 'runmode', 'runarena', 'runwaves', 'rundifficulty', 'runsetupconfirm'];
         return controls.filter(id => !['runarena', 'runwaves'].includes(id) || !document.getElementById('rundefenseoptions').disabled)
@@ -94,20 +96,22 @@ function fixture() {
   class CustomEvent { constructor(type, { detail } = {}) { this.type = type; this.detail = detail; } }
   const settings = createRunSettings({ onChange: detail => document.emit('run:settingschange', { detail }) });
   document.addEventListener('run:configured', value => calls.configured.push(value.detail));
+  const input = { active: false, pause() { calls.paused++; this.active = false; } };
+  const location = { href: 'http://localhost:4173/?mute=1', reload() { calls.reloaded++; } };
   const context = vm.createContext({ document, clamp, RunSettings: settings, DIFFICULTY_LEVELS, CustomEvent,
-    Input: { pause() { calls.paused++; } }, HUD: { snapshot: () => ({ bestStreak: calls.hudBestStreak ?? 0 }) },
+    Input: input, HUD: { snapshot: () => ({ bestStreak: calls.hudBestStreak ?? 0 }) },
     CombatStats: { snapshot: () => ({}) }, engageLock() { calls.engaged++; },
-    location: { reload() { calls.reloaded++; } }, openPanel: null,
+    location, openPanel: null,
   });
   const helpers = source.slice(source.indexOf('const byId ='), source.indexOf('const ZONE_ORDER'));
   const cards = source.slice(source.indexOf('function runDescription('), source.indexOf('/** Sample real frame time'));
   const summaries = source.slice(source.indexOf('function syncRunDetails('), source.indexOf("document.addEventListener('game:ready'"));
-  vm.runInContext(helpers + cards + summaries + '\nglobalThis.cards = { RunSetup, IntroCard, EndCard };', context);
+  vm.runInContext(helpers + cards + summaries + '\nglobalThis.cards = { RunSetup, IntroCard, EndCard, LeaveGame, PauseMenu };', context);
   const keyboard = source.slice(source.indexOf('// Native controls keep'), source.indexOf('\nconst audioSettingKeys'));
   vm.runInContext(keyboard, context);
   const field = id => document.getElementById(id);
   function choose(id, value) { field(id).value = String(value); field(id).dispatch('change'); }
-  return { ...context.cards, document, settings, field, choose, calls };
+  return { ...context.cards, document, settings, field, choose, calls, input, location };
 }
 
 test('begin requires an explicit difficulty and cancellation leaves the run unconfigured', () => {
@@ -283,6 +287,140 @@ test('controller alone can choose street defense and 100 waves or cancel with B'
   assert.equal(canceled.RunSetup.isOpen(), false);
   assert.equal(canceled.settings.isConfigured(), false);
   assert.equal(canceled.document.activeElement.id, 'startbutton');
+});
+
+function pausedRun(ui, { dead = false } = {}) {
+  ui.settings.configure({ difficulty: 'hard', mode: 'defense', arena: 'street', waves: 20 });
+  ui.settings.start();
+  if (dead) {
+    ui.field('deathscreen').classList.add('show');
+    ui.field('overlay').classList.add('hidden');
+  }
+  return ui.settings.snapshot();
+}
+
+test('leave controls become available only for a started run and cannot abandon active gameplay directly', () => {
+  const ui = fixture();
+  assert.equal(ui.field('pausegameactions').hidden, true);
+  assert.equal(ui.field('deathleavebutton').disabled, true);
+  assert.equal(ui.LeaveGame.present(), false);
+  ui.field('leavegameconfirm').click();
+  assert.equal(ui.calls.reloaded, 0);
+  pausedRun(ui);
+  assert.equal(ui.field('pausegameactions').hidden, false);
+  assert.equal(ui.field('deathleavebutton').disabled, false);
+  ui.input.active = true;
+  assert.equal(ui.LeaveGame.present(), false);
+  assert.equal(ui.calls.reloaded, 0);
+});
+
+test('leave confirmation keeps the paused run intact until an explicit decision and cancel restores focus', () => {
+  const ui = fixture(), run = pausedRun(ui);
+  const source = ui.field('leavegamebutton');
+  ui.field('choice').inert = true;
+  source.click();
+  assert.equal(ui.LeaveGame.isOpen(), true);
+  assert.equal(ui.field('leavegame').getAttribute('aria-hidden'), 'false');
+  assert.equal(ui.document.activeElement.id, 'leavegamecancel', 'the safe action receives initial focus');
+  for (const id of ['overlay', 'hud', 'choice', 'game', 'audiotoggle']) assert.equal(ui.field(id).inert, true, id);
+  assert.equal(ui.calls.paused, 1);
+  assert.equal(ui.settings.snapshot(), run);
+  assert.equal(ui.calls.reloaded, 0);
+  ui.field('leavegamecancel').click();
+  assert.equal(ui.LeaveGame.isOpen(), false);
+  assert.equal(ui.field('leavegame').getAttribute('aria-hidden'), 'true');
+  assert.equal(ui.field('overlay').inert, false);
+  assert.equal(ui.field('hud').inert, false);
+  assert.equal(ui.field('choice').inert, true, 'preexisting inert state is preserved');
+  assert.equal(ui.document.activeElement, source);
+  assert.equal(ui.settings.snapshot(), run, 'cancel preserves locked mode, difficulty, arena and waves');
+  assert.equal(ui.calls.engaged, 0, 'cancel returns to the paused menu without silently resuming');
+});
+
+test('leave dialog traps keyboard focus and Escape or P cancels without triggering death retry shortcuts', () => {
+  const ui = fixture(); pausedRun(ui, { dead: true });
+  const source = ui.field('deathleavebutton');
+  assert.equal(source.dispatch('keydown', { code: 'Enter' }).propagationStopped, true);
+  source.click();
+  ui.field('leavegameconfirm').focus();
+  assert.equal(ui.document.emit('keydown', { code: 'Tab', shiftKey: false }).defaultPrevented, true);
+  assert.equal(ui.document.activeElement.id, 'leavegamecancel');
+  assert.equal(ui.document.emit('keydown', { code: 'Tab', shiftKey: true }).defaultPrevented, true);
+  assert.equal(ui.document.activeElement.id, 'leavegameconfirm');
+  assert.equal(ui.field('leavegame').dispatch('keydown', { code: 'Enter' }).propagationStopped, true);
+  for (const code of ['Escape', 'KeyP']) {
+    const event = ui.document.emit('keydown', { code });
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(event.propagationStopped, true);
+    assert.equal(ui.LeaveGame.isOpen(), false);
+    assert.equal(ui.document.activeElement, source);
+    assert.equal(ui.field('deathscreen').classList.contains('show'), true);
+    assert.equal(ui.calls.reloaded, 0);
+    if (code === 'Escape') source.click();
+  }
+});
+
+test('explicit leave reloads the current muted URL once without resetting saved settings or mutating the old run', () => {
+  const ui = fixture(), run = pausedRun(ui);
+  const url = ui.location.href;
+  ui.field('leavegamebutton').click();
+  ui.field('leavegameconfirm').click();
+  ui.field('leavegameconfirm').click();
+  assert.equal(ui.calls.reloaded, 1);
+  assert.equal(ui.location.href, url, 'reload preserves the mute query and existing route');
+  assert.equal(ui.settings.snapshot(), run, 'only a fresh page creates a new run; no half-reset gameplay is exposed');
+  assert.equal(ui.field('leavegameconfirm').disabled, true);
+  assert.equal(ui.LeaveGame.cancel(), false, 'navigation cannot be raced by cancel');
+});
+
+test('controller can select Leave from either pause or death and confirm only with a fresh deliberate press', () => {
+  for (const dead of [false, true]) {
+    const ui = fixture(); pausedRun(ui, { dead });
+    const primary = dead ? 'restartbutton' : 'startbutton';
+    const leave = dead ? 'deathleavebutton' : 'leavegamebutton';
+    const press = index => { ui.PauseMenu.pollGamepad(gamepad()); return ui.PauseMenu.pollGamepad(gamepad([index])); };
+    assert.equal(ui.PauseMenu.pollGamepad(gamepad([0])), true);
+    assert.equal(ui.document.activeElement.id, primary);
+    assert.equal(ui.LeaveGame.isOpen(), false, 'opening A is not a second confirmation');
+    press(13);
+    for (let frame = 0; frame < 120; frame++) ui.PauseMenu.pollGamepad(gamepad([13]));
+    assert.equal(ui.document.activeElement.id, leave, 'held navigation changes selection only once');
+    assert.equal(press(0), true);
+    assert.equal(ui.LeaveGame.isOpen(), true);
+    ui.LeaveGame.pollGamepad(gamepad([0]));
+    ui.LeaveGame.pollGamepad(gamepad([0]));
+    assert.equal(ui.calls.reloaded, 0);
+    assert.equal(ui.document.activeElement.id, 'leavegamecancel');
+    ui.LeaveGame.pollGamepad(gamepad());
+    ui.LeaveGame.pollGamepad(gamepad([], [0, 1]));
+    assert.equal(ui.document.activeElement.id, 'leavegameconfirm');
+    ui.LeaveGame.pollGamepad(gamepad());
+    ui.LeaveGame.pollGamepad(gamepad([0]));
+    assert.equal(ui.calls.reloaded, 1);
+  }
+});
+
+test('controller cancel returns to the current menu and Start selects resume or retry without leaving', () => {
+  for (const cancelButton of [1, 9]) {
+    const ui = fixture(); pausedRun(ui);
+    ui.field('leavegamebutton').click();
+    ui.LeaveGame.pollGamepad(gamepad());
+    ui.LeaveGame.pollGamepad(gamepad([cancelButton]));
+    assert.equal(ui.LeaveGame.isOpen(), false);
+    assert.equal(ui.calls.reloaded, 0);
+    assert.equal(ui.PauseMenu.pollGamepad(gamepad([cancelButton])), true, 'held cancel is only an opening sample');
+    ui.PauseMenu.pollGamepad(gamepad());
+    ui.PauseMenu.pollGamepad(gamepad([13]));
+    assert.equal(ui.document.activeElement.id, 'leavegamebutton');
+    ui.PauseMenu.pollGamepad(gamepad());
+    assert.equal(ui.PauseMenu.pollGamepad(gamepad([9])), 'primary');
+    assert.equal(ui.calls.reloaded, 0);
+  }
+  const ui = fixture(); pausedRun(ui, { dead: true });
+  ui.PauseMenu.pollGamepad(gamepad());
+  assert.equal(ui.PauseMenu.pollGamepad(gamepad([0])), 'primary');
+  ui.input.active = true;
+  assert.equal(ui.PauseMenu.pollGamepad(gamepad()), false);
 });
 
 test('victory shows difficulty, defense progress, favorite, and distinct weapon attack statistics safely', () => {

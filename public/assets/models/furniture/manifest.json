@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "source": "assets/blender/furniture.blend",
+  "builder": "tools/blender/build-furniture.py",
+  "blender": "5.2.1 LTS",
+  "runtime": "geometry templates; existing shared game materials and batched decorations",
+  "file": "catalog.json",
+  "bytes": 38646,
+  "sha256": "2867d52ce23c3d050d6cff2087c8fe4dcb34d184bb90a00e71fd90ba532745b3",
+  "materials": 0,
+  "textures": 0,
+  "templates": {
+    "milled-box": {
+      "triangles": 44,
+      "vertices": 60
+    },
+    "soft-box": {
+      "triangles": 300,
+      "vertices": 188
+    },
+    "profiled-leg": {
+      "triangles": 156,
+      "vertices": 80
+    },
+    "knob": {
+      "triangles": 48,
+      "vertices": 26
+    },
+    "cup": {
+      "triangles": 160,
+      "vertices": 82
+    },
+    "cup-handle": {
+      "triangles": 192,
+      "vertices": 102
+    }
+  },
+  "families": [
+    "refrigerator",
+    "stove",
+    "sideboard",
+    "bookcase",
+    "bench",
+    "upholsteredSeat",
+    "bedding",
+    "chair",
+    "tableSetting"
+  ],
+  "parameterization": "Rounded boxes retain metric radius and exact outer bounds; legs use metric normals and UVs.",
+  "lighting": "Planar triangle vertices are isolated from bevels to retain existing interior lightmap chart ownership."
+}

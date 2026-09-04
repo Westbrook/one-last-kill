@@ -4,6 +4,7 @@ import { heroFaceMaterial } from './hero-face-albedo.js';
 import { applyHeroSurfaceFinish, hasHeroSurfaceFinish } from './hero-surface-finish.js';
 
 const cache = new Map();
+const finishCaches = new WeakMap();
 let detail = null;
 const SIZE = 256, TAU = Math.PI * 2;
 
@@ -44,26 +45,44 @@ function details() {
 }
 
 /** Original authored microdetail, with palette carried by static vertex colours. */
-export function heroCharacterMaterials(config) {
+export function heroCharacterMaterials(config, { finish = null } = {}) {
   const role = config.role || config.kind || 'adult';
   const projectedFace = !['child', 'woman'].includes(role);
   const authored = hasHeroSurfaceFinish(role);
+  // A palette/role match alone cannot select atlas maps: their UVs belong only
+  // to the exact geometry whose successful boot load supplied this finish.
+  const baked = finish?.version === 1 && finish.role === role && role === 'gunman' ? finish : null;
+  let materialsCache = cache;
+  if (baked) {
+    if (!finishCaches.has(baked)) finishCaches.set(baked, new Map());
+    materialsCache = finishCaches.get(baked);
+  }
   const key = [config.skin || '#bd957e', config.hair || '#201b16', projectedFace, authored].join('|');
-  if (cache.has(key)) return cache.get(key);
+  if (materialsCache.has(key)) return materialsCache.get(key);
   const maps = details();
-  const garments = new THREE.MeshStandardMaterial({ ...maps.cloth, vertexColors: true, roughness: 1, metalness: 0,
-    normalScale: new THREE.Vector2(0.45, 0.45), envMapIntensity: 0.25 });
-  garments.name = 'hero-woven-garments';
+  const garments = new THREE.MeshStandardMaterial({ ...(baked ? baked.garments : maps.cloth), vertexColors: true, roughness: 1, metalness: 0,
+    normalScale: new THREE.Vector2(baked ? 1 : 0.45, baked ? 1 : 0.45), envMapIntensity: 0.25 });
+  garments.name = baked ? 'hero-gunman-baked-garments' : 'hero-woven-garments';
   const skin = new THREE.MeshStandardMaterial({ ...maps.skin, color: config.skin || '#bd957e', vertexColors: true, roughness: 1,
     normalScale: new THREE.Vector2(0.35, 0.35), envMapIntensity: 0.25 });
   skin.name = 'hero-skin';
   const detailsMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0, envMapIntensity: 0.3 });
   detailsMaterial.name = 'hero-face-hair-details';
   if (authored) {
-    applyHeroSurfaceFinish(garments, 226 / 255);
+    if (!baked) applyHeroSurfaceFinish(garments, 226 / 255);
     applyHeroSurfaceFinish(skin, 188 / 255);
     applyHeroSurfaceFinish(detailsMaterial, detailsMaterial.roughness);
   }
-  const result = { garments, skin, face: projectedFace ? heroFaceMaterial(skin, { authored }) : skin, details: detailsMaterial };
-  cache.set(key, result); return result;
+  let faceBase = skin;
+  if (baked) {
+    faceBase = new THREE.MeshStandardMaterial({ ...baked.head, color: config.skin || '#bd957e', vertexColors: true,
+      roughness: 1, metalness: 0, normalScale: new THREE.Vector2(1, 1), envMapIntensity: 0.25 });
+    const provenance = { version: baked.version, id: baked.id, source: 'original-blender-sculpted-baked' };
+    garments.userData.authoredCharacterFinish = { ...provenance, surface: 'garments' };
+    faceBase.userData.authoredCharacterFinish = { ...provenance, surface: 'head' };
+  }
+  const face = projectedFace ? heroFaceMaterial(faceBase, { authored }) : faceBase;
+  if (baked && projectedFace) faceBase.dispose();
+  const result = { garments, skin, face, details: detailsMaterial };
+  materialsCache.set(key, result); return result;
 }

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "name": "Walnut and machined finish refinement",
+  "authoringMethod": "offline deterministic material profiles plus built-in imagegen diffuse walnut source",
+  "woodSource": "assets/material-sources/weapon-finish-v1/walnut-source.png",
+  "woodSourceSha256": "e92c45ca4d14dda4a56b0d653f1c2c33747937976182f91596cc7db13aba849f",
+  "generationProvenance": "assets/material-sources/weapon-finish-v1/generation.json",
+  "woodPaletteSrgb": [
+    0.543142760033701,
+    0.3331369437423407,
+    0.16314625459558824
+  ],
+  "woodColorVariation": 0.78,
+  "woodRoughness": 0.65,
+  "steelPaletteSrgb": [
+    0.7801367,
+    0.820145,
+    0.8501347
+  ],
+  "steelRoughness": 0.41,
+  "steelMetallic": 0.86,
+  "polymerPaletteSrgb": [
+    0.7824421,
+    0.80245385,
+    0.80245385
+  ],
+  "polymerRoughness": 0.85,
+  "constraints": {
+    "imageSize": 256,
+    "images": 6,
+    "materials": 3,
+    "geometry": "unchanged",
+    "uv": "unchanged",
+    "colorAttributes": "unchanged",
+    "sourceImageAffects": "wood diffuse pigmentation only; independent authored pores provide microheight"
+  },
+  "sourceAuthoring": "Saved image datablocks and their existing material nodes are authoritative for export-existing; refresh-materials is an explicit optional reauthoring step."
+}

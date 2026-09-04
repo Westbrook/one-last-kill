@@ -12,8 +12,12 @@ const SUPPORT = {
 /** Flatten owned static hands into the same finish batches as the weapon. */
 export function addHeroWeaponHands(root, type) {
   const grips = [];
+  const handSurfaces = [];
   function append(side, center, basis, options) {
     const hand = createAuthoredGripHand({ side, ...options });
+    const surface = hand.children.find(mesh => mesh.geometry?.userData.authoredHand)?.geometry.userData.authoredHand;
+    if (surface) handSurfaces.push({ source: surface.source || 'original-procedural',
+      revision: surface.revision || null, finish: surface.finish || null, side, radius: options.radius });
     hand.position.fromArray(center); hand.quaternion.setFromRotationMatrix(basis);
     hand.updateMatrixWorld(true);
     const wrist = hand.userData.wristAnchor.clone().applyMatrix4(hand.matrixWorld);
@@ -72,5 +76,8 @@ export function addHeroWeaponHands(root, type) {
     root.userData.heroWeapon.readyAngle = { side: 25, up: 10 };
   }
   root.userData.heroWeapon.grips = grips;
+  // Static batching consumes these meshes; retain their actual asset identity
+  // for inspection without keeping the original geometry alive.
+  root.userData.handSurfaces = handSurfaces;
   return root;
 }

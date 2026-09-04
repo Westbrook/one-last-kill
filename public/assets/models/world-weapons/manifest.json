@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "source": "original-project-blender-refined",
+  "sourceFile": "assets/blender/world-weapons.blend",
+  "rebuild": "tools/blender/build-world-weapons.py",
+  "sourceExport": "tools/blender/export-world-weapons.mjs",
+  "runtimeFile": "public/assets/models/world-weapons/world-weapons.glb",
+  "geometry": {
+    "triangles": {
+      "pistol": 758,
+      "shotgun": 1144,
+      "smg": 1258,
+      "machinegun": 1268,
+      "bat": 1208
+    },
+    "maximumTriangles": {
+      "pistol": 856,
+      "shotgun": 1172,
+      "smg": 1280,
+      "machinegun": 1320,
+      "bat": 1300
+    },
+    "drawsPerWeapon": 2
+  },
+  "delivery": {
+    "glbBytes": 481020,
+    "sha256": "449060f5d42c62e94a31a6e54e15af708a1fe381f1168004368d61ea70a253da",
+    "embeddedImages": 0
+  },
+  "refinements": [
+    "16-segment chamfered firearm muzzle edges replace 12-segment square edges, retaining canonical bore anchors.",
+    "Area-weighted receiver, furniture and barrel normals on shared immutable buffers.",
+    "28-segment bat body using fewer redundant axial rings, preserving canonical profile anchors.",
+    "Planar receiver cleanup funds rounder muzzle chamfers within existing world-gun triangle caps."
+  ],
+  "materials": "Existing runtime finishes are reused; no new texture or shader draws."
+}

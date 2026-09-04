@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { getAuthoredSupplyGeometry } from './authored-supply-props.js';
 
 // A 24 cm molded case replaces the four intersecting pickup boxes. Geometry
 // and the three finishes are shared by every supply; animation stays on the
@@ -139,9 +140,10 @@ function getParts() {
 export function createHealthPickupModel() {
   const root = new THREE.Group();
   for (const [name, geometry, material] of getParts()) {
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(getAuthoredSupplyGeometry('health', name) ?? geometry, material);
     mesh.name = name;
     root.add(mesh);
   }
+  if (root.children[0].geometry.userData.source) root.userData.source = 'blender-authored-original';
   return root;
 }

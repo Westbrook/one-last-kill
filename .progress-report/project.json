@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "projectId": "little-sicily",
+  "reportWorkspace": "/Users/westbrook/.codex/visualizations/2026/09/04/01a06da2-4af2-79d2-8271-c8f79fced942/progress-report",
+  "stateLocation": "/Users/westbrook/.codex/visualizations/2026/09/04/01a06da2-4af2-79d2-8271-c8f79fced942/progress-report/data/project.json",
+  "reportUrl": "http://localhost:4191/",
+  "apps": { "preview": "http://localhost:4173/?mute=1" }
+}

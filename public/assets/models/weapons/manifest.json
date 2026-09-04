@@ -1,0 +1,735 @@
+{
+  "schemaVersion": 1,
+  "source": "original-blender-authored",
+  "name": "Original project held weapon catalog",
+  "authoringTool": "5.2.1 LTS",
+  "rebuild": "tools/blender/build-weapons.py",
+  "sourceExport": "tools/blender/export-weapon-source.mjs",
+  "sourceFile": "assets/blender/weapons.blend",
+  "sourceGeometry": "assets/blender/weapons-source.json",
+  "sourceGeometrySha256": "65f6f70a477c63744f20d2fe3b2ef684bc91d55da3b3d1e773c9abb5dc648cc5",
+  "runtimeFile": "public/assets/models/weapons/weapons.glb",
+  "license": "Original project profiles and authored procedural metal/polymer finishes; locally generated walnut diffuse source with recorded prompt and provenance.",
+  "coordinateSystem": {
+    "units": "meters",
+    "forward": "+X",
+    "up": "+Y",
+    "right": "+Z"
+  },
+  "weapons": {
+    "knife": {
+      "name": "vm_knife",
+      "sourceTriangles": 444,
+      "geometry": {
+        "triangles": 464,
+        "exportedVertices": 1292,
+        "meshParts": 12,
+        "materialGroups": 2,
+        "budgetTriangles": 1142
+      },
+      "bounds": {
+        "min": [
+          -0.11569999903440475,
+          -0.040786709636449814,
+          -0.020999999716877937
+        ],
+        "max": [
+          0.23899999260902405,
+          0.028699999675154686,
+          0.020999997854232788
+        ]
+      },
+      "heroWeapon": {
+        "version": 1,
+        "source": "original-blender-authored",
+        "type": "knife",
+        "parts": [
+          "knife-contoured-handle",
+          "knife-swept-guard",
+          "knife-ground-blade",
+          "knife-lanyard-pommel",
+          "receiver-pin-0--1",
+          "receiver-pin-slot-0--1",
+          "receiver-pin-0-1",
+          "receiver-pin-slot-0-1",
+          "receiver-pin-1--1",
+          "receiver-pin-slot-1--1",
+          "receiver-pin-1-1",
+          "receiver-pin-slot-1-1"
+        ],
+        "preparation": "original-project profiles refined in Blender",
+        "features": [
+          "machined-edge-breaks",
+          "weighted-receiver-normals",
+          "authored-shared-finish-atlas",
+          "geometric-cutting-microbevel"
+        ]
+      }
+    },
+    "shotgun": {
+      "name": "vm_shotgun",
+      "sourceTriangles": 4526,
+      "geometry": {
+        "triangles": 4880,
+        "exportedVertices": 12224,
+        "meshParts": 43,
+        "materialGroups": 3,
+        "budgetTriangles": 5484
+      },
+      "bounds": {
+        "min": [
+          -0.25,
+          -0.06800000369548798,
+          -0.03400000184774399
+        ],
+        "max": [
+          0.5,
+          0.06499999761581421,
+          0.03400000184774399
+        ]
+      },
+      "heroWeapon": {
+        "version": 1,
+        "source": "original-blender-authored",
+        "type": "shotgun",
+        "recess": {
+          "point": [
+            0.025,
+            0.018,
+            -0.0215
+          ],
+          "depth": 0.012
+        },
+        "panels": [
+          {
+            "name": "rear-cheek-pocket",
+            "point": [
+              -0.03,
+              0.013,
+              -0.0203
+            ],
+            "depth": 0.0012
+          },
+          {
+            "name": "trigger-group-pocket",
+            "point": [
+              0.01,
+              -0.013,
+              -0.0203
+            ],
+            "depth": 0.001
+          }
+        ],
+        "triggerOpening": [
+          -0.038,
+          -0.049,
+          0.0
+        ],
+        "parts": [
+          "shotgun-sculpted-stock",
+          "shotgun-recoil-pad",
+          "shotgun-action",
+          "shotgun-action-opposite-wall",
+          "shotgun-action-recessed-bolt",
+          "shotgun-action-rear-cheek-pocket-floor--1",
+          "shotgun-action-rear-cheek-pocket-floor-1",
+          "shotgun-action-trigger-group-pocket-floor--1",
+          "shotgun-action-trigger-group-pocket-floor-1",
+          "shotgun-stock-tang",
+          "shotgun-stepped-breech-cap",
+          "shotgun-breech-insert",
+          "shotgun-breech-retainer-rim",
+          "shotgun-breech-retainer-socket",
+          "shotgun-matted-sighting-flat",
+          "shotgun-crown-plug-rim",
+          "shotgun-crown-plug-socket",
+          "shotgun-crown-plug-rim.001",
+          "shotgun-crown-plug-socket.001",
+          "shotgun-barrel",
+          "shotgun-bore-depth",
+          "shotgun-magazine-tube",
+          "shotgun-tube-end-cap",
+          "shotgun-ribbed-pump",
+          "shotgun-pump-rear-ferrule",
+          "shotgun-pump-front-ferrule",
+          "trigger-guard",
+          "shotgun-trigger",
+          "shotgun-ventilated-rib",
+          "shotgun-rib-bridge",
+          "shotgun-rib-bridge.001",
+          "shotgun-rib-bridge.002",
+          "shotgun-rib-bridge.003",
+          "shotgun-bead-base",
+          "receiver-pin-0--1-rim",
+          "receiver-pin-0--1-socket",
+          "receiver-pin-0-1-rim",
+          "receiver-pin-0-1-socket",
+          "receiver-pin-1--1-rim",
+          "receiver-pin-1--1-socket",
+          "receiver-pin-1-1-rim",
+          "receiver-pin-1-1-socket",
+          "shotgun-front-bead"
+        ],
+        "preparation": "original-project profiles refined in Blender",
+        "features": [
+          "machined-edge-breaks",
+          "weighted-receiver-normals",
+          "authored-shared-finish-atlas"
+        ]
+      },
+      "muzzle": [
+        0.5,
+        0.03,
+        0.0
+      ]
+    },
+    "smg": {
+      "name": "vm_smg",
+      "sourceTriangles": 3820,
+      "geometry": {
+        "triangles": 4472,
+        "exportedVertices": 10372,
+        "meshParts": 48,
+        "materialGroups": 3,
+        "budgetTriangles": 4784
+      },
+      "bounds": {
+        "min": [
+          -0.19249999523162842,
+          -0.16050000488758087,
+          -0.03500000014901161
+        ],
+        "max": [
+          0.2800000011920929,
+          0.07750000059604645,
+          0.032999999821186066
+        ]
+      },
+      "heroWeapon": {
+        "version": 1,
+        "source": "original-blender-authored",
+        "type": "smg",
+        "recess": {
+          "point": [
+            0.035,
+            0.025,
+            -0.0185
+          ],
+          "depth": 0.012
+        },
+        "panels": [
+          {
+            "name": "pressed-side-pocket",
+            "point": [
+              -0.045,
+              0.015,
+              -0.0173
+            ],
+            "depth": 0.0012
+          }
+        ],
+        "triggerOpening": [
+          -0.034,
+          -0.041,
+          0.0
+        ],
+        "parts": [
+          "smg-stamped-upper",
+          "smg-stamped-upper-opposite-wall",
+          "smg-stamped-upper-recessed-bolt",
+          "smg-stamped-upper-pressed-side-pocket-floor--1",
+          "smg-stamped-upper-pressed-side-pocket-floor-1",
+          "smg-lower-receiver",
+          "smg-angled-grip",
+          "smg-curved-magazine",
+          "smg-magazine-rib--1--0.003",
+          "smg-magazine-rib--1-0.014",
+          "smg-magazine-rib-1--0.003",
+          "smg-magazine-rib-1-0.014",
+          "smg-folding-stock",
+          "smg-stock-pad",
+          "smg-vented-foreend--1",
+          "smg-vented-foreend-1",
+          "smg-foreend-heel",
+          "smg-exposed-barrel",
+          "smg-barrel-collar",
+          "smg-bore-depth",
+          "trigger-guard.001",
+          "smg-trigger",
+          "smg-charging-latch",
+          "smg-top-reinforcement",
+          "smg-stamped-crown-rib",
+          "smg-stamped-crown-rib.001",
+          "smg-stamped-crown-rib.002",
+          "smg-stamped-crown-rib.003",
+          "smg-stock-hinge-neck",
+          "smg-folding-stock-pivot-rim",
+          "smg-folding-stock-pivot-socket",
+          "smg-folding-stock-pivot-rim.001",
+          "smg-folding-stock-pivot-socket.001",
+          "smg-front-sight-tower",
+          "smg-rear-hinge-cap",
+          "receiver-pin-0--1-rim.001",
+          "receiver-pin-0--1-socket.001",
+          "receiver-pin-0-1-rim.001",
+          "receiver-pin-0-1-socket.001",
+          "receiver-pin-1--1-rim.001",
+          "receiver-pin-1--1-socket.001",
+          "receiver-pin-1-1-rim.001",
+          "receiver-pin-1-1-socket.001",
+          "rear-sight-dovetail",
+          "rear-sight-ear--1",
+          "rear-sight-ear-1",
+          "front-sight-post",
+          "smg-front-ceramic-insert"
+        ],
+        "preparation": "original-project profiles refined in Blender",
+        "features": [
+          "machined-edge-breaks",
+          "weighted-receiver-normals",
+          "authored-shared-finish-atlas"
+        ]
+      },
+      "muzzle": [
+        0.28,
+        0.02,
+        0.0
+      ],
+      "ironSights": {
+        "rear": {
+          "x": -0.05,
+          "length": 0.022,
+          "width": 0.03,
+          "bottom": 0.0525,
+          "floor": 0.0585,
+          "top": 0.0775,
+          "gap": 0.014
+        },
+        "front": {
+          "x": 0.16,
+          "length": 0.009,
+          "width": 0.005,
+          "bottom": 0.055,
+          "top": 0.061
+        }
+      }
+    },
+    "machinegun": {
+      "name": "vm_machinegun",
+      "sourceTriangles": 4638,
+      "geometry": {
+        "triangles": 5274,
+        "exportedVertices": 12669,
+        "meshParts": 56,
+        "materialGroups": 3,
+        "budgetTriangles": 5484
+      },
+      "bounds": {
+        "min": [
+          -0.19200000166893005,
+          -0.19953091442584991,
+          -0.0430000014603138
+        ],
+        "max": [
+          0.5899999737739563,
+          0.0949999988079071,
+          0.03099999949336052
+        ]
+      },
+      "heroWeapon": {
+        "version": 1,
+        "source": "original-blender-authored",
+        "type": "machinegun",
+        "recess": {
+          "point": [
+            0.055,
+            0.021,
+            -0.0235
+          ],
+          "depth": 0.012
+        },
+        "panels": [
+          {
+            "name": "rear-stamping-pocket",
+            "point": [
+              -0.044,
+              0.019,
+              -0.0223
+            ],
+            "depth": 0.0013
+          },
+          {
+            "name": "lower-assembly-pocket",
+            "point": [
+              0.07,
+              -0.014,
+              -0.0223
+            ],
+            "depth": 0.001
+          }
+        ],
+        "triggerOpening": [
+          -0.035,
+          -0.043,
+          0.0
+        ],
+        "parts": [
+          "machinegun-receiver",
+          "machinegun-receiver-opposite-wall",
+          "machinegun-receiver-recessed-bolt",
+          "machinegun-receiver-rear-stamping-pocket-floor--1",
+          "machinegun-receiver-rear-stamping-pocket-floor-1",
+          "machinegun-receiver-lower-assembly-pocket-floor--1",
+          "machinegun-receiver-lower-assembly-pocket-floor-1",
+          "machinegun-contoured-stock",
+          "machinegun-stock-pad",
+          "machinegun-pistol-grip",
+          "machinegun-curved-magazine",
+          "machinegun-magazine-flute--1--0.008",
+          "machinegun-magazine-flute--1-0.011",
+          "machinegun-magazine-flute--1-0.03",
+          "machinegun-magazine-flute-1--0.008",
+          "machinegun-magazine-flute-1-0.011",
+          "machinegun-magazine-flute-1-0.03",
+          "machinegun-feed-cover",
+          "machinegun-cover-bead--1",
+          "machinegun-cover-bead-1",
+          "machinegun-rear-sight-boss",
+          "machinegun-cover-release-rim",
+          "machinegun-cover-release-socket",
+          "machinegun-rear-takedown-cap",
+          "machinegun-stock-socket-inset",
+          "machinegun-vented-handguard--1",
+          "machinegun-vented-handguard-1",
+          "machinegun-handguard-floor",
+          "machinegun-barrel",
+          "machinegun-flash-hider",
+          "machinegun-bore-depth",
+          "machinegun-barrel-collar",
+          "machinegun-barrel-collar.001",
+          "machinegun-barrel-collar.002",
+          "machinegun-folded-bipod--1",
+          "machinegun-folded-bipod-1",
+          "trigger-guard.002",
+          "machinegun-trigger",
+          "machinegun-charging-handle",
+          "receiver-pin-0--1-rim.002",
+          "receiver-pin-0--1-socket.002",
+          "receiver-pin-0-1-rim.002",
+          "receiver-pin-0-1-socket.002",
+          "receiver-pin-1--1-rim.002",
+          "receiver-pin-1--1-socket.002",
+          "receiver-pin-1-1-rim.002",
+          "receiver-pin-1-1-socket.002",
+          "receiver-pin-2--1-rim",
+          "receiver-pin-2--1-socket",
+          "receiver-pin-2-1-rim",
+          "receiver-pin-2-1-socket",
+          "rear-sight-dovetail.001",
+          "rear-sight-ear--1.001",
+          "rear-sight-ear-1.001",
+          "front-sight-post.001",
+          "machinegun-front-ceramic-insert"
+        ],
+        "preparation": "original-project profiles refined in Blender",
+        "features": [
+          "machined-edge-breaks",
+          "weighted-receiver-normals",
+          "authored-shared-finish-atlas"
+        ]
+      },
+      "muzzle": [
+        0.59,
+        0.03,
+        0.0
+      ],
+      "ironSights": {
+        "rear": {
+          "x": 0.06,
+          "length": 0.04,
+          "width": 0.04,
+          "bottom": 0.065,
+          "floor": 0.071,
+          "top": 0.095,
+          "gap": 0.014
+        },
+        "front": {
+          "x": 0.46,
+          "length": 0.009,
+          "width": 0.006,
+          "bottom": 0.048,
+          "top": 0.09
+        }
+      }
+    }
+  },
+  "geometry": {
+    "triangles": 15090,
+    "materialGroups": 3
+  },
+  "delivery": {
+    "glbBytes": 1910732,
+    "sha256": "2bbb7bc899ebd580399c0b063d4d1ed728b53132f2991f71d3d325cf7a2d17c6",
+    "embeddedImages": 6,
+    "textureRgba8BytesWithMipmapsEstimate": 2097152,
+    "runtimeExternalDependencies": []
+  },
+  "textures": [
+    {
+      "path": "assets/blender/weapons-textures/weapons-nonmetal-basecolor.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 63437,
+      "sha256": "3a88022fbe3fd3e3e0bb06e6327e4a4b9f5e4342c9b7ff7723d8a0ab8bc39e47"
+    },
+    {
+      "path": "assets/blender/weapons-textures/weapons-nonmetal-metalrough.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 29339,
+      "sha256": "ff87799f2a7c9ae15df68739c91637d63fd7d497a768142178a6dbbec4a25903"
+    },
+    {
+      "path": "assets/blender/weapons-textures/weapons-nonmetal-normal.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 20055,
+      "sha256": "8b56a84882cf8c81a8bc375db0f08ca65d75152f128e6812f7fd85b0a1e4c7b6"
+    },
+    {
+      "path": "assets/blender/weapons-textures/weapons-steel-basecolor.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 52397,
+      "sha256": "632d625aed6b0d1f1a9484a756c4d1f153afcc0eb5b1f3aa879d4739fd8fe834"
+    },
+    {
+      "path": "assets/blender/weapons-textures/weapons-steel-metalrough.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 39326,
+      "sha256": "ee34f47022ffa5ae335276170123c3a590be24d9432cdfaa3a24eeaeefd395ce"
+    },
+    {
+      "path": "assets/blender/weapons-textures/weapons-steel-normal.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 29537,
+      "sha256": "064d2eb70b31abea8b534d57a63ea9da4f90f962dc0c231e04e98ae9b7a6c26d"
+    }
+  ],
+  "refinements": [
+    {
+      "weapon": "knife",
+      "part": "knife-contoured-handle",
+      "continuousContourNormals": true,
+      "contactVerticesUnchanged": true
+    },
+    {
+      "weapon": "knife",
+      "part": "knife-ground-blade",
+      "trueCuttingMicrobevelMeters": 0.00085,
+      "sourceTipPreserved": true
+    },
+    {
+      "weapon": "shotgun",
+      "part": "shotgun-action",
+      "edgeBreakMeters": 0.00023,
+      "bevelSegments": 2,
+      "refinedLongEdges": 28,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "shotgun",
+      "part": "shotgun-stepped-breech-cap",
+      "edgeBreakMeters": 0.00022,
+      "bevelSegments": 2,
+      "refinedLongEdges": 16,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "shotgun",
+      "part": "shotgun-front-bead",
+      "selfLitCeramicBead": true
+    },
+    {
+      "weapon": "smg",
+      "part": "smg-stamped-upper",
+      "edgeBreakMeters": 0.00023,
+      "bevelSegments": 2,
+      "refinedLongEdges": 30,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "smg",
+      "part": "smg-vented-foreend--1",
+      "edgeBreakMeters": 0.00016,
+      "bevelSegments": 1,
+      "refinedLongEdges": 8,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "smg",
+      "part": "smg-vented-foreend-1",
+      "edgeBreakMeters": 0.00016,
+      "bevelSegments": 1,
+      "refinedLongEdges": 8,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "smg",
+      "part": "smg-rear-hinge-cap",
+      "edgeBreakMeters": 0.00022,
+      "bevelSegments": 2,
+      "refinedLongEdges": 16,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "smg",
+      "part": "smg-front-ceramic-insert",
+      "sightInsertRadiusMeters": 0.00135,
+      "normalDirection": "-X"
+    },
+    {
+      "weapon": "machinegun",
+      "part": "machinegun-receiver",
+      "edgeBreakMeters": 0.00023,
+      "bevelSegments": 2,
+      "refinedLongEdges": 47,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "machinegun",
+      "part": "machinegun-rear-takedown-cap",
+      "edgeBreakMeters": 0.00022,
+      "bevelSegments": 2,
+      "refinedLongEdges": 24,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "machinegun",
+      "part": "machinegun-vented-handguard--1",
+      "edgeBreakMeters": 0.00016,
+      "bevelSegments": 1,
+      "refinedLongEdges": 10,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "machinegun",
+      "part": "machinegun-vented-handguard-1",
+      "edgeBreakMeters": 0.00016,
+      "bevelSegments": 1,
+      "refinedLongEdges": 10,
+      "weightedNormals": true,
+      "planarTopologyCleanup": true
+    },
+    {
+      "weapon": "machinegun",
+      "part": "machinegun-front-ceramic-insert",
+      "sightInsertRadiusMeters": 0.00135,
+      "normalDirection": "-X"
+    }
+  ],
+  "notes": [
+    "Source fitted profiles are original project meshes, imported through a deterministic world-space geometry export.",
+    "Blender changes edge topology, receiver/foreend shading, knife cutting bevels, finish zones, and sight inserts; it is not an unchanged round trip.",
+    "Three catalog-wide materials and six shared 256px images serve all four weapons.",
+    "Wood and polymer occupy padded atlas regions with separate object charts and clamped sampling.",
+    "Source grips, trigger openings, bores, rear notch dimensions and muzzle anchors are retained.",
+    "Texture memory is an RGBA8 plus mip estimate, not measured driver residency.",
+    "Saved-source material refinement: generated walnut diffuse pigmentation, authored matched metal/polymer microfinish, and independent subtle sealed-wood pores. Six 256px images, existing UVs, geometry, tint paint, material identities, and shader paths are preserved."
+  ],
+  "exportExisting": "tools/blender/build-weapons.py -- --export-existing",
+  "materialAuthoring": {
+    "authoringMethod": "offline deterministic material profiles plus built-in imagegen diffuse walnut source",
+    "constraints": {
+      "colorAttributes": "unchanged",
+      "geometry": "unchanged",
+      "imageSize": 256,
+      "images": 6,
+      "materials": 3,
+      "sourceImageAffects": "wood diffuse pigmentation only; independent authored pores provide microheight",
+      "uv": "unchanged"
+    },
+    "generationProvenance": "assets/material-sources/weapon-finish-v1/generation.json",
+    "name": "Walnut and machined finish refinement",
+    "polymerPaletteSrgb": [
+      0.7824421,
+      0.80245385,
+      0.80245385
+    ],
+    "polymerRoughness": 0.85,
+    "sourceAuthoring": "Saved image datablocks and their existing material nodes are authoritative for export-existing; refresh-materials is an explicit optional reauthoring step.",
+    "steelMetallic": 0.86,
+    "steelPaletteSrgb": [
+      0.7801367,
+      0.820145,
+      0.8501347
+    ],
+    "steelRoughness": 0.41,
+    "version": 1,
+    "woodColorVariation": 0.78,
+    "woodPaletteSrgb": [
+      0.543142760033701,
+      0.3331369437423407,
+      0.16314625459558824
+    ],
+    "woodRoughness": 0.65,
+    "woodSource": "assets/material-sources/weapon-finish-v1/walnut-source.png",
+    "woodSourceSha256": "e92c45ca4d14dda4a56b0d653f1c2c33747937976182f91596cc7db13aba849f"
+  },
+  "embeddedImages": [
+    {
+      "name": "weapons-nonmetal-normal",
+      "width": 256,
+      "height": 256,
+      "bytes": 20055,
+      "sha256": "8b56a84882cf8c81a8bc375db0f08ca65d75152f128e6812f7fd85b0a1e4c7b6"
+    },
+    {
+      "name": "weapons-nonmetal-basecolor",
+      "width": 256,
+      "height": 256,
+      "bytes": 63437,
+      "sha256": "3a88022fbe3fd3e3e0bb06e6327e4a4b9f5e4342c9b7ff7723d8a0ab8bc39e47"
+    },
+    {
+      "name": "weapons-nonmetal-metalrough",
+      "width": 256,
+      "height": 256,
+      "bytes": 29339,
+      "sha256": "ff87799f2a7c9ae15df68739c91637d63fd7d497a768142178a6dbbec4a25903"
+    },
+    {
+      "name": "weapons-steel-normal",
+      "width": 256,
+      "height": 256,
+      "bytes": 29537,
+      "sha256": "064d2eb70b31abea8b534d57a63ea9da4f90f962dc0c231e04e98ae9b7a6c26d"
+    },
+    {
+      "name": "weapons-steel-basecolor",
+      "width": 256,
+      "height": 256,
+      "bytes": 52397,
+      "sha256": "632d625aed6b0d1f1a9484a756c4d1f153afcc0eb5b1f3aa879d4739fd8fe834"
+    },
+    {
+      "name": "weapons-steel-metalrough",
+      "width": 256,
+      "height": 256,
+      "bytes": 39326,
+      "sha256": "ee34f47022ffa5ae335276170123c3a590be24d9432cdfaa3a24eeaeefd395ce"
+    }
+  ],
+  "sourceFileSha256": "1285da2b9165193e62d4b22fd94b0d8f860946692c9df815c3004e9393e121fc"
+}
