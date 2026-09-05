@@ -146,6 +146,85 @@ test('stick dead zone rejects drift and clamps diagonal movement', () => {
   assert.ok(diagonal.y < 0);
 });
 
+test('stick output buffers are reusable while default results remain independent', () => {
+  const target = {};
+  assert.equal(normalizeStick(0.7, -0.3, 0.18, target), target);
+  assert.deepEqual(target, normalizeStick(0.7, -0.3));
+  const saved = normalizeStick(0.7, -0.3);
+  normalizeStick(0, 0, 0.18, target);
+  assert.deepEqual(target, { x: 0, y: 0 });
+  assert.ok(saved.x > 0);
+  assert.ok(saved.y < 0);
+
+  const input = createInputState();
+  input.activate();
+  const move = input._padMove, look = input._padLook, touch = input._touchMove;
+  input.setGamepad(controller({ axes: [0.5, -1, 0.6, -0.5] }));
+  input.setTouchMove(-0.4, 0.7);
+  input.setGamepad(null);
+  input.resetTouch();
+  assert.equal(input._padMove, move);
+  assert.equal(input._padLook, look);
+  assert.equal(input._touchMove, touch);
+  for (const vector of [move, look, touch]) assert.deepEqual(vector, { x: 0, y: 0 });
+});
+
+test('caller-owned input frames overwrite consumed edges and preserve independent captures', () => {
+  const input = createInputState(), target = {};
+  input.activate();
+  input.mouseMove(8, -5);
+  input.keyDown('KeyE');
+  input.touchButton('fire', true);
+  input.touchButton('jump', true);
+  input.setTouchMove(0.5, 1);
+  assert.equal(input.consumeFrame(1 / 120, target), target);
+  assert.equal(target.ePressed, true);
+  assert.equal(target.leftPressed, true);
+  assert.equal(target.jumpPressed, true);
+  assert.equal(target.dx, 8);
+  const saved = input.consumeFrame(1 / 120);
+  assert.equal(saved.leftDown, true);
+  assert.equal(saved.leftPressed, false);
+  input.pause();
+  assert.equal(input.consumeFrame(1 / 120, target), target);
+  for (const [field, value] of Object.entries(target)) {
+    assert.equal(value, typeof value === 'boolean' ? false : 0, field);
+  }
+  assert.equal(saved.leftDown, true, 'a retained default snapshot cannot be changed by another consume');
+  assert.ok(saved.moveY > 0);
+  input.activate();
+  input.touchButton('fire', true);
+  input.touchButton('fire', false);
+  input.consumeFrame(1 / 120, target);
+  assert.equal(target.leftPressed, true, 'a completed tap still delivers its edge');
+  assert.equal(target.leftDown, false);
+  input.consumeFrame(1 / 120, target);
+  assert.equal(target.leftPressed, false);
+});
+
+test('gamepad edges keep alternate melee buttons independent and ignore unmapped high indices', () => {
+  const input = createInputState(), target = {};
+  input.activate();
+  input.setGamepad(controller({ pressed: [5] }));
+  assert.equal(input.consumeFrame(1 / 120, target).vPressed, true);
+  input.setGamepad(controller({ pressed: [5, 11] }));
+  assert.equal(input.consumeFrame(1 / 120, target).vPressed, true, 'the second melee binding has its own edge');
+  input.setGamepad(controller({ pressed: [5] }));
+  assert.equal(input.consumeFrame(1 / 120, target).vPressed, false);
+  const pad = { connected: true, axes: [], buttons: Array.from({ length: 48 }, (_, index) => ({
+    pressed: [32, 37, 39, 44].includes(index), value: index === 7 ? 0.36 : 0,
+  })) };
+  input.setGamepad(pad);
+  input.consumeFrame(1 / 120, target);
+  assert.equal(target.leftPressed, true, 'an analog trigger still uses the established threshold');
+  assert.equal(target.jumpPressed, false, 'button 32 cannot alias button 0');
+  assert.equal(target.vPressed, false, 'button 37 cannot alias button 5');
+  assert.equal(target.tPressed, false, 'button 44 cannot alias button 12');
+  pad.buttons[7].value = 0.35;
+  input.setGamepad(pad);
+  assert.equal(input.consumeFrame(1 / 120, target).leftDown, false, 'button 39 cannot alias a released trigger');
+});
+
 test('standard gamepad actions have edges, forward movement, and aim', () => {
   const input = createInputState();
   input.activate();

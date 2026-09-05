@@ -60,12 +60,15 @@ export function createTouchControls({ input, document: doc = document, window: v
   const listeners = [];
   let enabled = false, active = false;
   let motionMode = false, lookPointer = null;
+  let motionRequested = false;
   let stickOffsetX = 0, stickOffsetY = 0;
   const motionAim = createMotionAim({
     window: viewport,
     document: doc,
     onLook(dx, dy) {
-      if (!root.hidden && input.active && !Array.from(pointers.values()).some(record => record.action === 'recenter')) input.touchLook(dx, dy);
+      if (root.hidden || !input.active) return;
+      for (const record of pointers.values()) if (record.action === 'recenter') return;
+      input.touchLook(dx, dy);
     },
     onStatus: showMotionStatus,
   });
@@ -110,10 +113,22 @@ export function createTouchControls({ input, document: doc = document, window: v
       unavailable: 'Motion unavailable · swipe to aim',
     }[status];
   }
+  function requestMotionFromGesture() {
+    if (!enabled || motionRequested || viewport.navigator?.userActivation?.isActive === false) return;
+    // Only the setting or an explicit start/resume gesture calls this method.
+    // Keep enable() on this stack: iOS cannot prompt after a deferred callback.
+    motionRequested = true;
+    void motionAim.enable();
+  }
   function activateMotionAction(action) {
     if (action === 'recenter') motionAim.recenter();
-    else if (['requesting', 'waiting', 'active'].includes(motionAim.status)) motionAim.disable();
-    else void motionAim.enable();
+    else {
+      // A manual swipe choice, denial, or unavailable sensor must not trigger
+      // another automatic request on every pause/resume. MOTION can retry.
+      motionRequested = true;
+      if (['requesting', 'waiting', 'active'].includes(motionAim.status)) motionAim.disable();
+      else void motionAim.enable();
+    }
   }
 
   function listen(target, type, handler, options) {
@@ -294,7 +309,17 @@ export function createTouchControls({ input, document: doc = document, window: v
     element: root,
     reset,
     setContext,
-    setEnabled(value) { enabled = Boolean(value); if (!enabled) motionAim.disable(); syncVisibility(); },
+    requestMotionFromGesture,
+    setEnabled(value) {
+      enabled = Boolean(value);
+      if (!enabled) {
+        // Successfully used motion can resume on a later touch opt-in. Keep
+        // declined/unsupported/manual-off decisions for this page session.
+        if (['waiting', 'active'].includes(motionAim.status)) motionRequested = false;
+        motionAim.disable();
+      }
+      syncVisibility();
+    },
     setActive(value) { active = Boolean(value); syncVisibility(); },
     destroy() {
       reset();

@@ -53,19 +53,44 @@ export function createCombatStats({ rage = null } = {}) {
       this.streakRemaining = Math.max(0, this.streakRemaining - Math.max(0, dt));
       if (!this.streakRemaining) this.streak = 0;
     },
-    snapshot() {
-      const rows = weaponTypes.map(type => ({
-        type, name: WEAPON_DEFS[type].name, kind: WEAPON_DEFS[type].kind,
-        ...weapons[type], accuracy: accuracy(weapons[type].hits, weapons[type].attacks),
-      }));
+    // HUD callers may reuse their own output and weapon rows. Omitting target
+    // preserves independent checkpoint/result snapshots, including nested rows.
+    snapshot(target = {}) {
+      const rows = Array.isArray(target.weapons) ? target.weapons : [];
+      rows.length = weaponTypes.length;
       // Favorite means most attacks. Kill count breaks ties, followed by the
       // stable weapon-data order, so the result cannot flicker between rows.
-      const favorite = rows.reduce((best, row) => row.attacks > 0
-        && (!best || row.attacks > best.attacks || (row.attacks === best.attacks && row.kills > best.kills)) ? row : best, null);
-      return { kills: this.kills, shots: this.shots, hits: this.hits, headshots: this.headshots,
-        streak: this.streak, bestStreak: this.bestStreak, accuracy: accuracy(this.hits, this.shots), attacks: this.attacks,
-        attackHits: this.attackHits, damageDealt: this.damageDealt,
-        favoriteWeapon: favorite?.type ?? null, favoriteWeaponName: favorite?.name ?? null, weapons: rows };
+      let favorite = null;
+      for (let index = 0; index < weaponTypes.length; index++) {
+        const type = weaponTypes[index], weapon = weapons[type];
+        const row = rows[index] ?? (rows[index] = {});
+        row.type = type;
+        row.name = WEAPON_DEFS[type].name;
+        row.kind = WEAPON_DEFS[type].kind;
+        row.attacks = weapon.attacks;
+        row.shots = weapon.shots;
+        row.hits = weapon.hits;
+        row.kills = weapon.kills;
+        row.headshots = weapon.headshots;
+        row.damageDealt = weapon.damageDealt;
+        row.accuracy = accuracy(weapon.hits, weapon.attacks);
+        if (row.attacks > 0 && (!favorite || row.attacks > favorite.attacks
+          || (row.attacks === favorite.attacks && row.kills > favorite.kills))) favorite = row;
+      }
+      target.kills = this.kills;
+      target.shots = this.shots;
+      target.hits = this.hits;
+      target.headshots = this.headshots;
+      target.streak = this.streak;
+      target.bestStreak = this.bestStreak;
+      target.accuracy = accuracy(this.hits, this.shots);
+      target.attacks = this.attacks;
+      target.attackHits = this.attackHits;
+      target.damageDealt = this.damageDealt;
+      target.favoriteWeapon = favorite?.type ?? null;
+      target.favoriteWeaponName = favorite?.name ?? null;
+      target.weapons = rows;
+      return target;
     },
     restore(snapshot) {
       this.reset();

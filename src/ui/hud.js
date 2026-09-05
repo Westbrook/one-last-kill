@@ -537,7 +537,7 @@ const IntroCard = (() => {
     element.classList.remove('show');
     element.setAttribute('aria-hidden', 'true');
     // Pointer capture must stay inside the original click or key gesture.
-    if (engage) engageLock();
+    if (engage) engageLock({ motionPermission: true });
     return true;
   }
   byId('introcontinue').addEventListener('click', (event) => {
@@ -960,6 +960,10 @@ for (const [key, field] of Object.entries(settingFields)) {
     // Editing the mix only saves preferences. Unmuting remains an explicit,
     // separate audio-control gesture, including after restoring defaults.
     Settings.set(key, value);
+    // The change event still has the checkbox tap/keyboard activation. Do not
+    // move this to settingschange: restored or programmatic preferences are
+    // not permission gestures, and iOS requires the request on this stack.
+    if (key === 'touchControls' && value) Input.requestTouchMotion();
     write(byId('settingssaved'), 'PREFERENCES APPLIED');
   });
 }

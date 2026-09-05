@@ -9,6 +9,7 @@ import { createRunSettings } from '../../src/game/run-settings.js';
 import { createAudioController } from '../../src/core/audio.js';
 import { createSettingsStore, audioMixFromSettings } from '../../src/core/settings.js';
 import { FixedStepClock } from '../../src/core/frame-budget.js';
+import { createFrameSampleCadence } from '../../src/core/frame-sample-cadence.js';
 import { createBallisticWorld, createBallisticHit } from '../../src/core/ballistics.js';
 import { capsuleHasClearance, moveCapsule } from '../../src/core/collision.js';
 import { lerp, clamp } from '../../src/core/math.js';
@@ -38,6 +39,12 @@ function startedRun(options = {}) {
 function actualMain(name) {
   const source = mainSource.match(new RegExp('^function ' + name + '\\([^]*?^\\}', 'm'))?.[0];
   assert.ok(source, 'Keep the actual main hook fixture current: ' + name);
+  return source;
+}
+
+function actualMainDeclaration(name) {
+  const source = mainSource.match(new RegExp('^(?:const|let) ' + name + '\\b[^]*?;', 'm'))?.[0];
+  assert.ok(source, 'Keep the actual main state fixture current: ' + name);
   return source;
 }
 
@@ -178,6 +185,8 @@ test('real pickups distinguish weapon handling from reserve ammo without doublin
 // remain real, so accepted/paused time crosses the production boundary.
 function mainHarness(audio, { updateNavigation = noOp, run = {} } = {}) {
   const ticks = [], simulated = [], listeners = new Map();
+  const renderBudget = { resets: 0, samples: [] };
+  let elapsedCpuMs = 0;
   const document = {
     hidden: false,
     addEventListener(type, listener) { listeners.set(type, listener); },
@@ -191,7 +200,7 @@ function mainHarness(audio, { updateNavigation = noOp, run = {} } = {}) {
   const PlayerState = { dead: false }, camera = new THREE.PerspectiveCamera();
   camera.position.copy(Player.pos);
   const bindings = {
-    FixedStepClock, Settings, audioMixFromSettings, document, Input, Player, PlayerState, camera, Rage: createRageState(),
+    FixedStepClock, createFrameSampleCadence, Settings, audioMixFromSettings, document, Input, Player, PlayerState, camera, Rage: createRageState(),
     RunSettings: startedRun(run),
     HealthRegeneration: createHealthRegeneration(),
     Audio: { ...audio, tick(dt, state) {
@@ -213,19 +222,22 @@ function mainHarness(audio, { updateNavigation = noOp, run = {} } = {}) {
     ThreatFeedback: { update: record('threat'), clear: record('threatClear') },
     ObjectiveBanner: { update: record('objective') }, updateNavigation,
     animateFires: noOp, animateFlickerLights: noOp, animateSmoke: noOp, updateEnvironment: noOp,
-    FPSMeter: { tick: noOp }, recordRenderTime: noOp, render: noOp,
+    FPSMeter: { tick: noOp }, render: noOp,
+    performance: { now: () => ++elapsedCpuMs },
+    resetRenderBudget() { renderBudget.resets++; },
+    recordRenderTime(dt, timings) { renderBudget.samples.push({ dt, ...timings }); },
   };
   const settingsHook = mainSource.match(/^syncAudioSettings\(\);\ndocument\.addEventListener\('settingschange',[^\n]+\);$/m)?.[0];
   assert.ok(settingsHook, 'Run the actual settings subscription, not a substitute listener');
-  const prelude = 'const clock = new FixedStepClock(); let contextLost = false, hudTimer = 0;'
-    + 'let previousTime = 0, wasPlaying = false, controlledTest = false, inspecting = false;'
-    + 'const audioScene = {zone:"apartment",threat:0,paused:true,dead:false,listener:{position:camera.position,yaw:0}};\n';
+  const prelude = ['clock', 'contextLost', 'hudTimer', 'previousTime', 'wasPlaying', 'controlledTest',
+    'inspecting', 'audioScene', 'touchContext', 'rageHudSnapshot', 'frameTimings', 'runtimeGpuTimer', 'gpuCadence', 'lastGpuSample', 'pauseRenderPending']
+    .map(actualMainDeclaration).join('\n') + '\n';
   const api = runInNewContext(prelude
-    + ['syncAudioSettings', 'isPlaying', 'syncTouchContext', 'updateAudioScene', 'stepFrame', 'frame'].map(actualMain).join('\n')
+    + ['syncAudioSettings', 'isPlaying', 'resetRuntimeTiming', 'syncTouchContext', 'updateAudioScene', 'stepFrame', 'frame'].map(actualMain).join('\n')
     + '\n' + settingsHook
     + '\n;({stepFrame,frame,updateAudioScene,isPlaying,setContextLost(value){contextLost=value;}});',
   bindings, { filename: 'src/main.js:audio-hooks' });
-  return { ...api, ...bindings, audio, ticks, simulated, gates, setZone(zone) { bindings.currentZone = zone; } };
+  return { ...api, ...bindings, audio, ticks, simulated, gates, renderBudget, setZone(zone) { bindings.currentZone = zone; } };
 }
 
 function navigationHarness(audio, run = {}) {
@@ -354,6 +366,20 @@ test('actual main hook supplies bounded local enemy pressure including surviving
   assertLocked(audio, calls);
 });
 
+test('nearby contacts block graphics recovery even when audio is hard-muted, then quiet gameplay releases it', () => {
+  const { audio, calls } = lockedAudio(), h = mainHarness(audio);
+  const enemy = { alive: true, state: 'attack', pos: h.Player.pos.clone().add(new THREE.Vector3(5, 0, 0)) };
+  h.Enemies.list.push(enemy);
+  h.frame(1000); h.frame(1017);
+  assert.ok(h.ticks.at(-1).threat > 0, 'The real scene scan still measures nearby contacts while muted');
+  assert.equal(h.renderBudget.samples.at(-1).allowRecovery, false);
+  enemy.pos.x += 100;
+  h.frame(1034);
+  assert.equal(h.ticks.at(-1).threat, 0);
+  assert.equal(h.renderBudget.samples.at(-1).allowRecovery, true);
+  assertLocked(audio, calls);
+});
+
 test('actual fixed-step and animation hooks freeze audio for all pause gates and discard resume catch-up', async () => {
   const output = outputDouble(), audio = createAudioController(output), h = mainHarness(audio);
   audio.setMuted(false); await audio.resume();
@@ -379,11 +405,16 @@ test('actual fixed-step and animation hooks freeze audio for all pause gates and
     near(h.stepFrame(0), 0); near(h.stepFrame(STEP), STEP);
   }
   h.frame(1000); h.frame(1017);
+  assert.equal(h.renderBudget.resets, 1, 'The first active frame starts a fresh performance window');
   h.Input.active = false; h.frame(90000);
+  assert.equal(h.renderBudget.resets, 2, 'Pausing clears timings that would include inactive wall time');
   assert.equal(audio.getStatus().active, false, 'The automatic rAF pause path also suspends the controller');
   h.Input.active = true; await audio.resume();
   const elapsed = audio.getStatus().elapsed, game = h.GameTime.elapsed;
   h.frame(180000);
+  assert.equal(h.renderBudget.resets, 3, 'Resuming cannot carry pause time into the quality controller');
+  assert.equal(h.renderBudget.samples.at(-1).dt, 0);
+  assert.ok(h.renderBudget.samples.every(sample => sample.cpuMs >= sample.simulationMs && sample.cpuMs >= sample.renderMs));
   near(audio.getStatus().elapsed, elapsed); near(h.GameTime.elapsed, game);
   h.frame(180017); assert.ok(audio.getStatus().elapsed > elapsed);
   await audio.reset(); assert.equal(output.calls.contexts, 1);

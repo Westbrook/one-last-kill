@@ -30,6 +30,12 @@ function actualFunction(source, name) {
   return result;
 }
 
+const hudState = ['touchContext', 'rageHudSnapshot'].map(name => {
+  const declaration = mainSource.match(new RegExp('^const ' + name + '\\b[^]*?;', 'm'))?.[0];
+  assert.ok(declaration, `Keep the production HUD state fixture current: ${name}`);
+  return declaration;
+}).join('\n');
+
 // Real input, Player, rage, CombatStats, fixed simulation loop and mission
 // damage/restart functions. Rendering, audio and unrelated encounter services
 // are quiet sinks; attacks can credit a kill at an exact simulation step.
@@ -90,7 +96,7 @@ function fixture(options, run = { difficulty: 'average' }) {
   const simulation = ['isPlaying', 'syncTouchContext', 'stepFrame'].map(name => actualFunction(mainSource, name)).join('\n');
   const lifecycle = ['applyPlayerDamage', 'playerDie', 'restartFromZone']
     .map(name => actualFunction(missionSource, name)).join('\n');
-  const api = runInNewContext(`${playerSource}\nlet hudTimer = 0;\n`
+  const api = runInNewContext(`${playerSource}\n${hudState}\nlet hudTimer = 0;\n`
     + 'let checkpoint = checkpointSeed; let restoringCheckpoint = false;\n'
     + `${simulation}\n${lifecycle}\n${fireInitialization}\n`
     + ';({ Player, PlayerState, playerInit, playerUpdate, stepFrame, applyPlayerDamage, playerDie, restartFromZone });',

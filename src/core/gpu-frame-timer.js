@@ -220,5 +220,12 @@ export function createGpuFrameTimer(gl, { enabled = false, maxQueries = 4, sampl
   }
 
   setEnabled(enabled);
-  return Object.freeze({ setEnabled, begin, end, snapshot, reset, dispose });
+  return Object.freeze({
+    setEnabled, begin, end, snapshot, reset, dispose,
+    // Reading completed scalars never polls, sorts, allocates, or waits. Runtime
+    // adaptation can consume sparse GPU samples without taking QA snapshots.
+    get latestMs() { return latestMs; },
+    get totalSamples() { return totalSamples; },
+    get status() { return status; },
+  });
 }

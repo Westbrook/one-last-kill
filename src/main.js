@@ -3,8 +3,11 @@ import './touch-controls.css';
 import './installed-app.css';
 import './progress-report.css';
 import { mountProgressReportLink } from './ui/progress-report.js';
-import { scene, camera, renderer, GameTime, recordRenderTime } from './core/renderer.js';
+import { scene, camera, renderer, GameTime, recordRenderTime, renderQuality, resetRenderBudget, renderBudgetSnapshot } from './core/renderer.js';
 import { FixedStepClock } from './core/frame-budget.js';
+import { createGpuFrameTimer } from './core/gpu-frame-timer.js';
+import { createFrameSampleCadence } from './core/frame-sample-cadence.js';
+import { createShadowCadence } from './render/shadow-cadence.js';
 import { Settings, audioMixFromSettings } from './core/settings.js';
 import { Audio } from './core/audio.js';
 import { Ballistics } from './core/ballistics.js';
@@ -57,6 +60,13 @@ let lightBudget;
 let interiorLighting;
 let interiorReflections;
 let focusedShadows;
+let shadowCadence;
+let runtimeGpuTimer;
+const gpuCadence = createFrameSampleCadence();
+let lastGpuSample = 0;
+const frameTimings = { cpuMs: 0, simulationMs: 0, renderMs: 0, gpuMs: null, adaptive: true, allowRecovery: true };
+const touchContext = { canAim: false, canRage: false };
+const rageHudSnapshot = {}, combatHudSnapshot = {};
 let roofTaskLighting;
 let worldPresentation;
 let weaponWarmup = { status: 'pending' };
@@ -68,6 +78,7 @@ let inspecting = false;
 let contextLost = false;
 let previousTime = 0;
 let wasPlaying = false;
+let pauseRenderPending = false;
 let hudTimer = 0;
 const audioScene = {
   zone: 'apartment', threat: 0, paused: true, dead: false,
@@ -89,6 +100,25 @@ function isPlaying() {
     && !Endings.isResolved() && !DefenseDirector.isResolved() && !document.hidden && !contextLost;
 }
 
+function resetRuntimeTiming() {
+  clock.advance(0, false);
+  previousTime = 0;
+  wasPlaying = false;
+  resetRenderBudget();
+  runtimeGpuTimer?.reset();
+  lastGpuSample = 0;
+  gpuCadence.reset();
+}
+
+// Input pauses synchronously on blur, hidden pages, pagehide and lost capture.
+// Clear clocks/queries here even if no paused animation frame gets delivered.
+document.addEventListener('playstatechange', event => {
+  if (!event.detail.active && !controlledTest) {
+    pauseRenderPending ||= wasPlaying;
+    resetRuntimeTiming();
+  }
+});
+
 document.addEventListener('game:runstart', () => {
   startRun();
   clock.advance(0, false);
@@ -98,10 +128,9 @@ document.addEventListener('game:runstart', () => {
 });
 
 function syncTouchContext() {
-  Input.setTouchContext({
-    canAim: !PlayerState.dead && Weapons.def().kind === 'ranged',
-    canRage: !PlayerState.dead && Rage.available(Player),
-  });
+  touchContext.canAim = !PlayerState.dead && Weapons.def().kind === 'ranged';
+  touchContext.canRage = !PlayerState.dead && Rage.available(Player);
+  Input.setTouchContext(touchContext);
 }
 
 function updateAudioScene(dt) {
@@ -171,14 +200,16 @@ function stepFrame(realDt) {
     Blood.update(progressed);
     FX.update(progressed);
     Weapons.update(progressed);
-    HUD.setRage({ ...Rage.snapshot(Player), gamepad: Input.gamepadConnected });
+    Rage.snapshot(Player, 100, rageHudSnapshot);
+    rageHudSnapshot.gamepad = Input.gamepadConnected;
+    HUD.setRage(rageHudSnapshot);
     if (isPlaying()) ThreatFeedback.update(progressed, Enemies.list);
     else ThreatFeedback.clear();
     ObjectiveBanner.update(GameTime.elapsed);
     updateNavigation(progressed);
     hudTimer -= progressed;
     if (hudTimer <= 0) {
-      HUD.setCombat?.(CombatStats.snapshot());
+      HUD.setCombat?.(CombatStats.snapshot(combatHudSnapshot));
       HUD.setCompass?.(Player.yaw);
       hudTimer = 0.10;
     }
@@ -188,7 +219,7 @@ function stepFrame(realDt) {
   return progressed;
 }
 
-function render() {
+function render(dt = 0) {
   if (contextLost) return;
   // One-way fire gates are created during progression, after initial lighting.
   for (const fire of WorldState.fires) lightBudget?.register(fire.light);
@@ -198,11 +229,13 @@ function render() {
     HUD.setCompass?.(Player.yaw);
     updateNavigation(0);
   }
-  focusedShadows?.update(camera, renderer.shadowMap.enabled);
+  const shadowChanged = focusedShadows?.update(camera, renderer.shadowMap.enabled);
+  shadowCadence?.update(dt, renderQuality.tier, shadowChanged || dt <= 0);
   renderWithViewModel(renderer, scene, camera, renderWorld);
 }
 
 function frame(now) {
+  const cpuStart = performance.now();
   const realDt = previousTime ? (now - previousTime) / 1000 : 0;
   previousTime = now;
   Input.pollGamepad();
@@ -211,18 +244,38 @@ function frame(now) {
   const playing = isPlaying();
   if (!playing) {
     clock.advance(0, false);
-    if (wasPlaying) updateAudioScene(0);
-    if (wasPlaying || inspecting) render();
-    wasPlaying = false;
+    const justPaused = wasPlaying || pauseRenderPending;
+    if (justPaused) { resetRuntimeTiming(); updateAudioScene(0); }
+    if (justPaused || inspecting) render();
+    pauseRenderPending = false;
     return;
   }
   // The first resumed frame starts a fresh clock; no hidden-tab catch-up.
   const dt = wasPlaying ? realDt : 0;
+  if (!wasPlaying) resetRuntimeTiming();
+  previousTime = now;
   wasPlaying = true;
+  pauseRenderPending = false;
+  const simulationStart = performance.now();
   stepFrame(dt);
-  FPSMeter.tick(now / 1000, realDt);
-  recordRenderTime(realDt);
-  render();
+  frameTimings.simulationMs = performance.now() - simulationStart;
+  FPSMeter.tick(now / 1000, dt);
+  // Sample sparsely and asynchronously. Never request an unfinished GPU result
+  // or allocate/sort a diagnostic snapshot inside the animation callback.
+  const gpuMeasured = gpuCadence.tick() && runtimeGpuTimer?.begin();
+  const renderStart = performance.now();
+  try { render(dt); }
+  finally { if (gpuMeasured) runtimeGpuTimer.end(); }
+  const finished = performance.now();
+  frameTimings.renderMs = finished - renderStart;
+  frameTimings.cpuMs = finished - cpuStart;
+  frameTimings.gpuMs = runtimeGpuTimer?.totalSamples !== lastGpuSample ? runtimeGpuTimer?.latestMs : null;
+  lastGpuSample = runtimeGpuTimer?.totalSamples ?? 0;
+  frameTimings.adaptive = Settings.get('quality') === 'auto';
+  // Upsizing render targets can cost a frame. Earn recovery during quiet play;
+  // sustained pressure can still reduce work while nearby contacts are active.
+  frameTimings.allowRecovery = audioScene.threat === 0;
+  recordRenderTime(dt, frameTimings);
 }
 
 document.addEventListener('game:contextlost', () => {
@@ -279,7 +332,9 @@ async function boot() {
   } catch (error) {
     console.warn('Static interior lighting was unavailable; live lighting remains enabled.', error);
   }
-  worldPresentation = createWorldPresentation(renderer, scene, camera, { getQuality: () => Settings.get('quality') });
+  worldPresentation = createWorldPresentation(renderer, scene, camera, {
+    getQuality: () => Settings.get('quality'), getTier: () => renderQuality.tier,
+  });
   const initial = CHECKPOINTS.apartment;
   Player.pos.set(initial.x, initial.y + Player.eyeHeight, initial.z);
   Player.yaw = initial.yaw;
@@ -317,6 +372,7 @@ async function boot() {
   focusedShadows = createFocusedShadowBudget(worldLight.directional, worldLight.bounds, {
     casterRoot: scene, receiverFloor: -2.2,
   });
+  shadowCadence = createShadowCadence(worldLight.directional.shadow);
   Weapons.update(0);
   const characterStart = performance.now();
   try {
@@ -341,6 +397,7 @@ async function boot() {
   }
   HUD.setObjective(ZONE_OBJECTIVES.apartment);
   render();
+  runtimeGpuTimer = createGpuFrameTimer(renderer.getContext(), { enabled: true, maxQueries: 2, sampleWindow: 120 });
   graphicsStartup.readyMs = performance.now() - bootStarted;
 
   const startButton = document.getElementById('startbutton');
@@ -351,19 +408,33 @@ async function boot() {
   // QA is visible, explicit, and excluded from production builds.
   const params = new URLSearchParams(location.search);
   if (import.meta.env.DEV && params.get('qa') === '1') {
-    const [{ installQA }, { createGpuFrameTimer }, { installDifficultyQA }] = await Promise.all([
-      import('./testing/qa.js'), import('./core/gpu-frame-timer.js'), import('./testing/difficulty-qa.js'),
+    const [{ installQA }, { installDifficultyQA }] = await Promise.all([
+      import('./testing/qa.js'), import('./testing/difficulty-qa.js'),
     ]);
     const gpuTimer = createGpuFrameTimer(renderer.getContext(), { sampleWindow: 2048 });
     const qaApi = {
       scene, World, renderer, camera, Player, PlayerState, Enemies, Weapons,
       stepFrame, gpuTimer,
-      render() {
+      runtimeMetrics: () => ({ ...renderBudgetSnapshot(), gpuTimer: (controlledTest ? gpuTimer : runtimeGpuTimer).snapshot(),
+        shadows: shadowCadence.snapshot(), effects: FX.snapshot(), blood: Blood.snapshot() }),
+      resetRuntimeBudget: resetRenderBudget,
+      recordRuntimeFrame(dt, simulationMs, renderMs, cpuMs, gpuMs = null) {
+        frameTimings.simulationMs = simulationMs; frameTimings.renderMs = renderMs;
+        frameTimings.cpuMs = cpuMs; frameTimings.gpuMs = gpuMs;
+        frameTimings.adaptive = Settings.get('quality') === 'auto';
+        frameTimings.allowRecovery = audioScene.threat === 0;
+        recordRenderTime(dt, frameTimings);
+      },
+      render(dt = 0) {
         gpuTimer.begin();
-        try { render(); }
+        try { render(dt); }
         finally { gpuTimer.end(); }
       },
-      setTesting(active) { controlledTest = active; clock.advance(0, false); previousTime = 0; },
+      setTesting(active) {
+        controlledTest = active;
+        pauseRenderPending = false;
+        resetRuntimeTiming();
+      },
       setInteriorLightingEnabled(enabled) { interiorLighting?.setEnabled(enabled); },
       setInteriorReflectionsEnabled(enabled) { interiorReflections?.setEnabled(enabled); },
       setHeroFaceTextureEnabled,

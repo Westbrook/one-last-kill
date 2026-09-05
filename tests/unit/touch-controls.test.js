@@ -728,6 +728,143 @@ test('reset, visibility changes, resize, rotation, and destruction clear touch s
   }
 });
 
+test('touch opt-in requests motion synchronously once and starts sensors only during play', async t => {
+  let grant, requests = 0;
+  const f = fixture(t, { enabled: false, active: false, motion: {
+    requestPermission() { requests++; return new Promise(resolve => { grant = resolve; }); },
+  } });
+  f.controls.requestMotionFromGesture();
+  assert.equal(requests, 0, 'touch must be opted in');
+  f.controls.setEnabled(true);
+  assert.equal(requests, 0, 'setting a saved preference is not a permission gesture');
+  f.controls.requestMotionFromGesture();
+  assert.equal(requests, 1, 'the sensor API runs before the gesture method returns');
+  assert.equal(f.controls.element.dataset.motionAim, 'requesting');
+  f.controls.requestMotionFromGesture();
+  assert.equal(requests, 1, 'pending requests cannot duplicate the system dialog');
+  grant('granted');
+  await Promise.resolve();
+  assert.equal(f.controls.element.dataset.motionAim, 'waiting');
+  assert.equal(f.viewport.listeners.get('deviceorientation')?.size ?? 0, 0, 'menus do not sample motion');
+  f.runTimers();
+  assert.equal(f.controls.element.dataset.motionAim, 'waiting', 'sensor timeout starts with gameplay');
+  f.controls.setActive(true);
+  f.orient();
+  assertAimMode(f, 'motion');
+  assertReleased(f.input);
+  f.orient(0, 5, 0);
+  assert.ok(Math.abs(f.input.consumeFrame().dy) > 0);
+  f.controls.setActive(false);
+  f.controls.setActive(true);
+  f.controls.requestMotionFromGesture();
+  assert.equal(requests, 1, 'resume reuses the already authorized stream');
+});
+
+test('a missing browser activation preserves the automatic request for the next real gesture', async t => {
+  let requests = 0;
+  const f = fixture(t, { motion: { requestPermission() { requests++; return Promise.resolve('granted'); } } });
+  f.viewport.navigator = { userActivation: { isActive: false } };
+  f.controls.requestMotionFromGesture();
+  assert.equal(requests, 0);
+  f.viewport.navigator.userActivation.isActive = true;
+  f.controls.requestMotionFromGesture();
+  assert.equal(requests, 1);
+  await Promise.resolve();
+  assertAimMode(f, 'motion');
+});
+
+test('automatic motion denial keeps swipe play and never retries on resume or preference synchronization', async t => {
+  let requests = 0;
+  const f = fixture(t, { motion: { requestPermission() { requests++; return Promise.resolve(requests === 1 ? 'denied' : 'granted'); } } });
+  f.controls.requestMotionFromGesture();
+  await Promise.resolve();
+  assert.equal(f.controls.element.dataset.motionAim, 'denied');
+  assertAimMode(f, 'touch');
+  f.down('fire', 1);
+  f.move(1, 194, 170);
+  let frame = f.input.consumeFrame();
+  assert.equal(frame.dx, 35);
+  assert.equal(frame.dy, -25);
+  assert.equal(frame.leftPressed, false);
+  f.end(1);
+  for (let index = 0; index < 3; index++) {
+    f.controls.setActive(false);
+    f.controls.setEnabled(false);
+    f.controls.setEnabled(true);
+    f.controls.setActive(true);
+    f.controls.requestMotionFromGesture();
+  }
+  assert.equal(requests, 1);
+  assertAimMode(f, 'touch');
+  f.click('motion');
+  assert.equal(requests, 2, 'MOTION remains an intentional retry');
+  await Promise.resolve();
+  f.orient();
+  assertAimMode(f, 'motion');
+  frame = f.input.consumeFrame();
+  assert.equal(frame.leftPressed, false);
+});
+
+test('missing sensor samples fall back to swipe and do not restart the timeout on every resume', t => {
+  const f = fixture(t, { motion: true });
+  f.controls.requestMotionFromGesture();
+  assertAimMode(f, 'motion');
+  f.runTimers();
+  assert.equal(f.controls.element.dataset.motionAim, 'unavailable');
+  assertAimMode(f, 'touch');
+  f.controls.setActive(false);
+  f.controls.setActive(true);
+  f.controls.requestMotionFromGesture();
+  assert.equal(f.controls.element.dataset.motionAim, 'unavailable');
+  f.down('look', 1);
+  f.move(1, 185, 174);
+  const frame = f.input.consumeFrame();
+  assert.equal(frame.dx, 12.5);
+  assert.equal(frame.dy, -15);
+});
+
+test('automatic motion mode respects a manual swipe choice across pause and touch re-enabling', t => {
+  const f = fixture(t, { motion: true });
+  f.controls.requestMotionFromGesture();
+  f.orient();
+  f.click('motion');
+  assertAimMode(f, 'touch');
+  f.controls.setActive(false);
+  f.controls.setEnabled(false);
+  f.controls.setEnabled(true);
+  f.controls.setActive(true);
+  f.controls.requestMotionFromGesture();
+  assert.equal(f.controls.element.dataset.motionAim, 'off');
+  assertAimMode(f, 'touch');
+  f.click('motion');
+  assertAimMode(f, 'motion');
+});
+
+test('automatic grant cancels an existing swipe safely and a late grant after disabling is ignored', async t => {
+  let grant;
+  const f = fixture(t, { motion: { requestPermission: () => new Promise(resolve => { grant = resolve; }) } });
+  f.controls.requestMotionFromGesture();
+  f.down('fire', 1);
+  f.move(1, 182, 178);
+  grant('granted');
+  await Promise.resolve();
+  f.end(1);
+  assertReleased(f.input);
+  assert.equal(f.elements.get('fire').hasPointerCapture(1), false);
+  f.controls.setEnabled(false);
+  f.controls.setEnabled(true);
+  f.controls.requestMotionFromGesture();
+  assert.equal(f.controls.element.dataset.motionAim, 'requesting', 'successful motion can activate on the next opt-in');
+  f.controls.setEnabled(false);
+  grant('granted');
+  await Promise.resolve();
+  f.controls.setEnabled(true);
+  f.orient();
+  assert.equal(f.controls.element.dataset.motionAim, 'off');
+  assertAimMode(f, 'touch');
+  assertReleased(f.input);
+});
+
 test('motion fire starts on contact, stays held through jitter, and stops once on release', t => {
   const f = fixture(t, { motion: true });
   f.click('motion');

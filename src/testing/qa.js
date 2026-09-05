@@ -7,11 +7,14 @@
  *
  * installQA({ stepFrame, render, setTesting, setInspection, resetToApartment? })
  * - stepFrame(seconds): the real simulation entry, including its play gate.
- * - render(): draw the real scene once, including normal render preparation.
+ * - render(seconds?): draw the real scene once, including normal render preparation.
  * - setTesting(boolean): suspend automatic simulation, not stepFrame calls.
  * - setInspection(boolean): show a paused scene without modal menus.
  * - resetToApartment(): optional full new-mission reset, including world gates.
  * - metrics(): optional read-only lighting and presentation configuration.
+ * - runtimeMetrics(): explicit runtime budget/timing snapshot; never sampled per frame.
+ * - resetRuntimeBudget(): clear recent runtime timing and controller history.
+ * - recordRuntimeFrame(seconds, simulationMs, renderMs, cpuMs, gpuMs?): feed measured work.
  *
  * The suite drives actual game controllers. Explicit state/visual fixtures
  * are disclosed in their reports and reset afterwards. Collision routes use
@@ -4966,13 +4969,27 @@ export function installQA(api) {
     report('ready', sceneDescription(ui.select.value));
   }
 
-  function benchmark({ combat = false, balcony = false, roof = false, sweep = false, pistol = false, firearm = null, held = false } = {}) {
+  function benchmark({ combat = false, balcony = false, roof = false, sweep = false, pistol = false, firearm = null, held = false, adaptive = false } = {}) {
     if (busy || disposed) return;
     if (firearm && WEAPON_DEFS[firearm]?.kind !== 'ranged') {
       report('fail', 'Choose a firearm in Held weapon before running its combat benchmark.');
       return;
     }
-    combat ||= balcony || roof || pistol || Boolean(firearm);
+    if (adaptive && !['runtimeMetrics', 'resetRuntimeBudget', 'recordRuntimeFrame'].every(method => typeof api[method] === 'function')) {
+      report('fail', 'Runtime performance hooks are unavailable in this development build.');
+      return;
+    }
+    combat ||= balcony || roof || pistol || Boolean(firearm) || adaptive;
+    const savedGraphics = adaptive ? { quality: Settings.get('quality'), scale: ui.renderScale.value } : null;
+    let graphicsRestored = false;
+    function restoreAdaptiveGraphics() {
+      if (!adaptive || graphicsRestored) return;
+      graphicsRestored = true;
+      ui.renderScale.value = savedGraphics.scale;
+      ui.quality.value = savedGraphics.quality;
+      Settings.set('quality', savedGraphics.quality);
+      applyReviewScale();
+    }
     if (held) inspectHeldWeapon();
     const heldType = held ? Weapons.current : null;
     const retainedActor = !combat && !held && inspectedActor?.alive ? inspectedActor : null;
@@ -4983,12 +5000,22 @@ export function installQA(api) {
     const reviewDirection = { yaw: Player.yaw, pitch: Player.pitch };
     let fixture = null;
     try {
+      if (adaptive) {
+        // Remove the QA override before Settings dispatches its renderer update.
+        ui.renderScale.value = 'device';
+        ui.quality.value = 'auto';
+        Settings.set('quality', 'auto');
+        applyReviewScale();
+      }
       api.setInspection(true);
       if (combat) fixture = balcony ? prepareBalconyCombatFixture() : prepareCombatFixture({ roof, pistol, firearm });
       if (held) assert(inspectedWeapon && Weapons._vm(heldType)?.name === `vm_${heldType}`,
         'A held benchmark must retain the selected production viewmodel');
       assertSilent();
+      if (adaptive) api.resetRuntimeBudget();
     } catch (error) {
+      try { restoreAdaptiveGraphics(); }
+      catch { /* Preserve the original setup failure while still clearing the fixture. */ }
       pauseSilently();
       if (combat) {
         try { freshApartment(); ui.select.value = 'apartment'; }
@@ -5000,19 +5027,21 @@ export function installQA(api) {
       return;
     }
     report('running', combat ? [
-      `${balcony ? 'BALCONY MELEE' : roof ? 'ROOFTOP COMBAT' : firearm ? WEAPON_DEFS[firearm].name + ' COMBAT' : pistol ? 'PISTOL COMBAT' : 'STREET COMBAT'} BENCHMARK · 0.5 s warmup, then 10 s measured simulation + rendering`,
+      `${adaptive ? 'ADAPTIVE STREET COMBAT' : balcony ? 'BALCONY MELEE' : roof ? 'ROOFTOP COMBAT' : firearm ? WEAPON_DEFS[firearm].name + ' COMBAT' : pistol ? 'PISTOL COMBAT' : 'STREET COMBAT'} BENCHMARK · 0.5 s warmup, then 10 s measured simulation + rendering`,
       balcony ? `Fixed balcony camera; actual brawler and bat thug, respawned on death; real bat input every 0.8 s, ${(meleeTiming('bat').contactAt * 1000).toFixed(0)} ms contact delay and capsule-safety assertions.`
         : roof ? 'Fixed rooftop camera; 5 actual mixed-weapon contacts, respawned on death; automatic SMG fire, timed reloads and world-collision assertions.'
         : firearm ? `Fixed street camera; 4 actual contacts, respawned on death; real ${WEAPON_DEFS[firearm].name.toLowerCase()} fire and normal timed reloads.`
           : pistol ? 'Fixed street camera; 4 actual contacts, respawned on death; distinct pistol presses every 0.23 s and normal timed reloads.'
           : 'Fixed street camera; 4 actual contacts, respawned on death; automatic SMG fire and normal timed reloads.',
       'Player health is replenished between frames for this fixture. Keep this tab visible. Audio is locked off.',
+      ...(adaptive ? ['Automatic graphics follow the production controller; no fixed review-scale override. This controlled scene is not a physical-device test or evidence of garbage collection.'] : []),
     ] : sweep ? 'CAMERA SWEEP · 0.5 s warmup, then a measured 10 s full turn with a gentle vertical sweep.\nPaused review camera only, not gameplay movement or input-latency measurement. Audio is locked off.'
       : held ? `HELD ${WEAPON_DEFS[heldType].name} BENCHMARK · 0.5 s warmup, then 10 s measured rendering\nSelected held pose is retained; gameplay is paused and audio is locked off.`
         : 'BENCHMARK · 0.5 s warmup, then 10 s measured rendering\nKeep this tab visible. Gameplay is paused; audio is locked off.');
     const intervals = [], frameTimes = [], callbackTimes = [], simulationTimes = [], renderTimes = [], calls = [], triangles = [];
     const lateIntervals = [], healthCue = document.getElementById('healthvignette');
     let previousCpuMs = null, previousCallbackCpuMs = null, resourcesBefore = null;
+    let previousRuntimeGpuSample = 0;
     const liveContacts = [], attackingContacts = [];
     const presentationProfiles = new Map();
     const longTasks = [];
@@ -5070,6 +5099,11 @@ export function installQA(api) {
       abortBenchmark = null;
       const measurementEnd = performance.now();
       const resourcesAfter = measurementStart === null ? null : resourceSnapshot();
+      let runtimeResult = null;
+      // Save this before pause/reset clears recent controller data. Percentile
+      // sorting is outside the measurement and happens only at this boundary.
+      try { if (adaptive && !disposed) runtimeResult = api.runtimeMetrics(); }
+      catch (failure) { error ??= failure; }
       // A long-task entry for this final rAF callback is queued only after
       // its task finishes. Yield once before collecting, without extending
       // the measurement or including the later fixture reset/report work.
@@ -5078,7 +5112,10 @@ export function installQA(api) {
         longTasks.push(...taskObserver.takeRecords());
         taskObserver.disconnect();
       }
-      if (disposed) return;
+      if (disposed) {
+        try { restoreAdaptiveGraphics(); } catch { /* The disposed renderer may already be unavailable. */ }
+        return;
+      }
       const gpu = api.gpuTimer?.snapshot();
       api.gpuTimer?.setEnabled(false);
       pauseSilently();
@@ -5093,7 +5130,7 @@ export function installQA(api) {
           const draw = summarize(calls), geometry = summarize(triangles);
           const elapsed = intervals.reduce((sum, value) => sum + value, 0);
           result = [
-            `${balcony ? 'CONTROLLED BALCONY MELEE' : roof ? 'CONTROLLED ROOFTOP COMBAT' : firearm ? 'CONTROLLED ' + WEAPON_DEFS[firearm].name + ' COMBAT' : pistol ? 'CONTROLLED PISTOL COMBAT' : combat ? 'CONTROLLED COMBAT' : sweep ? 'PAUSED CAMERA SWEEP' : held ? 'PAUSED HELD ' + WEAPON_DEFS[heldType].name : 'PAUSED SCENE'} BENCHMARK MEASURED · ${ZONE_LABELS[zone] ?? zone}`,
+            `${adaptive ? 'CONTROLLED ADAPTIVE COMBAT' : balcony ? 'CONTROLLED BALCONY MELEE' : roof ? 'CONTROLLED ROOFTOP COMBAT' : firearm ? 'CONTROLLED ' + WEAPON_DEFS[firearm].name + ' COMBAT' : pistol ? 'CONTROLLED PISTOL COMBAT' : combat ? 'CONTROLLED COMBAT' : sweep ? 'PAUSED CAMERA SWEEP' : held ? 'PAUSED HELD ' + WEAPON_DEFS[heldType].name : 'PAUSED SCENE'} BENCHMARK MEASURED · ${ZONE_LABELS[zone] ?? zone}`,
             `${intervals.length} real rAF intervals · ${(elapsed / 1000).toFixed(2)} s measured`,
             `Frame time: median ${time.median.toFixed(2)} ms · p95 ${time.p95.toFixed(2)} ms · p99 ${time.p99.toFixed(2)} ms · average ${time.average.toFixed(2)} ms`,
             `Maximum rAF interval: ${time.maximum.toFixed(2)} ms · maximum sampled CPU section: ${cpu.maximum.toFixed(2)} ms`,
@@ -5132,7 +5169,13 @@ export function installQA(api) {
             );
           }
           if (presentationProfiles.size > 1) result.push('Timing spans the presentation configurations listed above.');
-          result.push('Render ratio held at the start value during this controlled measurement.');
+          if (adaptive) {
+            result.push(
+              'Automatic graphics followed the production controller during warmup and measurement; render ratio and cosmetic complexity could change. No fixed QA scale override was applied.',
+              'Controlled combat fixture, not a physical-device test or proof of garbage collection; the QA callback adds its own bookkeeping.',
+              `Runtime performance at measurement end (before fixture reset):\n${JSON.stringify(runtimeResult, null, 2)}`,
+            );
+          } else result.push('Render ratio held at the start value during this controlled measurement.');
           result.push(`Review scale: ${ui.renderScale.value === 'device' ? 'device/preset' : 'explicit QA override, not a device capability claim'}.`);
           result.push(`Health screen cue: ${healthCue?.dataset.level ?? 'unavailable'} · current player health ${Player.health.toFixed(2)}`);
           if (lateIntervals.length) {
@@ -5172,6 +5215,8 @@ export function installQA(api) {
           result.push('Audio locked off on every sampled frame · no AudioContext');
         }
       } catch (failure) { error = failure; }
+      try { restoreAdaptiveGraphics(); }
+      catch (failure) { error ??= failure; }
       if (combat) {
         try {
           freshApartment();
@@ -5220,7 +5265,7 @@ export function installQA(api) {
           simulationTime = performance.now() - simulationStart;
           contactState = fixture.afterFrame();
           renderStart = performance.now();
-          api.render();
+          api.render(adaptive ? dt : undefined);
         } else {
           assert(!Input.active, 'Gameplay was resumed during the paused-scene benchmark');
           if (held) assert(Weapons.current === heldType && inspectedWeapon, 'The held benchmark lost its selected weapon');
@@ -5242,6 +5287,7 @@ export function installQA(api) {
             previous = timestamp;
             previousCpuMs = frameTime;
             api.gpuTimer?.reset();
+            previousRuntimeGpuSample = 0;
             fixture?.markMeasured();
             resourcesBefore = resourceSnapshot();
           }
@@ -5296,6 +5342,14 @@ export function installQA(api) {
           }
         }
         if (!measurementComplete) frameId = requestAnimationFrame(sample);
+        if (adaptive) {
+          // Describe the frame that was just drawn before a quality decision
+          // changes the renderer configuration for the following frame.
+          const sampleCount = api.gpuTimer?.totalSamples ?? 0;
+          const gpuMs = sampleCount > previousRuntimeGpuSample ? api.gpuTimer.latestMs : null;
+          previousRuntimeGpuSample = sampleCount;
+          api.recordRuntimeFrame(dt, simulationTime, renderTime, frameTime, gpuMs);
+        }
         // Keep this end clock before finish(): without the long-task observer,
         // finish can synchronously report and reset the entire combat fixture.
         // Recording the clock itself is the only per-frame bookkeeping below it.
@@ -5394,6 +5448,16 @@ export function installQA(api) {
   ui.button(ui.actions, 'Benchmark 10 seconds', 'qa-benchmark', () => benchmark());
   ui.button(ui.actions, 'Benchmark camera sweep 10 seconds', 'qa-sweep-benchmark', () => benchmark({ sweep: true }));
   ui.button(ui.actions, 'Benchmark combat 10 seconds', 'qa-combat-benchmark', () => benchmark({ combat: true }));
+  ui.button(ui.actions, 'Benchmark adaptive combat 10 seconds', 'qa-adaptive-combat-benchmark', () => benchmark({ adaptive: true }));
+  ui.button(ui.actions, 'Inspect runtime performance', 'qa-runtime-performance', () => {
+    if (busy || disposed) return;
+    try {
+      assert(typeof api.runtimeMetrics === 'function', 'Runtime performance hooks are unavailable in this development build');
+      report('ready', ['RUNTIME PERFORMANCE SNAPSHOT',
+        'Recent active frames and session stall evidence. Timing symptoms do not establish garbage collection.',
+        JSON.stringify(api.runtimeMetrics(), null, 2)]);
+    } catch (error) { report('fail', error instanceof Error ? error.message : String(error)); }
+  });
   ui.button(ui.actions, 'Benchmark pistol combat 10 seconds', 'qa-pistol-benchmark', () => benchmark({ pistol: true }));
   ui.button(ui.actions, 'Benchmark balcony melee 10 seconds', 'qa-balcony-benchmark', () => benchmark({ balcony: true }));
   ui.button(ui.actions, 'Benchmark rooftop combat 10 seconds', 'qa-roof-benchmark', () => benchmark({ roof: true }));

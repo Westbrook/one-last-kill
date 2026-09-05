@@ -10,6 +10,7 @@ const Input = createInputState();
 const touchControls = createTouchControls({ input: Input });
 // Main supplies gameplay availability without importing game systems here.
 Input.setTouchContext = context => touchControls.setContext(context);
+Input.requestTouchMotion = () => touchControls.requestMotionFromGesture();
 const resetState = Input.reset.bind(Input);
 Input.reset = () => { resetState(); touchControls.reset(); };
 let touchEnabled = Settings.get('touchControls');
@@ -71,10 +72,11 @@ function requestPointer() {
     if (request?.catch) request.catch(() => pointerFallback(attempt));
   } catch { pointerFallback(attempt); }
 }
-function engageLock({ pointerLock = true } = {}) {
+function engageLock({ pointerLock = true, motionPermission = false } = {}) {
   if (document.hidden || LeaveGame.isOpen() || overlayEl?.classList.contains('is-panel-open') || startButton?.disabled
     || cardOpen('endcard') || cardOpen('deathscreen')) return false;
   if (RunSetup.isOpen()) return false;
+  if (motionPermission) Input.requestTouchMotion();
   if (firstEngage || !RunSettings.isStarted()) {
     pauseSession({ showOverlay: false });
     overlayEl?.classList.add('hidden');
@@ -164,10 +166,10 @@ addEventListener('mousemove', (event) => {
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 canvas.addEventListener('click', () => {
   if (modalOpen()) return;
-  if (!Input.active) engageLock();
+  if (!Input.active) engageLock({ motionPermission: true });
   else if (Input.active && !Input.locked && !touchEnabled) requestPointer();
 });
-startButton?.addEventListener('click', engageLock);
+startButton?.addEventListener('click', () => engageLock({ motionPermission: true }));
 document.getElementById('audiotoggle')?.addEventListener('click', (event) => {
   event.stopPropagation();
   toggleAudio();

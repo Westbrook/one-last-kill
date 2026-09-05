@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import * as THREE from 'three';
 import { IMPACT_PROFILES, resolveImpactProfile, impactParticleStyle } from '../../src/render/impact-profile.js';
 
-function harness() {
+function harness(tier = 0) {
   const allocations = {}, countedThree = { ...THREE }, canvases = [];
   for (const name of ['BufferGeometry', 'PlaneGeometry', 'CylinderGeometry', 'MeshBasicMaterial', 'PointsMaterial',
     'Mesh', 'Points', 'PointLight', 'CanvasTexture', 'Vector3', 'Quaternion']) {
@@ -25,20 +25,21 @@ function harness() {
     };
     canvas.getContext = () => context; canvases.push(canvas); return canvas;
   };
-  let seed = 1234567;
+  let seed = 1234567, randomCalls = 0;
   const randomMath = Object.create(Math);
-  randomMath.random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  randomMath.random = () => { randomCalls++; seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const source = readFileSync(new URL('../../src/render/effects.js', import.meta.url), 'utf8')
     .replace(/^import .*;\s*$/gm, '').replace(/^export \{[^}]+\};\s*$/gm, '');
   assert.doesNotMatch(source, /^import\s/m);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(82, 16 / 9, 0.05, 100);
+  const renderQuality = { tier };
   camera.position.set(0, 2, 5);
   // Canvas records drawing commands only. No DOM, renderer, audio or browser exists.
-  const { FX } = runInNewContext(`${source}\n;({ FX });`, {
-    THREE: countedThree, scene, camera, makeCanvas, Math: randomMath, resolveImpactProfile, impactParticleStyle,
+  const { FX, Blood } = runInNewContext(`${source}\n;({ FX, Blood });`, {
+    THREE: countedThree, scene, camera, renderQuality, makeCanvas, Math: randomMath, resolveImpactProfile, impactParticleStyle,
   }, { filename: 'effects.js' });
   const impacts = scene.children.filter(object => object.name === 'impact-particle');
-  return { FX, scene, camera, impacts, allocations, canvases };
+  return { FX, Blood, scene, camera, renderQuality, impacts, allocations, canvases, randomCalls: () => randomCalls, nextRandom: randomMath.random };
 }
 
 const active = h => h.impacts.filter(mesh => mesh.visible);
@@ -162,4 +163,65 @@ test('legacy calls are neutral, counts are bounded, and invalid points or normal
   h.FX.impact(0, 0, 0, 4, hit('glass', new THREE.Vector3(), new THREE.Vector3(NaN, 0, 0)));
   h.FX.update(0.01);
   for (const mesh of active(h)) assert.ok([...mesh.position.toArray(), ...mesh.quaternion.toArray(), ...mesh.scale.toArray()].every(Number.isFinite));
+});
+
+test('adaptive tiers reduce cosmetic density while retaining muzzle cores, tracers and visible hit feedback', () => {
+  const from = new THREE.Vector3(1, 2, 3), to = new THREE.Vector3(1, 2, -10);
+  let referenceTracer = null;
+  for (const tier of [0, 1, 2]) {
+    const h = harness(tier);
+    h.Blood.spawn(0, 1, 0, 12);
+    h.FX.impact(0, 0, 0, 12, hit('metal'));
+    h.FX.muzzleFlash(from); h.FX.tracer(from, to);
+    const fx = h.FX.snapshot(), blood = h.Blood.snapshot();
+    assert.equal(blood.capacity, 256);
+    assert.equal(blood.active, [12, 8, 4][tier]);
+    assert.equal(fx.active.impacts, [12, 8, 4][tier]);
+    assert.equal(fx.active.flashes, 1, 'every shot retains its muzzle core');
+    assert.equal(fx.active.flares, tier < 2 ? 1 : 0);
+    assert.equal(fx.active.smoke, tier < 1 ? 1 : 0);
+    assert.equal(fx.active.tracers, 1, 'shot direction feedback is never omitted');
+    const tracer = h.scene.children.find(mesh => mesh.visible && mesh.geometry?.type === 'CylinderGeometry');
+    if (!referenceTracer) referenceTracer = state(tracer);
+    else assert.deepEqual(state(tracer), referenceTracer);
+    h.Blood.update(1); h.FX.update(1);
+    h.Blood.spawn(0, 1, 0, 1); h.FX.impact(0, 0, 0, 1, hit('wood'));
+    assert.equal(h.Blood.snapshot().active, 1, 'small hits still produce blood feedback');
+    assert.equal(h.FX.snapshot().active.impacts, 1, 'small impacts still produce contact feedback');
+  }
+});
+
+test('cosmetic quality changes consume identical random sequences and cannot alter subsequent combat draws', () => {
+  let expectedCalls = null, expectedNext = null;
+  for (const tier of [0, 1, 2]) {
+    const h = harness(tier);
+    for (const count of [1, 4, 10, 20, 64]) {
+      h.FX.impact(0, 0, 0, count, hit('brick'));
+      h.Blood.spawn(0, 1, 0, count);
+      h.FX.muzzleFlash(h.camera.position);
+    }
+    const calls = h.randomCalls(), next = h.nextRandom();
+    if (expectedCalls === null) { expectedCalls = calls; expectedNext = next; }
+    else { assert.equal(calls, expectedCalls); assert.equal(next, expectedNext); }
+  }
+});
+
+test('repeated tier changes and bursts retain all pool resources within their fixed capacities', () => {
+  const h = harness(), counts = { ...h.allocations }, objects = [...h.scene.children], canvasCount = h.canvases.length;
+  for (let burst = 0; burst < 200; burst++) {
+    h.renderQuality.tier = burst % 3;
+    h.FX.impact(0, 0, 0, 10000, hit('metal'));
+    h.Blood.spawn(0, 1, 0, 10000);
+    h.FX.muzzleFlash(h.camera.position);
+    h.FX.tracer(h.camera.position, h.camera.position);
+    h.FX.update(1 / 120); h.Blood.update(1 / 120);
+    const fx = h.FX.snapshot(), blood = h.Blood.snapshot();
+    assert.ok(blood.active > 0 && blood.active <= blood.capacity);
+    assert.ok(fx.active.impacts > 0 && fx.active.impacts <= fx.capacities.impacts);
+    assert.ok(fx.active.flashes <= fx.capacities.flashes);
+    assert.ok(fx.active.tracers <= fx.capacities.tracers);
+  }
+  assert.deepEqual(h.allocations, counts);
+  assert.equal(h.canvases.length, canvasCount);
+  assert.deepEqual(h.scene.children, objects);
 });

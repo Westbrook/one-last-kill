@@ -30,28 +30,44 @@ export const camera = new THREE.PerspectiveCamera(Settings.get('fov'), initialVi
 export const GameTime = { elapsed: 0 };
 
 const frameBudget = new FrameBudget();
+// Stable shared presentation state; effects read this without allocating a
+// settings snapshot or rebuilding their preallocated resources.
+export const renderQuality = { tier: 0 };
 let viewportWidth = 0, viewportHeight = 0;
+let configuredQuality;
 export function configureRenderer() {
   const { width, height } = viewportSize();
-  viewportWidth = width;
-  viewportHeight = height;
+  const sizeChanged = width !== viewportWidth || height !== viewportHeight;
   const quality = Settings.get('quality');
+  if (quality !== configuredQuality) { frameBudget.reset(); configuredQuality = quality; }
+  renderQuality.tier = quality === 'performance' ? 2 : quality === 'high' ? 0 : frameBudget.qualityTier;
   // Spend the reviewed extra sampling on smaller high-DPI viewports. Do not
   // increase large-window allocations beyond their previous 1.6× ceiling:
   // only the additional headroom is limited to a four-megapixel buffer.
   const highScale = Math.min(2, Math.max(1.6, Math.sqrt(4 * 1024 * 1024 / (width * height))));
   const ratio = quality === 'high' ? highScale : quality === 'performance' ? 0.85 : frameBudget.scale;
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, ratio));
-  renderer.setSize(width, height, false);
+  const pixelRatio = Math.min(devicePixelRatio || 1, ratio);
+  // Three's setPixelRatio() also resizes the canvas. Apply the complete tuple
+  // once, only when it changes: tier-only relief must not reset a busy buffer.
+  if (sizeChanged || renderer.getPixelRatio() !== pixelRatio) {
+    renderer.setDrawingBufferSize(width, height, pixelRatio);
+  }
+  viewportWidth = width;
+  viewportHeight = height;
   renderer.shadowMap.enabled = quality !== 'performance';
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
 }
 
-export function recordRenderTime(dt) {
-  if (Settings.get('quality') !== 'auto') return;
-  const next = frameBudget.sample(dt);
-  if (next !== null) configureRenderer();
+export function recordRenderTime(dt, timings) {
+  const revision = frameBudget.revision;
+  frameBudget.sample(dt, timings);
+  if (Settings.get('quality') === 'auto' && revision !== frameBudget.revision) configureRenderer();
+}
+
+export function resetRenderBudget() { frameBudget.reset(); }
+export function renderBudgetSnapshot() {
+  return { ...frameBudget.snapshot(), preset: Settings.get('quality'), effectiveScale: renderer.getPixelRatio(), tier: renderQuality.tier };
 }
 
 configureRenderer();

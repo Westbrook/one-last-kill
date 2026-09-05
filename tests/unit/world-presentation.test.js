@@ -8,10 +8,10 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createWorldPresentation } from '../../src/render/world-presentation.js';
 
-function fixture({ quality = 'auto', ratio = 1.3, maxSamples = 4, supported = true, failAtDraw = 0, failFactory = '' } = {}) {
+function fixture({ quality = 'auto', tier = 0, ratio = 1.3, maxSamples = 4, supported = true, failAtDraw = 0, failFactory = '' } = {}) {
   const scene = new Scene(), camera = new PerspectiveCamera(82, 16 / 9, 0.05, 300);
   scene.background = new Color(0x2b3b41);
-  const state = { quality, ratio, width: 1600, height: 900, failAtDraw };
+  const state = { quality, tier, ratio, width: 1600, height: 900, failAtDraw };
   const calls = [], targets = [], depths = [], aoPasses = [], outputPasses = [], sizeArguments = [];
   const originalTarget = { name: 'caller-target' };
   const clearColor = new Color(0x456789);
@@ -105,7 +105,7 @@ function fixture({ quality = 'auto', ratio = 1.3, maxSamples = 4, supported = tr
       return result;
     },
   };
-  const presentation = createWorldPresentation(renderer, scene, camera, { getQuality: () => state.quality }, factories);
+  const presentation = createWorldPresentation(renderer, scene, camera, { getQuality: () => state.quality, getTier: () => state.tier }, factories);
   return { renderer, scene, camera, presentation, factories, state, calls, targets, depths, aoPasses, outputPasses, originalTarget, sizeArguments };
 }
 
@@ -127,7 +127,7 @@ function assertRestored(f) {
 }
 
 test('performance and low adaptive resolution draw directly without allocating effects', () => {
-  for (const options of [{ quality: 'performance' }, { quality: 'auto', ratio: 0.95 }, { quality: 'invalid' }]) {
+  for (const options of [{ quality: 'performance' }, { quality: 'auto', ratio: 0.95 }, { tier: 1 }, { tier: 2 }, { quality: 'invalid' }]) {
     const f = fixture(options);
     for (let frame = 0; frame < 3; frame++) f.presentation.render();
     assert.equal(f.targets.length + f.aoPasses.length + f.outputPasses.length + f.depths.length, 0);
@@ -170,7 +170,7 @@ test('one HDR scene draw supplies depth to half-resolution AO and one output con
   assert.equal(f.targets[1].samples, 0, 'full-screen composition retains resolved geometry AA');
   assert.equal(f.targets[1].options.depthBuffer, false);
   assert.deepEqual(f.presentation.snapshot(), {
-    enabled: true, reason: 'active', quality: 'auto', allocated: true, disposed: false,
+    enabled: true, reason: 'active', quality: 'auto', tier: 0, allocated: true, disposed: false,
     size: { width: 1600, height: 900 }, aoSize: { width: 800, height: 450 },
     aoSamples: 8, denoiseSamples: 8, msaaSamples: 2, worldPasses: 1, postPasses: 5,
   });
@@ -206,7 +206,7 @@ test('physical drawing-buffer changes resize existing targets only once', () => 
 });
 
 test('high quality keeps contact shading restrained and respects the hardware MSAA cap', () => {
-  const f = fixture({ quality: 'high', ratio: 0.8, maxSamples: 1 });
+  const f = fixture({ quality: 'high', tier: 2, ratio: 0.8, maxSamples: 1 });
   f.presentation.render();
   const ao = f.aoPasses[0];
   assert.equal(ao.configs[0].samples, 12);
@@ -216,7 +216,7 @@ test('high quality keeps contact shading restrained and respects the hardware MS
   assert.ok(ao.blendIntensity >= 0.5 && ao.blendIntensity <= 0.65);
   assert.equal(ao.denoise.samples, 8);
   assert.equal(f.presentation.snapshot().msaaSamples, 1);
-  f.state.quality = 'auto'; f.state.ratio = 1.3;
+  f.state.quality = 'auto'; f.state.tier = 0; f.state.ratio = 1.3;
   f.presentation.render();
   assert.equal(f.aoPasses.length, 1);
   assert.equal(ao.configs.at(-1).samples, 8);
@@ -260,6 +260,33 @@ test('adaptive bypass retains buffers but explicit performance mode releases the
   assert.ok([...f.targets, ...f.depths, ...f.aoPasses, ...f.outputPasses].every(resource => resource.disposals === 1));
   assert.equal(f.aoPasses[0].gtaoMaterial.disposals, 1);
   assert.equal(f.aoPasses[0].blendMaterial.disposals, 1);
+});
+
+test('presentation budget sheds contact shading without rebuilding shaders or framebuffer attachments', () => {
+  const f = fixture();
+  f.presentation.render();
+  const originalBeauty = f.targets[0], originalAO = f.aoPasses[0];
+  for (const tier of [1, 2, 1, 0, 2, 0]) {
+    f.state.tier = tier;
+    const previousDraws = f.calls.length;
+    f.presentation.render();
+    const snapshot = f.presentation.snapshot();
+    assert.equal(snapshot.tier, tier);
+    assert.equal(snapshot.enabled, tier === 0);
+    assert.equal(snapshot.reason, tier === 0 ? 'active' : 'presentation-budget');
+    assert.equal(snapshot.allocated, true);
+    assert.equal(snapshot.msaaSamples, 2);
+    const draws = f.calls.slice(previousDraws);
+    assert.equal(draws.length, tier === 0 ? 6 : 1);
+    assert.equal(draws.filter(call => call.world).length, 1, 'essential world rendering remains available');
+    assertRestored(f);
+  }
+  assert.equal(f.targets.length, 2);
+  assert.equal(f.targets[0], originalBeauty);
+  assert.equal(f.aoPasses[0], originalAO);
+  assert.equal(originalAO.configs.length, 1, 'tier changes never change AO shader defines');
+  assert.equal(originalBeauty.resizes.length, 0);
+  assert.ok([...f.targets, ...f.depths, ...f.aoPasses, ...f.outputPasses].every(resource => resource.disposals === 0));
 });
 
 test('statistics accumulate into an outer world-and-weapon renderer without another reset', () => {

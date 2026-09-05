@@ -67,14 +67,21 @@ function fixture({ initial = {}, status = { muted: true, hardMuted: false, suppo
       return () => { audioStatusReads++; return status; };
     },
   });
-  const context = vm.createContext({ document, Settings: settings, AUDIO_MIX_SETTINGS, Audio });
+  let motionRequests = 0;
+  const Input = {
+    requestTouchMotion() {
+      assert.equal(settings.get('touchControls'), true, 'touch is enabled before requesting motion');
+      motionRequests++;
+    },
+  };
+  const context = vm.createContext({ document, Settings: settings, AUDIO_MIX_SETTINGS, Audio, Input });
   const helpers = source.slice(source.indexOf('const byId ='), source.indexOf('const padded ='));
   const start = source.indexOf('const audioSettingKeys ='), end = source.indexOf('\nfunction primaryLabel');
   assert.ok(start > 0 && end > start);
   // Run the actual settings bindings with native-control-shaped DOM objects.
   // Audio exposes only a read operation, so an accidental activation fails here.
   vm.runInContext(helpers + source.slice(start, end), context);
-  return { settings, document, context, element: id => document.getElementById(id), audioStatusReads: () => audioStatusReads };
+  return { settings, document, context, element: id => document.getElementById(id), audioStatusReads: () => audioStatusReads, motionRequests: () => motionRequests };
 }
 
 function changeLevel(ui, channel, percent) {
@@ -93,18 +100,27 @@ test('touch controls opt-in is labeled, follows saved preferences and resets to 
   assert.equal(field.getAttribute('aria-describedby'), 'touchcontrolshelp');
   assert.match(markup, /<label for="settingtouchcontrols">On-screen touch controls<\/label>/);
   assert.equal(field.checked, false);
+  assert.equal(ui.motionRequests(), 0);
   assert.equal(field.handlers.get('change').length, 1);
   const before = ui.settings.snapshot();
   field.checked = true;
   field.dispatch('change');
+  assert.equal(ui.motionRequests(), 1, 'permission is requested before the setting gesture returns');
   assert.equal(ui.settings.get('touchControls'), true);
   for (const key of Object.keys(DEFAULT_SETTINGS)) if (key !== 'touchControls') assert.equal(ui.settings.get(key), before[key]);
   assert.equal(ui.element('settingssaved').textContent, 'PREFERENCES APPLIED');
   assert.equal(ui.element('audiostatus').textContent, 'AUDIO OFF');
   ui.settings.set('touchControls', false);
   assert.equal(field.checked, false);
+  assert.equal(ui.motionRequests(), 1, 'external settings updates cannot request permission');
+  ui.settings.set('touchControls', true);
+  assert.equal(ui.motionRequests(), 1);
+  field.checked = false;
+  field.dispatch('change');
+  assert.equal(ui.motionRequests(), 1, 'turning touch off never prompts');
   const restored = fixture({ initial: { touchControls: true } });
   assert.equal(restored.element('settingtouchcontrols').checked, true);
+  assert.equal(restored.motionRequests(), 0, 'restoring a checked preference is passive');
   restored.element('resetsettings').dispatch('click');
   assert.equal(restored.settings.get('touchControls'), false);
   assert.equal(restored.element('settingtouchcontrols').checked, false);

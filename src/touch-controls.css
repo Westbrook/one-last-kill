@@ -71,15 +71,8 @@ body:has(#deathscreen.show) #touch-controls { display: none; }
 .touch-fire { grid-column: 2 / 4; grid-row: 1 / 3; width: 100%; height: 100%; border-radius: 50%; background: rgb(78 39 28 / 55%); border-color: rgb(226 176 148 / 65%); font-size: 10px; letter-spacing: .16em; gap: 10px; }
 .touch-fire svg { width: 34px; height: 34px; }
 
-/* Motion permission replaces both touch look surfaces with a compact trigger. */
+/* Keep the same generous FIRE target in either aiming mode. */
 #touch-controls[data-aim-mode="motion"] .touch-look { display: none; pointer-events: none; }
-#touch-controls[data-aim-mode="motion"] .touch-actions { grid-template-rows: repeat(2, var(--touch-size)); }
-#touch-controls[data-aim-mode="motion"] .touch-fire { grid-column: 2; grid-row: 1; border-radius: 12px; font-size: 8px; letter-spacing: .05em; gap: 5px; }
-#touch-controls[data-aim-mode="motion"] .touch-fire svg { width: 22px; height: 22px; }
-#touch-controls[data-aim-mode="motion"] .touch-use { grid-column: 3; grid-row: 1; }
-#touch-controls[data-aim-mode="motion"] .touch-reload,
-#touch-controls[data-aim-mode="motion"] .touch-melee,
-#touch-controls[data-aim-mode="motion"] .touch-jump { grid-row: 2; }
 
 /* Keep health, ammunition, and prompts clear of the thumb areas. */
 body[data-touch-controls="true"] #vitals { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 232px); width: 144px; }

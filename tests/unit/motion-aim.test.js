@@ -55,6 +55,19 @@ function assertTurn(f, yaw, pitch) {
   close(-f.looks[0][1] * 0.0025, MathUtils.degToRad(pitch), 'pitch');
 }
 
+function browserReading(pose) {
+  const angles = new Euler().setFromRotationMatrix(pose, 'ZXY');
+  let alpha = MathUtils.radToDeg(angles.z), beta = MathUtils.radToDeg(angles.x), gamma = MathUtils.radToDeg(angles.y);
+  // Three constrains beta; browsers constrain gamma instead. Convert the
+  // equivalent representation into DeviceOrientation's documented ranges.
+  if (Math.abs(gamma) > 90) {
+    alpha += 180;
+    beta = beta >= 0 ? 180 - beta : -180 - beta;
+    gamma += gamma > 0 ? -180 : 180;
+  }
+  return [(alpha + 360) % 360, beta, gamma];
+}
+
 // Generate physical rotations with Three's independent rotation-matrix/Euler
 // conversion, then pass the resulting browser readings to the public adapter.
 function localTurn([alpha, beta, gamma], screenAngle, axis, degrees) {
@@ -64,8 +77,18 @@ function localTurn([alpha, beta, gamma], screenAngle, axis, degrees) {
   pose.multiply(screen)
     .multiply(new Matrix4().makeRotationAxis(new Vector3(...axis), radians(degrees)))
     .multiply(screen.invert());
-  const angles = new Euler().setFromRotationMatrix(pose, 'ZXY');
-  return [MathUtils.radToDeg(angles.z), MathUtils.radToDeg(angles.x), MathUtils.radToDeg(angles.y)];
+  return browserReading(pose);
+}
+
+// Build an actual pointing direction using world-vertical panning, elevation
+// about horizontal right, and finally roll about the screen normal. Unlike
+// localTurn, these physical axes do not rotate with a locked/sideways display.
+function physicalPose(yaw, elevation, roll) {
+  const radians = MathUtils.degToRad;
+  const pose = new Matrix4().makeRotationZ(radians(yaw))
+    .multiply(new Matrix4().makeRotationX(radians(90 + elevation)))
+    .multiply(new Matrix4().makeRotationZ(radians(roll)));
+  return browserReading(pose);
 }
 
 test('motion aim stays off until opted in and calibrates without moving the camera', async t => {
@@ -74,23 +97,61 @@ test('motion aim stays off until opted in and calibrates without moving the came
   assert.equal(f.aim.status, 'off');
   assert.equal(f.viewport.count('deviceorientation'), 0);
   assert.deepEqual(f.statuses, []);
-  f.sample(100, 30, 20);
+  f.sample(...physicalPose(100, 10, 20));
   assert.equal(await f.aim.enable(), true);
   assert.equal(f.aim.enabled, true);
   assert.equal(f.aim.status, 'waiting');
   assert.equal(f.viewport.count('deviceorientation'), 1);
-  f.sample(100, 30, 20);
+  f.sample(...physicalPose(100, 10, 20));
   assert.equal(f.aim.status, 'active');
   assert.deepEqual(f.looks, []);
   assert.equal(f.timers.size, 0);
-  f.sample(100, 30, 25);
+  f.sample(...physicalPose(105, 10, 20));
   assertTurn(f, 5, 0);
   assert.deepEqual(f.statuses, ['requesting', 'waiting', 'active']);
 });
 
-test('screen-relative pitch and yaw have the correct signs at flat, upright, and tilted poses', async t => {
+test('physical panning and tilting keep their axes at tilted or rolled holds and any display angle', async t => {
   for (const angle of [0, 90, -90, 180]) {
-    for (const baseline of [[0, 0, 0], [45, 90, 0], [30, 45, 20]]) {
+    for (const elevation of [-60, -30, 0, 30, 60]) {
+      for (const roll of [-90, 0, 35, 90, 180]) {
+        for (const [yaw, pitch] of [[5, 0], [-5, 0], [0, 5], [0, -5]]) {
+          const f = fixture(t, { angle });
+          await f.aim.enable();
+          f.sample(...physicalPose(30, elevation, roll));
+          f.sample(...physicalPose(30 + yaw, elevation + pitch, roll));
+          assertTurn(f, yaw, pitch);
+        }
+      }
+    }
+  }
+});
+
+test('rolling a phone while its display is locked cannot exchange or invert later pan and tilt', async t => {
+  const f = fixture(t);
+  await f.aim.enable();
+  f.sample(...physicalPose(25, -30, 0));
+  for (const roll of [30, 60, 90, 140, 180, 240, 270, 360]) {
+    f.sample(...physicalPose(25, -30, roll));
+    assert.deepEqual(f.looks, [], `roll ${roll} must not move aim`);
+    f.sample(...physicalPose(30, -30, roll));
+    assertTurn(f, 5, 0);
+    f.looks.length = 0;
+    f.sample(...physicalPose(25, -30, roll));
+    assertTurn(f, -5, 0);
+    f.looks.length = 0;
+    f.sample(...physicalPose(25, -25, roll));
+    assertTurn(f, 0, 5);
+    f.looks.length = 0;
+    f.sample(...physicalPose(25, -30, roll));
+    assertTurn(f, 0, -5);
+    f.looks.length = 0;
+  }
+});
+
+test('near-flat calibration keeps a stable screen-relative frame for either face and every display angle', async t => {
+  for (const angle of [0, 90, -90, 180]) {
+    for (const baseline of [[0, 0, 0], [15, 10, 5], [0, 180, 0], [40, 175, 5]]) {
       for (const [axis, yaw, pitch] of [[[1, 0, 0], 0, 5], [[0, 1, 0], 5, 0], [[0, -1, 0], -5, 0], [[-1, 0, 0], 0, -5]]) {
         const f = fixture(t, { angle });
         await f.aim.enable();
@@ -100,6 +161,124 @@ test('screen-relative pitch and yaw have the correct signs at flat, upright, and
       }
     }
   }
+});
+
+test('lifting a flat-started phone adopts gravity without a jump or a lingering swapped reference', async t => {
+  for (const angle of [0, 90, -90, 180]) {
+    for (const direction of [-1, 1]) {
+      for (const roll of [0, 65, 150]) {
+        const f = fixture(t, { angle });
+        await f.aim.enable();
+        f.sample(...physicalPose(20, 85 * direction, roll));
+        f.sample(...physicalPose(20, 65 * direction, roll));
+        f.looks.length = 0;
+        f.sample(...physicalPose(20, 50 * direction, roll));
+        assert.deepEqual(f.looks, [], 'reference migration establishes a fresh baseline');
+        f.sample(...physicalPose(25, 50 * direction, roll));
+        assertTurn(f, 5, 0);
+        f.looks.length = 0;
+        f.sample(...physicalPose(25, 45 * direction, roll));
+        assertTurn(f, 0, -5 * direction);
+      }
+    }
+  }
+});
+
+test('crossing either pole reanchors without a yaw spike or a lasting inverted pitch branch', async t => {
+  for (const direction of [-1, 1]) {
+    for (const angle of [0, 90, -90]) {
+      const f = fixture(t, { angle });
+      await f.aim.enable();
+      f.sample(...physicalPose(30, direction * 60, 90));
+      f.sample(...physicalPose(30, direction * 87, 90));
+      assertTurn(f, 0, direction * 27);
+      f.looks.length = 0;
+      for (const [magnitude, pitch] of [[89, 2], [90, 1], [91, -1]]) {
+        f.sample(...physicalPose(30, magnitude * direction, 90));
+        assertTurn(f, 0, pitch * direction);
+        f.looks.length = 0;
+      }
+      f.sample(...physicalPose(30, direction * 95, 90));
+      assert.deepEqual(f.looks, [], 'leaving the pole adopts its new heading without a jump');
+      f.sample(...physicalPose(30, direction * 100, 90));
+      assertTurn(f, 0, -5 * direction);
+      f.looks.length = 0;
+      f.sample(...physicalPose(30, direction * 120, 90));
+      assertTurn(f, 0, -20 * direction);
+      f.looks.length = 0;
+      f.sample(...physicalPose(35, direction * 120, 90));
+      assertTurn(f, 5, 0);
+    }
+  }
+});
+
+test('a pole crossing between sensor samples cannot select an inverted branch', async t => {
+  for (const direction of [-1, 1]) {
+    const f = fixture(t);
+    await f.aim.enable();
+    f.sample(...physicalPose(30, 60 * direction, 90));
+    f.sample(...physicalPose(30, 85 * direction, 90));
+    f.looks.length = 0;
+    f.sample(...physicalPose(30, 95 * direction, 90));
+    assert.deepEqual(f.looks, [], 'ambiguous heading reversal establishes a fresh baseline');
+    f.sample(...physicalPose(30, 100 * direction, 90));
+    assertTurn(f, 0, -5 * direction);
+  }
+});
+
+test('turning at a pole then returning to an ordinary hold never leaves either aim axis inverted', async t => {
+  for (const angle of [0, 90, -90, 180]) {
+    for (const direction of [-1, 1]) {
+      for (const roll of [0, 90, 180]) {
+        for (const yaw of [-120, 120, 180]) {
+          const f = fixture(t, { angle });
+          await f.aim.enable();
+          f.sample(...physicalPose(0, 45 * direction, roll));
+          f.sample(...physicalPose(0, 89.99 * direction, roll));
+          f.sample(...physicalPose(yaw, 89.99 * direction, roll));
+          f.looks.length = 0;
+          f.sample(...physicalPose(yaw, 87 * direction, roll));
+          assert.deepEqual(f.looks, [], 'leaving the pole reanchors without a jump');
+          f.sample(...physicalPose(yaw, 82 * direction, roll));
+          assertTurn(f, 0, -5 * direction);
+          f.looks.length = 0;
+          f.sample(...physicalPose(yaw, 60 * direction, roll));
+          assertTurn(f, 0, -22 * direction);
+          f.looks.length = 0;
+          f.sample(...physicalPose(yaw + 5, 60 * direction, roll));
+          assertTurn(f, 5, 0);
+        }
+      }
+    }
+  }
+});
+
+test('tiny direction changes at a pole cannot amplify heading noise into a large turn', async t => {
+  const f = fixture(t);
+  await f.aim.enable();
+  f.sample(...physicalPose(0, 45, 0));
+  f.sample(...physicalPose(0, 89.99, 0));
+  f.looks.length = 0;
+  for (const yaw of [0, 80, 180, 260, 359, 120, 0]) f.sample(...physicalPose(yaw, 89.99, 0));
+  for (const [dx, dy] of f.looks) {
+    close(dx, 0, 'undefined pole heading is held');
+    assert.ok(Math.abs(dy * 0.0025) < MathUtils.degToRad(0.03), 'sub-degree sensor jitter stays sub-degree');
+  }
+  f.looks.length = 0;
+  f.sample(...physicalPose(120, 87, 0));
+  assert.deepEqual(f.looks, [], 'leaving the pole does not replay its undefined heading');
+  f.looks.length = 0;
+  f.sample(...physicalPose(125, 87, 0));
+  assert.ok(Math.abs(f.looks[0][0] * 0.0025) < MathUtils.degToRad(1), 'yaw returns gradually close to vertical');
+  f.looks.length = 0;
+  f.sample(...physicalPose(125, 82, 0));
+  assertTurn(f, 0, -5);
+  f.looks.length = 0;
+  f.sample(...physicalPose(125, 77, 0));
+  assertTurn(f, 0, -5);
+  f.looks.length = 0;
+  f.sample(...physicalPose(125, 60, 0));
+  assertTurn(f, 0, -17);
 });
 
 test('physical screen roll does not move the aim or tilt the horizon', async t => {
@@ -211,15 +390,15 @@ test('silence or invalid samples during calibration times out and an explicit re
   assert.equal(f.aim.status, 'unavailable');
   assert.equal(f.viewport.count('deviceorientation'), 0);
   assert.equal(f.timers.size, 0);
-  f.sample(0, 0, 20);
+  f.sample(20, 90, 0);
   f.aim.setActive(false);
   f.aim.setActive(true);
   assert.equal(f.aim.status, 'unavailable');
   await f.aim.enable();
-  f.sample(0, 0, 20);
+  f.sample(20, 90, 0);
   assert.equal(f.aim.status, 'active');
   assert.deepEqual(f.looks, []);
-  f.sample(0, 0, 25);
+  f.sample(25, 90, 0);
   assertTurn(f, 5, 0);
 });
 
@@ -251,9 +430,9 @@ test('recenter and resume keep a proven sensor available while waiting for the n
     f.advance(60000);
     assert.equal(f.viewport.count('deviceorientation'), 1);
     assert.equal(f.aim.status, 'waiting');
-    f.sample(30, 40, 50);
+    f.sample(30, 90, 0);
     assert.deepEqual(f.looks, []);
-    f.sample(30, 40, 55);
+    f.sample(35, 90, 0);
     assertTurn(f, 5, 0);
   }
 });
@@ -292,13 +471,13 @@ test('pause, visibility, blur, and page suspension discard movement until a fres
     assert.equal(f.aim.status, 'waiting');
     assert.equal(f.viewport.count('deviceorientation'), 0);
     assert.equal(f.timers.size, 0);
-    f.sample(50, 50, 50);
+    f.sample(50, 90, 0);
     f.advance(3000);
     resume(f);
     assert.equal(f.viewport.count('deviceorientation'), 1);
-    f.sample(50, 50, 50);
+    f.sample(50, 90, 0);
     assert.deepEqual(f.looks, []);
-    f.sample(50, 50, 55);
+    f.sample(55, 90, 0);
     assertTurn(f, 5, 0);
   }
 });
@@ -311,10 +490,9 @@ test('recenter and modern or legacy display rotation reset without a jump', asyn
     if (kind === 'recenter') f.aim.recenter();
     else if (kind === 'legacy') { f.viewport.orientation = 90; f.viewport.emit('orientationchange'); }
     else { f.screen.angle = 90; if (kind === 'modern') f.screen.emit('change'); }
-    f.sample(40, 20, 10);
+    f.sample(...physicalPose(40, -20, 90));
     assert.deepEqual(f.looks, []);
-    const angle = kind === 'recenter' ? 0 : 90;
-    f.sample(...localTurn([40, 20, 10], angle, [0, 1, 0], 5));
+    f.sample(...physicalPose(45, -20, 90));
     assertTurn(f, 5, 0);
     assert.equal(f.timers.size, 0);
   }
@@ -336,9 +514,9 @@ test('switching the browser orientation reference calibrates again without a hea
   const f = fixture(t);
   await f.aim.enable();
   f.sample(0, 0, 0, { absolute: false });
-  f.sample(100, 40, 30, { absolute: true });
+  f.sample(100, 90, 0, { absolute: true });
   assert.deepEqual(f.looks, []);
-  f.sample(100, 40, 35, { absolute: true });
+  f.sample(105, 90, 0, { absolute: true });
   assertTurn(f, 5, 0);
 });
 

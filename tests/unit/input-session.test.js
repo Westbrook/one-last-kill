@@ -67,10 +67,11 @@ function session({ touchEnabled = false } = {}) {
     set(key, value) { settings.set(key, value); document.emit('settingschange'); },
   };
   const controls = {
-    enabled: false, active: false, resets: 0, enabledChanges: [], context: null,
+    enabled: false, active: false, resets: 0, enabledChanges: [], context: null, motionGestures: 0,
     setEnabled(value) { this.enabled = value; this.enabledChanges.push(value); },
     setActive(value) { this.active = value; },
     setContext(value) { this.context = value; },
+    requestMotionFromGesture() { if (this.enabled) this.motionGestures++; },
     reset() { this.resets++; },
     get visible() { return this.enabled && this.active; },
   };
@@ -93,7 +94,7 @@ function session({ touchEnabled = false } = {}) {
     dismiss({ engage = true } = {}) {
       if (!briefingOpen) return false;
       briefingOpen = false;
-      if (engage) api.engageLock();
+      if (engage) api.engageLock({ motionPermission: true });
       return true;
     },
   };
@@ -164,6 +165,42 @@ test('the input adapter forwards authoritative gameplay availability to the touc
   assert.equal(h.controls.context, context);
   h.Input.setTouchContext({ canAim: false, canRage: true });
   assert.deepEqual(h.controls.context, { canAim: false, canRage: true });
+});
+
+test('saved touch preferences wait for an explicit start or resume gesture before requesting motion', () => {
+  const h = session({ touchEnabled: true });
+  assert.equal(h.controls.motionGestures, 0, 'saved preference initialization is passive');
+  h.document.emit('settingschange');
+  assert.equal(h.controls.motionGestures, 0);
+  h.start.click();
+  assert.equal(h.controls.motionGestures, 1, 'start forwards the gesture synchronously');
+  h.RunSetup.configure();
+  assert.equal(h.controls.motionGestures, 1, 'run configuration does not invent a permission gesture');
+  h.IntroCard.dismiss();
+  assert.equal(h.controls.motionGestures, 2, 'the briefing click can activate motion after controller setup');
+  h.Input.pause();
+  h.start.click();
+  assert.equal(h.controls.motionGestures, 3);
+  h.Input.pause();
+  h.engageLock();
+  assert.equal(h.controls.motionGestures, 3, 'programmatic engagement cannot request permission');
+});
+
+test('controller polling and blocked menu actions cannot generate motion permission prompts', () => {
+  const h = session({ touchEnabled: true });
+  h.overlay.classList.add('is-panel-open');
+  h.start.click();
+  assert.equal(h.controls.motionGestures, 0);
+  h.overlay.classList.remove('is-panel-open');
+  h.pollPad([9]);
+  h.RunSetup.configure();
+  h.pollPad([]);
+  h.pollPad([9]);
+  assert.equal(h.Input.active, true);
+  assert.equal(h.controls.motionGestures, 0, 'gamepad activation is outside a browser input event');
+  h.Input.pause();
+  h.start.click();
+  assert.equal(h.controls.motionGestures, 1, 'a later browser gesture still gets the opportunity');
 });
 
 test('opted-in touch play passes through the briefing and never requests pointer capture', () => {

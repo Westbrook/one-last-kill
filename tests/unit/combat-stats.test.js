@@ -42,6 +42,39 @@ test('favorite weapon uses attacks, then kills, with a stable tie order and no u
   assert.equal(stats.snapshot().favoriteWeapon, 'bat');
 });
 
+test('HUD output reuses weapon rows without changing independent checkpoint snapshots', () => {
+  const stats = createCombatStats(), target = {};
+  stats.recordShot(true, 'pistol', 24);
+  stats.recordKill(true, 'pistol');
+  assert.equal(stats.snapshot(target), target);
+  const rows = target.weapons, rowRefs = [...rows];
+  const checkpoint = stats.snapshot();
+  stats.recordMelee(false, 'bat');
+  stats.recordMelee(true, 'bat', 55);
+  assert.equal(stats.snapshot(target), target);
+  assert.equal(target.weapons, rows);
+  for (let index = 0; index < rows.length; index++) assert.equal(rows[index], rowRefs[index]);
+  assert.equal(target.favoriteWeapon, 'bat');
+  assert.equal(checkpoint.favoriteWeapon, 'pistol');
+  assert.equal(checkpoint.attacks, 1);
+  assert.equal(checkpoint.weapons.find(weapon => weapon.type === 'bat').attacks, 0);
+  target.weapons.find(weapon => weapon.type === 'pistol').hits = 999;
+  assert.equal(stats.snapshot().weapons.find(weapon => weapon.type === 'pistol').hits, 1,
+    'caller-owned output never aliases internal counters');
+  stats.reset();
+  stats.snapshot(target);
+  assert.equal(target.favoriteWeapon, null);
+  assert.equal(target.favoriteWeaponName, null);
+  assert.equal(target.attacks, 0);
+  for (let index = 0; index < rows.length; index++) {
+    assert.equal(rows[index], rowRefs[index]);
+    assert.equal(rows[index].hits, 0);
+    assert.equal(rows[index].accuracy, 0);
+  }
+  stats.restore(checkpoint);
+  assert.deepEqual(stats.snapshot(target), { ...checkpoint, streak: 0 });
+});
+
 test('checkpoint restoration rolls back credited results without reviving a kill streak or rage wager', () => {
   let rageResets = 0, rageKills = 0;
   const stats = createCombatStats({ rage: { reset() { rageResets++; }, recordKill() { rageKills++; } } });

@@ -1,8 +1,15 @@
 import * as THREE from 'three';
 
-import { scene, camera } from '../core/renderer.js';
+import { scene, camera, renderQuality } from '../core/renderer.js';
 import { makeCanvas } from '../render/materials.js';
 import { resolveImpactProfile, impactParticleStyle } from './impact-profile.js';
+
+// Change only presentation density. Pools and essential shot feedback keep
+// their lifetime and capacity; adapting never creates or destroys resources.
+function particleBudget(amount) {
+  const tier = renderQuality.tier;
+  return tier >= 2 ? Math.ceil(amount / 3) : tier >= 1 ? Math.ceil(amount * 2 / 3) : amount;
+}
 
 // ── Procedural blood-puff particle pool ─────────────────────────────────────
 function makeBloodTexture() {
@@ -42,15 +49,21 @@ const Blood = (() => {
   return {
     spawn(x, y, z, count = 10, scatter = 0.7) {
       const life0 = 0.35;
-      for (let i = 0; i < count; i++) {
+      const amount = Number.isFinite(count) ? Math.min(MAX, Math.max(0, Math.floor(count))) : 0;
+      const visibleAmount = particleBudget(amount);
+      for (let i = 0; i < amount; i++) {
+        const vx = (Math.random() - 0.5) * scatter * 2;
+        const vy = Math.random() * scatter * 1.6 + 0.2;
+        const vz = (Math.random() - 0.5) * scatter * 2;
+        // Consume the same random sequence across quality tiers. Cosmetic
+        // omission must not change subsequent combat randomness.
+        if (i >= visibleAmount) continue;
         const k = cursor;
         cursor = (cursor + 1) % MAX;
         positions[3*k]   = x;
         positions[3*k+1] = y;
         positions[3*k+2] = z;
-        vel[3*k]   = (Math.random() - 0.5) * scatter * 2;
-        vel[3*k+1] = Math.random() * scatter * 1.6 + 0.2;
-        vel[3*k+2] = (Math.random() - 0.5) * scatter * 2;
+        vel[3*k] = vx; vel[3*k+1] = vy; vel[3*k+2] = vz;
         life[k] = 0;
         maxLife[k] = life0;
       }
@@ -74,6 +87,11 @@ const Blood = (() => {
         any = true;
       }
       if (any) geom.attributes.position.needsUpdate = true;
+    },
+    snapshot() {
+      let active = 0;
+      for (let i = 0; i < MAX; i++) if (maxLife[i] > 0) active++;
+      return { tier: renderQuality.tier, capacity: MAX, active };
     },
   };
 })();
@@ -188,7 +206,7 @@ const FX = (() => {
     const light = new THREE.PointLight(0xffc070, 0, 5, 2.0);
     light.visible = false; light.castShadow = false;
     scene.add(light);
-    flashes[i] = { core, flare, smoke, coreMat, flareMat, smokeMat, light, age: 0, life: 0.04, active: false };
+    flashes[i] = { core, flare, smoke, coreMat, flareMat, smokeMat, light, age: 0, life: 0.04, active: false, hasFlare: true, hasSmoke: true };
   }
 
   // Tracer slots — per-slot cylinder mesh and a scratch Quaternion so the
@@ -240,7 +258,9 @@ const FX = (() => {
       f.smoke.scale.setScalar(0.7);
       f.core.scale.setScalar(0.85 + Math.random() * 0.3);
       f.coreMat.opacity = 1; f.flareMat.opacity = 1; f.smokeMat.opacity = 0.55;
-      f.core.visible = f.flare.visible = f.smoke.visible = true;
+      f.core.visible = true;
+      f.flare.visible = f.hasFlare = renderQuality.tier < 2;
+      f.smoke.visible = f.hasSmoke = renderQuality.tier < 1;
       f.light.position.copy(pos);
       f.light.intensity = 4;
       f.light.visible = true;
@@ -269,6 +289,7 @@ const FX = (() => {
       if (!Number.isFinite(_iOrigin.x) || !Number.isFinite(_iOrigin.y) || !Number.isFinite(_iOrigin.z)) return;
       const amount = Number.isFinite(count) ? Math.min(IMPACT_MAX, Math.max(0, Math.floor(count))) : 0;
       if (!amount) return;
+      const visibleAmount = particleBudget(amount);
       const profile = resolveImpactProfile(hit), normal = hit?.normal;
       _iNormal.set(normal?.x ?? 0, normal?.y ?? 0, normal?.z ?? 0);
       let normalLength = Math.hypot(_iNormal.x, _iNormal.y, _iNormal.z);
@@ -282,6 +303,12 @@ const FX = (() => {
       _iTangent.crossVectors(_iNormal, Math.abs(_iNormal.y) > 0.9 ? _iAxis : _tUp).normalize();
       _iBitangent.crossVectors(_iNormal, _iTangent);
       for (let i = 0; i < amount; i++) {
+        if (i >= visibleAmount) {
+          // Each full particle below takes eight random samples. Preserve the
+          // shared sequence even when a presentation budget omits the sprite.
+          for (let sample = 0; sample < 8; sample++) Math.random();
+          continue;
+        }
         const sp = impacts[impactCursor];
         impactCursor = (impactCursor + 1) % IMPACT_MAX;
         const style = impactParticleStyle(profile, i), jitter = 0.8 + Math.random() * 0.4;
@@ -323,9 +350,11 @@ const FX = (() => {
         } else {
           // Core/flare snap-fade; smoke lingers and expands.
           f.coreMat.opacity = k * k;
-          f.flareMat.opacity = k;
-          f.smokeMat.opacity = 0.55 * k * 0.7;
-          f.smoke.scale.setScalar(0.7 + (1 - k) * 0.6);
+          if (f.hasFlare) f.flareMat.opacity = k;
+          if (f.hasSmoke) {
+            f.smokeMat.opacity = 0.55 * k * 0.7;
+            f.smoke.scale.setScalar(0.7 + (1 - k) * 0.6);
+          }
           f.light.intensity = 4 * k;
         }
       }
@@ -359,6 +388,22 @@ const FX = (() => {
           if (separation < clearance) sp.mesh.position.addScaledVector(sp.normal, clearance - separation);
         }
       }
+    },
+    snapshot() {
+      let activeFlashes = 0, activeFlares = 0, activeSmoke = 0, activeTracers = 0, activeImpacts = 0;
+      for (let i = 0; i < FLASH_MAX; i++) {
+        if (!flashes[i].active) continue;
+        activeFlashes++;
+        if (flashes[i].flare.visible) activeFlares++;
+        if (flashes[i].smoke.visible) activeSmoke++;
+      }
+      for (let i = 0; i < TRACER_MAX; i++) if (tracers[i].active) activeTracers++;
+      for (let i = 0; i < IMPACT_MAX; i++) if (impacts[i].active) activeImpacts++;
+      return {
+        tier: renderQuality.tier,
+        capacities: { flashes: FLASH_MAX, tracers: TRACER_MAX, impacts: IMPACT_MAX },
+        active: { flashes: activeFlashes, flares: activeFlares, smoke: activeSmoke, tracers: activeTracers, impacts: activeImpacts },
+      };
     },
   };
 })();

@@ -1,41 +1,33 @@
 const RADIANS = Math.PI / 180;
 const LOOK_SENSITIVITY = 0.0025;
 const SENSOR_TIMEOUT = 2500;
+const FLAT_HOLD = Math.cos(20 * RADIANS);
+const UPRIGHT_HOLD = Math.cos(35 * RADIANS);
+const POLE_RADIUS = Math.sin(2 * RADIANS);
+const FULL_YAW_RADIUS = Math.sin(15 * RADIANS);
+const TAU = 2 * Math.PI;
 
-function multiply(a, b) {
-  const [ax, ay, az, aw] = a, [bx, by, bz, bw] = b;
-  return [
-    aw * bx + ax * bw + ay * bz - az * by,
-    aw * by - ax * bz + ay * bw + az * bx,
-    aw * bz + ax * by - ay * bx + az * bw,
-    aw * bw - ax * bx - ay * by - az * bz,
-  ];
+function shortAngle(value) {
+  value %= TAU;
+  return value > Math.PI ? value - TAU : value < -Math.PI ? value + TAU : value;
 }
-
-function conjugate([x, y, z, w]) { return [-x, -y, -z, w]; }
 
 function screenAngle(viewport) {
   const angle = viewport.screen?.orientation?.angle;
   return Number.isFinite(angle) ? angle : Number.isFinite(viewport.orientation) ? viewport.orientation : 0;
 }
 
-function orientationQuaternion(event, angle) {
-  // DeviceOrientation uses intrinsic Z-X'-Y'' rotations in the device's
-  // natural orientation, even when its display has rotated to landscape.
-  // https://www.w3.org/TR/orientation-event/#device-orientation
-  const alpha = event.alpha * RADIANS / 2, beta = event.beta * RADIANS / 2;
-  const gamma = event.gamma * RADIANS / 2, screen = -angle * RADIANS / 2;
-  return multiply(multiply(multiply(
-    [0, 0, Math.sin(alpha), Math.cos(alpha)],
-    [Math.sin(beta), 0, 0, Math.cos(beta)],
-  ), [0, Math.sin(gamma), 0, Math.cos(gamma)]), [0, 0, Math.sin(screen), Math.cos(screen)]);
-}
-
 /** Relative, opt-in motion aiming; camera deltas use the existing mouse scale. */
 export function createMotionAim({ window: viewport = window, document: doc = document, onLook = () => {}, onStatus = () => {} } = {}) {
   let status = 'off', enabled = false, active = false, destroyed = false;
   let permissionGranted = false, receivedSample = false, attempt = 0, listening = false, timeout = null;
-  let focused = true, pageVisible = true, previous = null, previousAngle = null, previousAbsolute = null;
+  let focused = true, pageVisible = true, calibrated = false, calibration = 0, previousAngle = null, previousAbsolute = null;
+  // A fixed reference makes panning independent of how the device is rolled,
+  // including a sideways phone whose display orientation is locked. Scalar
+  // storage also keeps the high-frequency sensor handler allocation-free.
+  let upX = 0, upY = 0, upZ = 1, forwardX = 0, forwardY = 1, forwardZ = 0;
+  let rightX = 1, rightY = 0, rightZ = 0, previousYaw = 0, previousPitch = 0, previousHorizontal = 1;
+  let flatReference = false;
   const displayOrientation = viewport.screen?.orientation;
   const listeners = [];
 
@@ -54,7 +46,8 @@ export function createMotionAim({ window: viewport = window, document: doc = doc
     timeout = null;
   }
   function clearBaseline() {
-    previous = null;
+    calibrated = false;
+    calibration++;
     previousAngle = null;
     previousAbsolute = null;
   }
@@ -91,30 +84,83 @@ export function createMotionAim({ window: viewport = window, document: doc = doc
   }
   function orientation(event) {
     if (!listening || !enabled || !active || destroyed || doc.hidden || !focused || !pageVisible) return;
-    if (![event.alpha, event.beta, event.gamma].every(Number.isFinite)) return;
+    if (!Number.isFinite(event.alpha) || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) return;
     const angle = screenAngle(viewport);
-    const current = orientationQuaternion(event, angle);
+    // DeviceOrientation is intrinsic Z-X'-Y''. Take its -Z direction: the
+    // camera points through the back of the screen. Unlike device-local X/Y
+    // increments, this direction is unchanged by roll and cannot swap axes.
+    // https://www.w3.org/TR/orientation-event/#device-orientation
+    const alpha = event.alpha * RADIANS, beta = event.beta * RADIANS, gamma = event.gamma * RADIANS;
+    const sa = Math.sin(alpha), ca = Math.cos(alpha), sb = Math.sin(beta), cb = Math.cos(beta);
+    const sg = Math.sin(gamma), cg = Math.cos(gamma);
+    const x = -ca * sg - sa * sb * cg, y = -sa * sg + ca * sb * cg, z = -cb * cg;
     const absolute = Boolean(event.absolute);
-    const baseline = previous;
-    const recalibrate = !baseline || previousAngle !== angle || previousAbsolute !== absolute;
-    previous = current;
+    // Once a flat-started device is lifted clearly upright, adopt gravity with
+    // a fresh baseline. Hysteresis avoids switching frames around one angle.
+    const recalibrate = !calibrated || previousAngle !== angle || previousAbsolute !== absolute || (flatReference && Math.abs(z) < UPRIGHT_HOLD);
+    if (recalibrate) {
+      upX = 0; upY = 0; upZ = 1;
+      flatReference = Math.abs(z) > FLAT_HOLD;
+      if (flatReference) {
+        // Gravity cannot define a useful heading when aiming nearly straight
+        // down/up. Calibrate against screen-up instead and retain that frame
+        // while held flat, so small posture changes cannot flip the controls.
+        const screen = angle * RADIANS, ss = Math.sin(screen), cs = Math.cos(screen);
+        upX = ss * (ca * cg - sa * sb * sg) - cs * sa * cb;
+        upY = ss * (sa * cg + ca * sb * sg) + cs * ca * cb;
+        upZ = -ss * cb * sg + cs * sb;
+      }
+      const vertical = x * upX + y * upY + z * upZ;
+      forwardX = x - upX * vertical; forwardY = y - upY * vertical; forwardZ = z - upZ * vertical;
+      const length = Math.hypot(forwardX, forwardY, forwardZ);
+      forwardX /= length; forwardY /= length; forwardZ /= length;
+      rightX = forwardY * upZ - forwardZ * upY;
+      rightY = forwardZ * upX - forwardX * upZ;
+      rightZ = forwardX * upY - forwardY * upX;
+      previousYaw = 0;
+      previousPitch = Math.atan2(vertical, length);
+      previousHorizontal = length;
+      calibrated = true;
+    }
+    const reference = calibration;
     previousAngle = angle;
     previousAbsolute = absolute;
     receivedSample = true;
     clearTimeout();
     setStatus('active');
-    if (recalibrate || previous !== current || !listening) return;
+    if (recalibrate || reference !== calibration || !listening) return;
 
-    // Local quaternion increments avoid Euler wraps and work at any holding
-    // angle. The shortest rotation vector gives screen X pitch and Y yaw;
-    // discard screen Z roll so the horizon stays level.
-    const [x, y, z, w] = multiply(conjugate(baseline), current);
-    const length = Math.hypot(x, y, z);
-    if (length < 1e-12) return;
-    const scale = 2 * Math.atan2(length, Math.abs(w)) * (w < 0 ? -1 : 1) / length;
-    // The camera faces into the screen (-Z): positive X looks up, positive Y
-    // looks left. Player subtracts mouse deltas from both camera angles.
-    const dx = -y * scale / LOOK_SENSITIVITY, dy = -x * scale / LOOK_SENSITIVITY;
+    const horizontalX = -(x * rightX + y * rightY + z * rightZ);
+    const horizontalY = x * forwardX + y * forwardY + z * forwardZ;
+    const vertical = x * upX + y * upY + z * upZ;
+    const horizontal = Math.hypot(horizontalX, horizontalY);
+    const heading = Math.atan2(horizontalX, horizontalY), elevation = Math.atan2(vertical, horizontal);
+    let yaw = shortAngle(heading - previousYaw), pitch = elevation - previousPitch;
+    if (horizontal < POLE_RADIUS) {
+      // At a pole heading is undefined. Keep the last heading and measure
+      // elevation only, rather than amplifying tiny sensor noise into a turn.
+      yaw = 0;
+    } else {
+      // After crossing a pole the equivalent, inverted spherical branch may
+      // look closer to the old reading. Reanchor to gravity instead of keeping
+      // that branch: a turn while nearly vertical must not invert later pitch.
+      const alternateYaw = shortAngle(heading + Math.PI - previousYaw);
+      const alternatePitch = shortAngle(Math.PI - elevation - previousPitch);
+      if (previousHorizontal < POLE_RADIUS || alternateYaw * alternateYaw + alternatePitch * alternatePitch < yaw * yaw + pitch * pitch) {
+        yaw = 0;
+        pitch = 0;
+      }
+      previousYaw = heading;
+    }
+    previousPitch = elevation;
+    // Fade heading sensitivity near vertical, where a tiny pointing change can
+    // imply a large yaw. Updating the baseline at full speed prevents deferred
+    // yaw from snapping back when the device leaves the pole cone.
+    const confidence = Math.max(0, Math.min(1, (Math.min(horizontal, previousHorizontal) - POLE_RADIUS) / (FULL_YAW_RADIUS - POLE_RADIUS)));
+    yaw *= confidence * confidence * (3 - 2 * confidence);
+    previousHorizontal = horizontal;
+    // Player subtracts mouse deltas from both camera angles.
+    const dx = -yaw / LOOK_SENSITIVITY, dy = -pitch / LOOK_SENSITIVITY;
     if (Math.abs(dx) > 1e-8 || Math.abs(dy) > 1e-8) onLook(dx, dy);
   }
   function recenter() {

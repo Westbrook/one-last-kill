@@ -75,9 +75,14 @@ export function createRageState(options = {}) {
       outcome = null;
       return value;
     },
-    snapshot(player, maxHealth = 100) {
-      return { available: available(player, maxHealth), active,
-        remaining: active ? Math.max(0, expiresAt - elapsed) : 0, recentKills: kills.length };
+    // Pass a caller-owned target for a transient HUD view; omit it when the
+    // snapshot must remain unchanged after later frames.
+    snapshot(player, maxHealth = 100, target = {}) {
+      target.available = available(player, maxHealth);
+      target.active = active;
+      target.remaining = active ? Math.max(0, expiresAt - elapsed) : 0;
+      target.recentKills = kills.length;
+      return target;
     },
     reset() {
       elapsed = expiresAt = startingHealth = 0;

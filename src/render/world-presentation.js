@@ -35,12 +35,12 @@ const DEFAULT_FACTORIES = Object.freeze({
  * The fifth argument substitutes resource factories for CPU-only tests. No
  * render target, pass, or mutable presentation state is exposed to the game.
  */
-export function createWorldPresentation(renderer, scene, camera, { getQuality = () => 'auto' } = {}, factories = DEFAULT_FACTORIES) {
+export function createWorldPresentation(renderer, scene, camera, { getQuality = () => 'auto', getTier = () => 0 } = {}, factories = DEFAULT_FACTORIES) {
   const drawingSize = new Vector2();
   const savedClearColor = new Color();
   let beauty = null, composite = null, depth = null, gtao = null, output = null;
   let width = 0, height = 0, aoWidth = 0, aoHeight = 0;
-  let profile = null, quality = getQuality(), floatSupported = null;
+  let profile = null, quality = getQuality(), tier = getTier(), floatSupported = null;
   let enabled = false, disposed = false, reason = 'not-rendered';
 
   function release() {
@@ -121,16 +121,17 @@ export function createWorldPresentation(renderer, scene, camera, { getQuality = 
   function render() {
     enabled = false;
     quality = getQuality();
+    tier = getTier();
     if (disposed || (quality !== 'auto' && quality !== 'high')) {
       reason = disposed ? 'disposed' : 'quality-disabled';
       if (!disposed && beauty) release();
       renderer.render(scene, camera);
       return;
     }
-    if (quality === 'auto' && renderer.getPixelRatio() < 1) {
+    if (quality === 'auto' && (tier >= 1 || renderer.getPixelRatio() < 1)) {
       // Keep existing resources during adaptive resolution changes to avoid
-      // repeated allocation/compilation when the budget crosses this boundary.
-      reason = 'resolution-budget';
+      // repeated allocation/compilation when either budget crosses a boundary.
+      reason = tier >= 1 ? 'presentation-budget' : 'resolution-budget';
       renderer.render(scene, camera);
       return;
     }
@@ -189,7 +190,7 @@ export function createWorldPresentation(renderer, scene, camera, { getQuality = 
 
   function snapshot() {
     return {
-      enabled, reason, quality, allocated: beauty !== null, disposed,
+      enabled, reason, quality, tier, allocated: beauty !== null, disposed,
       size: { width, height }, aoSize: { width: aoWidth, height: aoHeight },
       aoSamples: enabled ? profile.ao.samples : 0,
       denoiseSamples: enabled ? DENOISE.samples : 0,

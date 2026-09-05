@@ -10,6 +10,26 @@ function fixture(health = 20, options) {
   return { player, rage, stats, kills };
 }
 
+test('reused rage HUD output follows expiration and reset without mutating saved snapshots', () => {
+  const { player, rage, kills } = fixture(), target = { gamepad: true };
+  kills();
+  const saved = rage.snapshot(player);
+  assert.equal(saved.available, true);
+  rage.enter(player);
+  assert.equal(rage.snapshot(player, 100, target), target);
+  assert.equal(target.active, true);
+  assert.equal(target.remaining, 10);
+  assert.equal(target.gamepad, true, 'caller-supplied presentation fields survive refresh');
+  rage.update(10, player);
+  rage.snapshot(player, 100, target);
+  assert.equal(target.active, false);
+  assert.equal(target.remaining, 0);
+  rage.reset();
+  rage.snapshot(player, 100, target);
+  assert.deepEqual(target, { gamepad: true, available: false, active: false, remaining: 0, recentKills: 0 });
+  assert.deepEqual(saved, { available: true, active: false, remaining: 0, recentKills: 4 });
+});
+
 test('rage requires strictly below 30% health and more than three credited kills', () => {
   for (const health of [0, 1, 29.999, 30, 31, 100]) {
     const { player, rage, stats } = fixture(health);

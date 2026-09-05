@@ -46,6 +46,7 @@ const _feet = new THREE.Vector3();
 const _soundProbe = new THREE.Vector3();
 const _soundDown = new THREE.Vector3(0, -1, 0);
 const _soundSurface = createBallisticHit();
+const _inputFrame = {};
 const _body = {
   position: new THREE.Vector3(), velocity: Player.vel,
   radius: Player.radius, height: Player.bodyHeight,
@@ -129,7 +130,7 @@ function movementSound(intensity, speed = 0) {
 function playerUpdate(dt) {
   if (!Number.isFinite(dt) || dt <= 0) return;
   dt = Math.min(dt, 1 / 30);
-  const inp = Input.consumeFrame(dt);
+  const inp = Input.consumeFrame(dt, _inputFrame);
   const active = Input.active && !PlayerState.dead;
   Player.aiming = active && Input.isAiming();
   if (active) {
