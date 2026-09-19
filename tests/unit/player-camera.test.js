@@ -95,3 +95,20 @@ test('standing still on a floor joint leaves the camera and stance stable', () =
     }
   }
 });
+
+test('explicit Level view changes pitch only and later input still controls pitch', () => {
+  const { Player, playerInit, playerUpdate, Input } = fixture(true);
+  playerInit();
+  Player.pitch = 0.6;
+  Player.yaw = 1.2;
+  Input.consumeFrame = () => ({ dx: 0, dy: 0, levelView: true });
+  playerUpdate(1 / 60);
+  assert.equal(Player.pitch, 0);
+  assert.equal(Player.yaw, 1.2);
+  Input.consumeFrame = () => ({ dx: 0, dy: 20, levelView: false });
+  playerUpdate(1 / 60);
+  assert.equal(Player.pitch, -0.05);
+  Input.consumeFrame = () => ({ dx: 0, dy: 0 });
+  playerUpdate(1 / 60);
+  assert.equal(Player.pitch, -0.05, 'ordinary updates cannot silently level the view');
+});

@@ -64,6 +64,7 @@ function session({ touchEnabled = false } = {}) {
   const settings = new Map([['touchControls', touchEnabled]]);
   const Settings = {
     get: key => settings.get(key),
+    snapshot: () => Object.fromEntries(settings),
     set(key, value) { settings.set(key, value); document.emit('settingschange'); },
   };
   const controls = {
@@ -73,6 +74,9 @@ function session({ touchEnabled = false } = {}) {
     setContext(value) { this.context = value; },
     requestMotionFromGesture() { if (this.enabled) this.motionGestures++; },
     reset() { this.resets++; },
+    setMotionOptions(value) { this.motionOptions = value; },
+    levelView() { this.levelRequested = true; },
+    updateMotion(dt) { this.motionDt = dt; },
     get visible() { return this.enabled && this.active; },
   };
   let api, briefingOpen = false, setupOpen = false, leaveOpen = false, gamepad = null;

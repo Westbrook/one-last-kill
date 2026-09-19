@@ -1,4 +1,5 @@
 import { createMotionAim } from '../core/motion-aim.js';
+import { createMotionTurn } from '../core/motion-turn.js';
 
 const TOGGLES = new Set(['aim', 'sprint', 'crouch']);
 const LOOK_SCALE = 2.5;
@@ -32,7 +33,7 @@ function isFireTap(tap, event) {
 }
 
 /** Pointer ownership lets both thumbs move, aim, and attack independently. */
-export function createTouchControls({ input, document: doc = document, window: viewport = window } = {}) {
+export function createTouchControls({ input, document: doc = document, window: viewport = window, motionStyle = 'hybrid', verticalSensitivity = 1.5 } = {}) {
   const root = doc.createElement('div');
   root.id = 'touch-controls';
   root.hidden = true;
@@ -61,6 +62,8 @@ export function createTouchControls({ input, document: doc = document, window: v
   let enabled = false, active = false;
   let motionMode = false, lookPointer = null;
   let motionRequested = false;
+  let pendingLevel = true;
+  const motionTurn = createMotionTurn();
   let stickOffsetX = 0, stickOffsetY = 0;
   const motionAim = createMotionAim({
     window: viewport,
@@ -68,11 +71,39 @@ export function createTouchControls({ input, document: doc = document, window: v
     onLook(dx, dy) {
       if (root.hidden || !input.active) return;
       for (const record of pointers.values()) if (record.action === 'recenter') return;
-      input.touchLook(dx, dy);
+      const delta = motionTurn.update(dx, dy, motionStyle, verticalSensitivity);
+      input.touchLook(delta.dx, delta.dy);
+      paintMotionHint();
     },
     onStatus: showMotionStatus,
+    onReference() { motionTurn.reset(); paintMotionHint(); },
   });
 
+  function canSwipe() { return !motionMode || (motionStyle === 'hybrid' && motionAim.status === 'active'); }
+  function repositioning() {
+    for (const record of pointers.values()) if (record.action === 'recenter') return true;
+    return false;
+  }
+  function clearAimPointers() {
+    lookPointer = null;
+    for (const [pointerId, record] of pointers) {
+      if (!['look', 'fire', 'recenter'].includes(record.action)) continue;
+      pointers.delete(pointerId);
+      releaseCapture(record, pointerId);
+    }
+    input.cancelTouchButton('fire');
+    input.clearTouchLook();
+    for (const action of ['look', 'fire', 'recenter']) paint(action, false);
+  }
+  function paintMotionHint() {
+    if (motionAim.status !== 'active') return;
+    const hint = repositioning() ? 'REPOSITION · RELEASE WHEN COMFORTABLE'
+      : motionStyle === 'hybrid' ? 'SWIPE TO TURN · MOVE TO AIM'
+      : motionTurn.rate > 0 ? 'TURNING LEFT · CENTER TO STOP'
+      : motionTurn.rate < 0 ? 'TURNING RIGHT · CENTER TO STOP'
+      : 'GYRO EDGE · HOLD LEFT / RIGHT TO TURN';
+    if (motionStatus.textContent !== hint) motionStatus.textContent = hint;
+  }
   function showMotionStatus(status) {
     const selected = ['requesting', 'waiting', 'active'].includes(status);
     // Waiting starts only after permission is granted. Recalibrating or
@@ -80,28 +111,24 @@ export function createTouchControls({ input, document: doc = document, window: v
     const nextMotionMode = status === 'waiting' || status === 'active';
     if (motionMode !== nextMotionMode) {
       motionMode = nextMotionMode;
-      lookPointer = null;
       // A gesture belongs to the mode where it began. A permission result
       // must not turn an in-progress drag into a shot, or replay queued look.
-      for (const [pointerId, record] of pointers) {
-        if (!['look', 'fire', 'recenter'].includes(record.action)) continue;
-        pointers.delete(pointerId);
-        releaseCapture(record, pointerId);
-      }
-      input.cancelTouchButton('fire');
-      input.clearTouchLook();
-      paint('look', false);
-      paint('fire', false);
-      paint('recenter', false);
+      clearAimPointers();
+    }
+    if (status !== 'active') motionTurn.reset();
+    if (status === 'active' && pendingLevel && input.active && !root.hidden) {
+      pendingLevel = false;
+      input.levelTouchView();
     }
     root.dataset.motionAim = status;
     root.dataset.aimMode = motionMode ? 'motion' : 'touch';
+    root.dataset.motionStyle = motionStyle;
     const motionButton = controls.get('motion');
     motionButton.setAttribute('aria-pressed', String(selected));
     motionButton.setAttribute('aria-label', selected ? 'Disable motion aiming' : 'Enable motion aiming');
     controls.get('recenter').hidden = !motionMode;
     const look = controls.get('look');
-    look.hidden = motionMode;
+    look.hidden = motionMode && (motionStyle !== 'hybrid' || status !== 'active');
     controls.get('fire').setAttribute('aria-label', motionMode
       ? 'Fire or attack; hold for automatic fire' : 'Tap to fire or attack; drag to aim');
     motionStatus.textContent = {
@@ -112,6 +139,7 @@ export function createTouchControls({ input, document: doc = document, window: v
       denied: 'Motion access denied · swipe to aim',
       unavailable: 'Motion unavailable · swipe to aim',
     }[status];
+    if (status === 'active') paintMotionHint();
   }
   function requestMotionFromGesture() {
     if (!enabled || motionRequested || viewport.navigator?.userActivation?.isActive === false) return;
@@ -215,12 +243,18 @@ export function createTouchControls({ input, document: doc = document, window: v
     event.preventDefault();
     event.stopPropagation();
     const action = element.dataset.touch;
-    if (element.hidden || available.get(action) === false || (action === 'look' && motionMode)) return;
+    if (element.hidden || available.get(action) === false || (action === 'look' && (!canSwipe() || repositioning()))) return;
     // Never transfer an already-held stick or button to a second finger.
     if (pointers.has(event.pointerId) || Array.from(pointers.values()).some(record => record.action === action)) return;
     const record = { action, element, x: event.clientX, y: event.clientY };
     if (action === 'fire' && !motionMode) record.tap = { x: event.clientX, y: event.clientY, startedAt: event.timeStamp };
     pointers.set(event.pointerId, record);
+    if (action === 'recenter') {
+      lookPointer = null;
+      input.clearTouchLook();
+      motionTurn.reset();
+      paintMotionHint();
+    }
     try { element.setPointerCapture(event.pointerId); } catch { /* Window listeners still release the pointer. */ }
     if (action === 'move') {
       const bounds = element.getBoundingClientRect();
@@ -238,7 +272,7 @@ export function createTouchControls({ input, document: doc = document, window: v
     } else if (!['look', 'pause', 'motion', 'recenter'].includes(action)) {
       input.touchButton(action, true);
     }
-    if (!motionMode && (action === 'look' || action === 'fire') && lookPointer === null) lookPointer = event.pointerId;
+    if (canSwipe() && !repositioning() && (action === 'look' || (!motionMode && action === 'fire')) && lookPointer === null) lookPointer = event.pointerId;
     if (!TOGGLES.has(action)) paint(action, true);
   }
   function pointerMove(event) {
@@ -249,7 +283,7 @@ export function createTouchControls({ input, document: doc = document, window: v
     if (record.tap && !isFireTap(record.tap, event)) record.tap = null;
     if (record.action === 'move') moveStick(record, event);
     else {
-      if (!motionMode && lookPointer === event.pointerId) input.touchLook((event.clientX - record.x) * LOOK_SCALE, (event.clientY - record.y) * LOOK_SCALE);
+      if (canSwipe() && !repositioning() && lookPointer === event.pointerId) input.touchLook((event.clientX - record.x) * LOOK_SCALE, (event.clientY - record.y) * LOOK_SCALE);
       record.x = event.clientX;
       record.y = event.clientY;
     }
@@ -259,7 +293,7 @@ export function createTouchControls({ input, document: doc = document, window: v
     if (!record) return;
     pointers.delete(event.pointerId);
     if (lookPointer === event.pointerId) {
-      lookPointer = Array.from(pointers).find(([, pointer]) => pointer.action === 'look' || pointer.action === 'fire')?.[0] ?? null;
+      lookPointer = Array.from(pointers).find(([, pointer]) => pointer.action === 'look' || (!motionMode && pointer.action === 'fire'))?.[0] ?? null;
     }
     const canceled = event.type !== 'pointerup';
     if (record.action === 'move') {
@@ -276,8 +310,11 @@ export function createTouchControls({ input, document: doc = document, window: v
     }
     if (!TOGGLES.has(record.action)) paint(record.action, false);
     releaseCapture(record, event.pointerId);
+    // Cancellation and lost capture are also the end of repositioning. Never
+    // restart an old edge turn after a grip is interrupted.
+    if (record.action === 'recenter') { input.clearTouchLook(); motionAim.recenter(); }
     if (record.action === 'pause' && !canceled) input.pause();
-    if (['motion', 'recenter'].includes(record.action) && !canceled && !root.hidden && input.active) activateMotionAction(record.action);
+    if (record.action === 'motion' && !canceled && !root.hidden && input.active) activateMotionAction(record.action);
   }
 
   listen(root, 'pointerdown', pointerDown);
@@ -310,6 +347,27 @@ export function createTouchControls({ input, document: doc = document, window: v
     reset,
     setContext,
     requestMotionFromGesture,
+    setMotionOptions({ touchAimMode = 'hybrid', motionVerticalSensitivity = 1.5 } = {}) {
+      const style = touchAimMode === 'edge' ? 'edge' : 'hybrid';
+      const vertical = Number.isFinite(motionVerticalSensitivity) ? Math.max(0.5, Math.min(3, motionVerticalSensitivity)) : 1.5;
+      if (style === motionStyle && vertical === verticalSensitivity) return;
+      motionStyle = style;
+      verticalSensitivity = vertical;
+      clearAimPointers();
+      motionAim.recenter();
+      showMotionStatus(motionAim.status);
+    },
+    levelView() {
+      pendingLevel = true;
+      clearAimPointers();
+      motionAim.recenter();
+      if (input.active && !root.hidden) input.levelTouchView();
+    },
+    updateMotion(dt) {
+      if (root.hidden || !input.active || motionAim.status !== 'active' || repositioning()) return;
+      const dx = motionTurn.tick(dt);
+      if (dx) input.touchLook(dx, 0);
+    },
     setEnabled(value) {
       enabled = Boolean(value);
       if (!enabled) {

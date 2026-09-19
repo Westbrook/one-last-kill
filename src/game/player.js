@@ -134,6 +134,7 @@ function playerUpdate(dt) {
   const active = Input.active && !PlayerState.dead;
   Player.aiming = active && Input.isAiming();
   if (active) {
+    if (inp.levelView) Player.pitch = 0;
     const sensitivity = 0.0025 * Settings.get('sensitivity') * (Player.aiming ? 0.72 : 1);
     Player.yaw -= inp.dx * sensitivity;
     Player.pitch = clamp(Player.pitch - inp.dy * sensitivity, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);

@@ -930,6 +930,8 @@ const settingFields = {
   fov: byId('settingfov'),
   reducedMotion: byId('settingmotion'),
   touchControls: byId('settingtouchcontrols'),
+  touchAimMode: byId('settingtouchaimmode'),
+  motionVerticalSensitivity: byId('settingmotionverticalsensitivity'),
   ...Object.fromEntries([...audioSettingKeys].map((key) => [key, byId('setting' + key.toLowerCase())])),
   checkpointVoice: byId('settingcheckpointvoice'),
 };
@@ -948,6 +950,8 @@ function syncSettings(settings = Settings.snapshot()) {
       if (field.getAttribute('aria-valuetext') !== description) field.setAttribute('aria-valuetext', description);
     }
   }
+  write(byId('motionverticalvalue'), settings.motionVerticalSensitivity.toFixed(2) + '×');
+  byId('levelmotionview').disabled = !settings.touchControls;
   write(byId('sensitivityvalue'), settings.sensitivity.toFixed(2) + '×');
   write(byId('fovvalue'), settings.fov + '°');
   document.documentElement.dataset.reducedMotion = String(settings.reducedMotion);
@@ -968,6 +972,10 @@ for (const [key, field] of Object.entries(settingFields)) {
   });
 }
 byId('settingsform').addEventListener('submit', (event) => event.preventDefault());
+byId('levelmotionview').addEventListener('click', () => {
+  Input.levelMotionView();
+  write(byId('motionlevelstatus'), 'Ready. Hold comfortably when you resume motion aiming.');
+});
 byId('resetsettings').addEventListener('click', () => {
   Settings.reset();
   syncSettings();

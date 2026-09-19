@@ -15,6 +15,20 @@ test('settings validate saved data and clamp numeric ranges', () => {
   assert.equal(normalizeSettings({ sensitivity: true }).sensitivity, 1);
 });
 
+test('seated motion preferences validate and persist independently', () => {
+  assert.equal(normalizeSettings({ touchAimMode: 'invalid' }).touchAimMode, 'hybrid');
+  assert.equal(normalizeSettings({ motionVerticalSensitivity: 99 }).motionVerticalSensitivity, 3);
+  assert.equal(normalizeSettings({ motionVerticalSensitivity: -1 }).motionVerticalSensitivity, 0.5);
+  assert.equal(normalizeSettings({ motionVerticalSensitivity: NaN }).motionVerticalSensitivity, 1.5);
+  let saved;
+  const storage = { getItem: () => saved, setItem: (_, value) => { saved = value; } };
+  createSettingsStore({ storage }).set({ touchAimMode: 'edge', motionVerticalSensitivity: 2.1 });
+  const restored = createSettingsStore({ storage });
+  assert.equal(restored.get('touchAimMode'), 'edge');
+  assert.equal(restored.get('motionVerticalSensitivity'), 2.1);
+  assert.equal(restored.get('touchControls'), false, 'mode choice is not sensor permission or touch opt-in');
+});
+
 test('settings persist only normalized changes and expose independent snapshots', () => {
   const changes = [];
   const writes = [];

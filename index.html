@@ -265,7 +265,7 @@
         <p class="controller-note" id="controllerhelp">Gamepad: sticks move/look · RT fire · LT aim · A jump · B crouch · X reload · Y pick up · RB / R3 melee · L3 sprint · D-pad up rage · D-pad down drop · Start pause. Arrow keys also turn the camera.</p>
         <div class="controls-heading">TOUCH CONTROLS</div>
         <p class="controller-note">Enable on-screen touch controls in Settings. Touch the left movement area to center the stick, then drag to move. Swipe the right side to look. Tap and release FIRE to attack once, or drag FIRE to aim without firing. RUN and CROUCH toggle on each tap. USE picks up weapons and ammunition.</p>
-        <p class="controller-note">Enabling touch controls requests motion aiming where supported. Allow access to aim by turning or tilting your phone. Once allowed, touch-based looking turns off and the large FIRE control becomes a dedicated trigger: press to attack or hold for automatic fire. Hold RECENTER while adjusting your grip, then release. MOTION switches between motion and swipe aiming or retries access. Swipe controls stay available if motion is denied or unavailable. Look sensitivity adjusts both modes.</p>
+        <p class="controller-note">Enabling touch controls requests motion aiming where supported. In Settings, compare Swipe + gyro with Gyro edge turning. Swipe + gyro combines right-side swipes with small device movements. Gyro edge turning keeps turning when you hold the device farther left or right; center it to stop. In both modes, FIRE is a dedicated trigger: press to attack or hold for automatic fire. Hold RECENTER while changing grip, then release. To reset the horizon, pause, open Settings and choose LEVEL VIEW ON RESUME. MOTION switches to swipe-only aiming or retries access. Swipe controls stay available if motion is denied or unavailable.</p>
         <p class="controller-note">SIGHTS appears with firearms and toggles a closer view with tighter shot spread. Motion or swiping turns the camera. RAGE appears only when you can activate it. JUMP, RELOAD, MELEE, DROP, and PAUSE handle the other actions.</p>
         <p class="controller-note">Melee keeps your firearm and ammunition. Rage unlocks below 30% health after 4 kills in the last 60 seconds. Press T, D-pad up, or the touch RAGE button to double current health. Kill within 10 seconds to keep the remaining boost; otherwise health returns to its starting value. Pausing freezes both clocks.</p>
         <div class="fieldnote-tip"><span>REMEMBER</span><p>The street gives you a choice. The consequences are yours.</p></div>
@@ -283,6 +283,20 @@
             <div class="setting-row setting-checkbox">
               <div><label for="settingtouchcontrols">On-screen touch controls</label><p id="touchcontrolshelp">For tablets and phones. Show a floating movement stick and combat buttons. Enabling requests motion aiming where supported; swipe aiming stays available if motion is denied or unavailable. Off by default.</p></div>
               <input id="settingtouchcontrols" name="touchControls" type="checkbox" aria-describedby="touchcontrolshelp">
+            </div>
+            <div class="setting-row">
+              <label for="settingtouchaimmode">Seated motion mode</label>
+              <select id="settingtouchaimmode" name="touchAimMode" aria-describedby="seatedmotionhelp"><option value="hybrid">Swipe + gyro</option><option value="edge">Gyro edge turning</option></select>
+              <p id="seatedmotionhelp">Swipe + gyro: swipe the right side for large turns and move the device for fine aim. Gyro edge turning: small movements aim; hold farther left or right to keep turning, then center to stop. Pause and switch modes to compare.</p>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label"><label for="settingmotionverticalsensitivity">Vertical motion sensitivity</label><output id="motionverticalvalue" for="settingmotionverticalsensitivity">1.50×</output></div>
+              <input id="settingmotionverticalsensitivity" name="motionVerticalSensitivity" type="range" min="0.5" max="3" step="0.1" value="1.5">
+            </div>
+            <div class="setting-row">
+              <button id="levelmotionview" class="button button-outline" type="button" aria-describedby="levelmotionhelp">LEVEL VIEW ON RESUME</button>
+              <p id="levelmotionhelp">Hold the device comfortably when you resume. This sets that pose to a level view. During play, hold RECENTER to change grip while keeping your aim.</p>
+              <p id="motionlevelstatus" role="status" aria-live="polite"></p>
             </div>
             <p class="controller-note home-screen-help">For more screen space, add the game to your Home Screen. On iPhone or iPad, use Safari’s Share menu → Add to Home Screen, with Open as Web App enabled if shown. On Android, use your browser’s Install app or Add to Home screen option.</p>
           </fieldset>

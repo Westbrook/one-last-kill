@@ -18,7 +18,7 @@ function screenAngle(viewport) {
 }
 
 /** Relative, opt-in motion aiming; camera deltas use the existing mouse scale. */
-export function createMotionAim({ window: viewport = window, document: doc = document, onLook = () => {}, onStatus = () => {} } = {}) {
+export function createMotionAim({ window: viewport = window, document: doc = document, onLook = () => {}, onStatus = () => {}, onReference = () => {} } = {}) {
   let status = 'off', enabled = false, active = false, destroyed = false;
   let permissionGranted = false, receivedSample = false, attempt = 0, listening = false, timeout = null;
   let focused = true, pageVisible = true, calibrated = false, calibration = 0, previousAngle = null, previousAbsolute = null;
@@ -50,6 +50,7 @@ export function createMotionAim({ window: viewport = window, document: doc = doc
     calibration++;
     previousAngle = null;
     previousAbsolute = null;
+    onReference();
   }
   function stopSensor() {
     if (listening) viewport.removeEventListener('deviceorientation', orientation);
@@ -84,7 +85,12 @@ export function createMotionAim({ window: viewport = window, document: doc = doc
   }
   function orientation(event) {
     if (!listening || !enabled || !active || destroyed || doc.hidden || !focused || !pageVisible) return;
-    if (!Number.isFinite(event.alpha) || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) return;
+    if (!Number.isFinite(event.alpha) || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) {
+      // Explicit invalid data differs from a browser suppressing unchanged
+      // readings. Stop any retained seated turn and reanchor on recovery.
+      if (calibrated) { clearBaseline(); awaitSample(); }
+      return;
+    }
     const angle = screenAngle(viewport);
     // DeviceOrientation is intrinsic Z-X'-Y''. Take its -Z direction: the
     // camera points through the back of the screen. Unlike device-local X/Y
@@ -121,6 +127,7 @@ export function createMotionAim({ window: viewport = window, document: doc = doc
       previousPitch = Math.atan2(vertical, length);
       previousHorizontal = length;
       calibrated = true;
+      onReference();
     }
     const reference = calibration;
     previousAngle = angle;
@@ -135,7 +142,7 @@ export function createMotionAim({ window: viewport = window, document: doc = doc
     const vertical = x * upX + y * upY + z * upZ;
     const horizontal = Math.hypot(horizontalX, horizontalY);
     const heading = Math.atan2(horizontalX, horizontalY), elevation = Math.atan2(vertical, horizontal);
-    let yaw = shortAngle(heading - previousYaw), pitch = elevation - previousPitch;
+    let yaw = shortAngle(heading - previousYaw), pitch = elevation - previousPitch, reanchored = false;
     if (horizontal < POLE_RADIUS) {
       // At a pole heading is undefined. Keep the last heading and measure
       // elevation only, rather than amplifying tiny sensor noise into a turn.
@@ -149,6 +156,7 @@ export function createMotionAim({ window: viewport = window, document: doc = doc
       if (previousHorizontal < POLE_RADIUS || alternateYaw * alternateYaw + alternatePitch * alternatePitch < yaw * yaw + pitch * pitch) {
         yaw = 0;
         pitch = 0;
+        reanchored = true;
       }
       previousYaw = heading;
     }
@@ -157,6 +165,9 @@ export function createMotionAim({ window: viewport = window, document: doc = doc
     // imply a large yaw. Updating the baseline at full speed prevents deferred
     // yaw from snapping back when the device leaves the pole cone.
     const confidence = Math.max(0, Math.min(1, (Math.min(horizontal, previousHorizontal) - POLE_RADIUS) / (FULL_YAW_RADIUS - POLE_RADIUS)));
+    // A seated turn cannot retain an old deflection through an ambiguous
+    // heading or a change of reference near a vertical pointing direction.
+    if (confidence < 1 || reanchored) onReference();
     yaw *= confidence * confidence * (3 - 2 * confidence);
     previousHorizontal = horizontal;
     // Player subtracts mouse deltas from both camera angles.

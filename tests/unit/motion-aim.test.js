@@ -325,6 +325,8 @@ test('null, missing, nonnumeric, and nonfinite orientation values neither calibr
   f.sample();
   f.sample(0, null, 50);
   f.sample(0, 0, 5);
+  assert.deepEqual(f.looks, [], 'valid recovery establishes a new reference');
+  f.sample(0, 0, 10);
   assertTurn(f, 5, 0);
 });
 

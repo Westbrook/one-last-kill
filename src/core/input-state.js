@@ -67,6 +67,7 @@ export function createInputState() {
     _touchEdges: new Set(),
     _touchDX: 0,
     _touchDY: 0,
+    _touchLevel: false,
 
     get leftDown() {
       return this.active && (this._mouseLeft || this.keys.has('KeyJ') || (this._padButtons & PAD_BUTTONS.fire) !== 0 || this._touchButtons.has('fire'));
@@ -105,6 +106,7 @@ export function createInputState() {
     resetTouch() {
       this._touchMove.x = this._touchMove.y = 0;
       this._touchDX = this._touchDY = 0;
+      this._touchLevel = false;
       this._touchButtons.clear();
       // Touch cancellation must not discard another device's pending actions.
       this._touchEdges.clear();
@@ -121,6 +123,11 @@ export function createInputState() {
     },
     clearTouchLook() {
       this._touchDX = this._touchDY = 0;
+    },
+    levelTouchView() {
+      if (!this.active) return;
+      this.clearTouchLook();
+      this._touchLevel = true;
     },
     touchButton(action, down) {
       if (!this.active || !Object.hasOwn(TOUCH_ACTIONS, action)) return false;
@@ -204,6 +211,8 @@ export function createInputState() {
       const moveY = this._touchMove.y - this._padMove.y;
       const moveLength = Math.max(1, Math.hypot(moveX, moveY));
       const frame = target;
+      frame.levelView = this.active && this._touchLevel;
+      this._touchLevel = false;
       frame.dx = this.active ? this.mouseDX + this._touchDX + (arrowX * 700 + lookX * 1100) * seconds : 0;
       frame.dy = this.active ? this.mouseDY + this._touchDY + (arrowY * 700 + lookY * 900) * seconds : 0;
       frame.leftDown = this.leftDown;

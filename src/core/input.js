@@ -7,10 +7,16 @@ import { HUD, IntroCard, RunSetup, LeaveGame, PauseMenu, FPSMeter } from '../ui/
 import { RunSettings } from '../game/run-settings.js';
 
 const Input = createInputState();
-const touchControls = createTouchControls({ input: Input });
+const touchControls = createTouchControls({ input: Input, motionStyle: Settings.get('touchAimMode'), verticalSensitivity: Settings.get('motionVerticalSensitivity') });
+const consumeInputFrame = Input.consumeFrame.bind(Input);
+Input.consumeFrame = (dt = 1 / 60, target) => {
+  touchControls.updateMotion(dt);
+  return consumeInputFrame(dt, target);
+};
 // Main supplies gameplay availability without importing game systems here.
 Input.setTouchContext = context => touchControls.setContext(context);
 Input.requestTouchMotion = () => touchControls.requestMotionFromGesture();
+Input.levelMotionView = () => touchControls.levelView();
 const resetState = Input.reset.bind(Input);
 Input.reset = () => { resetState(); touchControls.reset(); };
 let touchEnabled = Settings.get('touchControls');
@@ -197,6 +203,7 @@ document.addEventListener('visibilitychange', () => {
 });
 addEventListener('pagehide', () => pauseSession({ showOverlay: false }));
 document.addEventListener('settingschange', () => {
+  touchControls.setMotionOptions(Settings.snapshot());
   const enabled = Settings.get('touchControls');
   if (enabled === touchEnabled) return;
   touchEnabled = enabled;

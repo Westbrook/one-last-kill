@@ -68,7 +68,9 @@ function fixture({ initial = {}, status = { muted: true, hardMuted: false, suppo
     },
   });
   let motionRequests = 0;
+  let levelRequests = 0;
   const Input = {
+    levelMotionView() { levelRequests++; },
     requestTouchMotion() {
       assert.equal(settings.get('touchControls'), true, 'touch is enabled before requesting motion');
       motionRequests++;
@@ -81,8 +83,27 @@ function fixture({ initial = {}, status = { muted: true, hardMuted: false, suppo
   // Run the actual settings bindings with native-control-shaped DOM objects.
   // Audio exposes only a read operation, so an accidental activation fails here.
   vm.runInContext(helpers + source.slice(start, end), context);
-  return { settings, document, context, element: id => document.getElementById(id), audioStatusReads: () => audioStatusReads, motionRequests: () => motionRequests };
+  return { settings, document, context, element: id => document.getElementById(id), audioStatusReads: () => audioStatusReads, motionRequests: () => motionRequests, levelRequests: () => levelRequests };
 }
+
+test('seated selector and level action apply to motion without prompting again', () => {
+  const ui = fixture({ initial: { touchControls: true } });
+  const mode = ui.element('settingtouchaimmode');
+  mode.value = 'edge';
+  mode.dispatch('change');
+  assert.equal(ui.settings.get('touchAimMode'), 'edge');
+  const vertical = ui.element('settingmotionverticalsensitivity');
+  vertical.value = '2.2';
+  vertical.dispatch('input');
+  assert.equal(ui.settings.get('motionVerticalSensitivity'), 2.2);
+  assert.equal(ui.element('motionverticalvalue').textContent, '2.20×');
+  const level = ui.element('levelmotionview');
+  assert.equal(level.disabled, false);
+  level.dispatch('click');
+  assert.equal(ui.levelRequests(), 1);
+  assert.match(ui.element('motionlevelstatus').textContent, /Hold comfortably/);
+  assert.equal(ui.motionRequests(), 0);
+});
 
 function changeLevel(ui, channel, percent) {
   const key = AUDIO_MIX_SETTINGS[channel];

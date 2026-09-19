@@ -95,7 +95,7 @@ class Element extends EventTarget {
   }
 }
 
-function fixture(t, { enabled = true, active = true, context, motion = false, secureContext = true } = {}) {
+function fixture(t, { enabled = true, active = true, context, motion = false, secureContext = true, motionStyle = 'edge', verticalSensitivity = 1 } = {}) {
   const viewport = new EventTarget();
   const timers = new Map();
   let timerId = 0;
@@ -115,7 +115,7 @@ function fixture(t, { enabled = true, active = true, context, motion = false, se
   let pauses = 0;
   const pause = input.pause.bind(input);
   input.pause = () => { pauses++; pause(); };
-  const controls = createTouchControls({ input, document: doc, window: viewport });
+  const controls = createTouchControls({ input, document: doc, window: viewport, motionStyle, verticalSensitivity });
   const elements = new Map(controls.element.querySelectorAll('[data-touch]').map(element => [element.dataset.touch, element]));
   if (context) controls.setContext(context);
   controls.setEnabled(enabled);
@@ -1319,4 +1319,155 @@ test('disabling motion while permission is pending preserves touch input and ign
   const frame = f.input.consumeFrame();
   assert.equal(frame.dx, 25);
   assert.equal(frame.dy, -15);
+});
+
+test('hybrid combines a separate swipe with gyro while movement and automatic fire stay independent', async t => {
+  const f = fixture(t, { motion: true, motionStyle: 'hybrid', verticalSensitivity: 1.5 });
+  f.click('motion');
+  await Promise.resolve();
+  f.orient(0, 90, 0);
+  assert.equal(f.input.consumeFrame().levelView, true, 'first comfortable pose establishes the horizon');
+  assert.equal(f.elements.get('look').hidden, false);
+  f.down('move', 1);
+  f.move(1, 180, 150);
+  f.down('fire', 2);
+  f.down('look', 3);
+  f.move(3, 200, 180);
+  f.orient(5, 95, 0);
+  const frame = f.input.consumeFrame();
+  assert.ok(frame.moveY > 0);
+  assert.equal(frame.leftDown, true);
+  assert.equal(frame.leftPressed, true);
+  assert.ok(Math.abs(frame.dx - (50 - 5 * Math.PI / 180 / 0.0025)) < 1e-7);
+  assert.ok(Math.abs(frame.dy + 5 * 1.5 * Math.PI / 180 / 0.0025) < 1e-7);
+  f.end(3);
+  f.move(2, 240, 240);
+  const held = f.input.consumeFrame();
+  assert.equal(held.dx, 0, 'held FIRE never inherits swipe ownership');
+  assert.equal(held.dy, 0);
+  assert.equal(held.leftDown, true);
+});
+
+test('edge mode keeps turning between sensor samples and repeated identical samples do not reset it', async t => {
+  const f = fixture(t, { motion: true });
+  f.click('motion');
+  await Promise.resolve();
+  f.orient(0, 90, 0);
+  f.input.consumeFrame();
+  f.orient(27, 90, 0);
+  f.input.consumeFrame();
+  for (let frame = 0; frame < 180; frame++) {
+    if (frame % 9 === 0) f.orient(27, 90, 0);
+    f.controls.updateMotion(1 / 60);
+    assert.ok(Math.abs(f.input.consumeFrame().dx + 2 * Math.PI / 180 / 0.0025) < 1e-7);
+  }
+  f.orient(0, 90, 0);
+  f.input.consumeFrame();
+  f.controls.updateMotion(1 / 60);
+  assert.equal(f.input.consumeFrame().dx, 0);
+});
+
+test('reposition release, cancel and capture loss all stop edge turning and preserve the horizon', async t => {
+  for (const end of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    const f = fixture(t, { motion: true });
+    f.click('motion');
+    await Promise.resolve();
+    f.orient(0, 90, 0);
+    f.input.consumeFrame();
+    f.orient(27, 90, 0);
+    f.down('recenter', 1);
+    f.controls.updateMotion(0.1);
+    assert.equal(f.input.consumeFrame().dx, 0, 'press discards queued and continuous look');
+    f.orient(60, 80, 0);
+    f.end(1, end);
+    f.controls.updateMotion(0.1);
+    assert.equal(f.input.consumeFrame().dx, 0);
+    f.orient(60, 80, 0);
+    f.controls.updateMotion(0.1);
+    const frame = f.input.consumeFrame();
+    assert.equal(frame.dx, 0);
+    assert.equal(frame.dy, 0);
+    assert.equal(frame.levelView, false);
+  }
+});
+
+test('mode switching resets look and fire ownership without leveling or losing movement', async t => {
+  const f = fixture(t, { motion: true });
+  f.click('motion');
+  await Promise.resolve();
+  f.orient(0, 90, 0);
+  f.input.consumeFrame();
+  f.down('move', 1);
+  f.move(1, 180, 150);
+  f.down('fire', 2);
+  f.orient(27, 90, 0);
+  f.controls.setMotionOptions({ touchAimMode: 'hybrid', motionVerticalSensitivity: 1 });
+  f.controls.updateMotion(0.1);
+  let frame = f.input.consumeFrame();
+  assert.ok(frame.moveY > 0);
+  assert.equal(frame.leftDown, false);
+  assert.equal(frame.leftPressed, false);
+  assert.equal(frame.dx, 0);
+  f.orient(27, 90, 0);
+  frame = f.input.consumeFrame();
+  assert.equal(frame.levelView, false);
+  assert.equal(f.elements.get('look').hidden, false);
+  f.move(2, 260, 200);
+  assert.equal(f.input.consumeFrame().dx, 0, 'stale FIRE gesture cannot become a swipe');
+});
+
+test('Level view queued while paused applies once at the new comfortable pose', async t => {
+  const f = fixture(t, { motion: true });
+  f.click('motion');
+  await Promise.resolve();
+  f.orient(0, 90, 0);
+  f.input.consumeFrame();
+  f.controls.setActive(false);
+  f.input.pause();
+  f.controls.levelView();
+  assert.equal(f.input.consumeFrame().levelView, false);
+  f.input.activate();
+  f.controls.setActive(true);
+  f.orient(70, 50, 0);
+  const frame = f.input.consumeFrame();
+  assert.equal(frame.levelView, true);
+  assert.equal(frame.dx, 0);
+  assert.equal(frame.dy, 0);
+  assert.equal(f.input.consumeFrame().levelView, false);
+  f.controls.setActive(false);
+  f.controls.setActive(true);
+  f.orient(80, 40, 0);
+  assert.equal(f.input.consumeFrame().levelView, false, 'ordinary resume preserves vertical aim');
+});
+
+test('explicit invalid sensor data stops edge turning and recovers with a fresh baseline', async t => {
+  const f = fixture(t, { motion: true });
+  f.click('motion');
+  await Promise.resolve();
+  f.orient(0, 90, 0);
+  f.input.consumeFrame();
+  f.orient(27, 90, 0);
+  f.input.consumeFrame();
+  f.orient(null, 90, 0);
+  f.controls.updateMotion(0.1);
+  assert.equal(f.input.consumeFrame().dx, 0);
+  assert.equal(f.controls.element.dataset.motionAim, 'waiting');
+  f.orient(80, 90, 0);
+  f.controls.updateMotion(0.1);
+  assert.equal(f.input.consumeFrame().dx, 0);
+});
+
+test('reference changes clear both edge rotation and turning feedback', async t => {
+  const f = fixture(t, { motion: true });
+  f.click('motion');
+  await Promise.resolve();
+  f.orient(0, 90, 0);
+  f.orient(27, 90, 0);
+  f.input.consumeFrame();
+  const status = f.controls.element.querySelector('.touch-motion-status');
+  assert.match(status.textContent, /TURNING LEFT/);
+  f.orient(27, 90, 0, { absolute: true });
+  f.controls.updateMotion(0.1);
+  assert.equal(f.input.consumeFrame().dx, 0);
+  assert.doesNotMatch(status.textContent, /TURNING LEFT/);
 });

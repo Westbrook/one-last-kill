@@ -4,6 +4,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   fov: 82,
   reducedMotion: false,
   touchControls: false,
+  touchAimMode: 'hybrid',
+  motionVerticalSensitivity: 1.5,
   audioMaster: 0.75,
   audioEffects: 0.85,
   audioAmbience: 0.4,
@@ -38,6 +40,8 @@ export function normalizeSettings(value = {}) {
     fov: Math.round(finiteNumber(source.fov, DEFAULT_SETTINGS.fov, 70, 100)),
     reducedMotion: typeof source.reducedMotion === 'boolean' ? source.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     touchControls: typeof source.touchControls === 'boolean' ? source.touchControls : DEFAULT_SETTINGS.touchControls,
+    touchAimMode: ['hybrid', 'edge'].includes(source.touchAimMode) ? source.touchAimMode : DEFAULT_SETTINGS.touchAimMode,
+    motionVerticalSensitivity: finiteNumber(source.motionVerticalSensitivity, DEFAULT_SETTINGS.motionVerticalSensitivity, 0.5, 3),
     ...Object.fromEntries(Object.values(AUDIO_MIX_SETTINGS).map((key) => [key, finiteNumber(source[key], DEFAULT_SETTINGS[key], 0, 1)])),
     checkpointVoice: typeof source.checkpointVoice === 'boolean' ? source.checkpointVoice : DEFAULT_SETTINGS.checkpointVoice,
   };
